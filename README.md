@@ -1,31 +1,31 @@
 # sci-research
 
-> A Claude Code plugin for scientific popular-science deep research with multi-entity comparison.
+> A Claude Code plugin with two independent pipelines: **deep research** for scientific articles and **news scan** for real-time news analysis.
 
-Given a topic and a set of entities (countries, institutions, organizations), this plugin orchestrates a multi-agent pipeline to produce a professionally structured, fully-cited research article — with cross-entity comparison tables, source credibility grading, and automated quality gates.
+Given a topic and a set of entities, this plugin orchestrates multi-agent pipelines to produce either a professionally structured research article or a real-time news briefing — with source credibility grading and automated quality gates.
+
+---
+
+## Two Feature Lines
+
+| | `/sci-research` | `/news-scan` |
+|---|---|---|
+| **Purpose** | Deep research article with multi-entity comparison | Real-time news briefing with impact analysis |
+| **Time focus** | Historical + current | Last 7-90 days |
+| **Sources** | Academic papers, official reports, authoritative media | Wire services, financial media, industry press |
+| **Agents** | 4 (researcher → comparator → fact-checker → writer) | 2 (news-scanner → news-analyst) |
+| **Output** | ≤5000-word structured article with APA references | 1000-3000-word briefing with event timeline |
+| **Shared agents** | None — completely independent pipelines | None |
 
 ---
 
 ## Why This Plugin
 
-Writing a rigorous popular-science research article typically requires hours of source retrieval, cross-referencing, and structuring. This plugin automates the entire pipeline:
-
-- **4 specialized agents** work in sequence — researcher, comparator, fact-checker, writer
-- **Parallel retrieval** — one researcher agent per entity, running simultaneously
-- **Credibility-first** — five-tier source grading system ensures authoritative backing
-- **Automated quality gates** — hooks enforce word limits, entity coverage, and reference integrity before output
-
-## Features
-
-| Feature | Description |
-|---------|-------------|
-| Multi-entity comparison | Compare any combination of countries, institutions, or companies |
-| Parallel research | One agent per entity, all searching simultaneously |
-| Source credibility grading | ★★★★★ (peer-reviewed) to ★☆☆☆☆ (blogs), graded in appendix |
-| Fact verification | Cross-references top 10-15 claims against independent sources |
-| Multilingual output | `zh` (Chinese), `en` (English), `ja` (Japanese) |
-| Quality hooks | Word count, entity coverage, reference integrity — all automated |
-| Professional structure | Abstract, methodology, comparison tables, APA 7th references |
+- **6 specialized agents** across two independent pipelines
+- **Parallel retrieval** — one agent per entity, running simultaneously
+- **Credibility-first** — five-tier source grading system for both pipelines
+- **Automated quality gates** — hooks enforce word limits, entity coverage, reference integrity, and news freshness
+- **Multilingual** — Chinese, English, Japanese output
 
 ---
 
@@ -38,7 +38,7 @@ Writing a rigorous popular-science research article typically requires hours of 
 /plugin marketplace add haiou312/sci-research
 
 # Install the plugin
-/plugin install sci-research@haiou312-deep-research-report
+/plugin install sci-research@haiou312-sci-research
 ```
 
 ### Option 2: Local Development
@@ -67,7 +67,7 @@ You should see `sci-research` listed with its version.
 
 ## Usage
 
-### Basic Command
+### Pipeline A: Deep Research
 
 ```
 /sci-research <topic> --entities "Entity1,Entity2,..." --lang zh|en|ja
@@ -79,8 +79,7 @@ You should see `sci-research` listed with its version.
 | `--entities` | Yes | — | Comma-separated entities to compare |
 | `--lang` | No | `zh` | Output language code |
 
-### Examples
-
+**Examples:**
 ```bash
 # Compare nuclear fusion progress across 4 countries (Chinese)
 /sci-research 核聚变能源最新进展 --entities "中国,美国,EU,日本"
@@ -89,13 +88,38 @@ You should see `sci-research` listed with its version.
 /sci-research mRNA vaccine technology landscape --entities "US,EU,China" --lang en
 
 # Compare AI companies
-/sci-research 大语言模型技术路线对比 --entities "OpenAI,Google DeepMind,Anthropic,Meta AI" --lang zh
-
-# Quantum computing commercialization
-/sci-research quantum computing commercialization --entities "IBM,Google,中国科学院" --lang en
+/sci-research 大语言模型技术路线对比 --entities "OpenAI,Google DeepMind,Anthropic" --lang zh
 ```
 
-### Additional Commands
+### Pipeline B: News Scan
+
+```
+/news-scan <topic> --entities "Entity1,Entity2,..." --period 7d|30d|90d --lang zh|en|ja
+```
+
+| Parameter | Required | Default | Description |
+|-----------|----------|---------|-------------|
+| `topic` | Yes | — | News search subject |
+| `--entities` | No | (broad search) | Comma-separated entities to focus on |
+| `--period` | No | `30d` | Time window: `7d`, `30d`, or `90d` |
+| `--lang` | No | `zh` | Output language code |
+
+**Examples:**
+```bash
+# Recent Open Banking news, UK and China focus
+/news-scan 开放银行最新进展 --entities "中国,英国" --lang zh
+
+# Quick 7-day scan in English
+/news-scan Open Banking UK --period 7d --lang en
+
+# Broad scan without entity filter
+/news-scan AI regulation --period 90d --lang en
+
+# Single entity news
+/news-scan 数字人民币 --entities "中国" --period 30d --lang zh
+```
+
+### Utility Commands
 
 ```bash
 # Add more entities to an active research session
@@ -109,25 +133,14 @@ You should see `sci-research` listed with its version.
 
 ## How It Works
 
-### Agent Pipeline
+### Pipeline A: `/sci-research`
 
 ```
-User Input: topic + entities + lang
-       │
-       ├──→ Researcher(Entity A) ─┐
-       ├──→ Researcher(Entity B) ─┼──→ Comparator ──→ Fact-Checker ──→ Writer ──→ Output
-       └──→ Researcher(Entity C) ─┘
-                                        │                 │               │
-                                  Compare across    Verify top      Generate article
-                                  5-8 dimensions    10-15 claims    in target language
-                                                                         │
-                                                                    ┌────┴────┐
-                                                                    │  Hooks  │
-                                                                    ├─────────┤
-                                                                    │ ≤5000w? │
-                                                                    │ Entities│
-                                                                    │  Refs?  │
-                                                                    └─────────┘
+User: /sci-research <topic> --entities "A,B,C" --lang zh
+  │
+  ├─→ Researcher(A) ─┐
+  ├─→ Researcher(B) ─┼─→ Comparator ─→ Fact-Checker ─→ Writer ─→ Hooks ─→ Output
+  └─→ Researcher(C) ─┘
 ```
 
 | Agent | Model | Role |
@@ -137,30 +150,38 @@ User Input: topic + entities + lang
 | **Fact-Checker** | Sonnet | Claim verification with confidence classification |
 | **Writer** | Opus | Structured article synthesis in target language |
 
-### Output Structure
+**Output structure:**
+```
+Abstract → Introduction → Core Concepts → Entity Analysis → Comparative Analysis
+→ Trends & Outlook → Conclusion → Glossary → Source Credibility Table → References (APA 7th)
+```
 
-The generated article follows a professional academic-popular format:
+### Pipeline B: `/news-scan`
 
 ```
-# {Topic}: Multi-Entity Comparative Research Report
+User: /news-scan <topic> --entities "A,B" --period 30d --lang zh
+  │
+  ├─→ News-Scanner(A) ─┐
+  │                     ├─→ News-Analyst ─→ Hooks ─→ Output
+  └─→ News-Scanner(B) ─┘
+```
 
-  Abstract                          ← 200 words max
-  1. Introduction                   ← background, scope, methodology
-  2. Core Concepts                  ← terminology, principles, milestone timeline
-  3. Entity-by-Entity Analysis      ← policy, progress, institutions, funding (per entity)
-  4. Multi-Dimensional Comparison   ← comparison table, root-cause analysis, competitive landscape
-  5. Trends & Outlook               ← short/long-term, risks, societal impact
-  6. Conclusion                     ← key findings, open questions
-  Appendix A: Glossary
-  Appendix B: Source Credibility Table
-  References                        ← categorized by type, APA 7th format
+| Agent | Model | Role |
+|-------|-------|------|
+| **News-Scanner** | Sonnet | Per-entity real-time news retrieval from wire services and media |
+| **News-Analyst** | Opus | Deduplication, timeline, impact analysis, trend signals |
+
+**Output structure:**
+```
+Key Events Summary → Full Event Timeline → Entity-by-Entity Developments
+→ Impact Analysis (per event matrix) → Trend Signals & Risk Alerts → Sources
 ```
 
 ---
 
-## Source Credibility System
+## Source Credibility Systems
 
-Every source is graded and disclosed in Appendix B:
+### For `/sci-research` (Academic & Official)
 
 | Grade | Source Type | Examples |
 |-------|-----------|----------|
@@ -169,27 +190,29 @@ Every source is graded and disclosed in Appendix B:
 | ★★★★☆ | Government reports | DOE, EU Commission, 国务院白皮书 |
 | ★★★★☆ | Wire services | Reuters, AP, AFP, 新华社 |
 | ★★★☆☆ | Quality journalism | Scientific American, BBC Science |
-| ★★★☆☆ | Industry analysis | McKinsey, Gartner, BloombergNEF |
 | ★★☆☆☆ | Preprints | arXiv, medRxiv (flagged as non-peer-reviewed) |
-| ★☆☆☆☆ | Social media / blogs | Avoided unless verified domain expert |
 
-**Rules:**
-- Minimum 10 unique sources per article
-- At least 40% must be ★★★★☆ or higher
-- At least 60% published within last 24 months
+### For `/news-scan` (News & Media)
+
+| Grade | Source Type | Examples |
+|-------|-----------|----------|
+| ★★★★★ | Wire services | Reuters, AP, AFP, 新华社 |
+| ★★★★☆ | Financial/business media | FT, Bloomberg, CNBC, 财新, BBC |
+| ★★★☆☆ | Industry vertical media | Finextra, TechCrunch, 36氪 |
+| ★★☆☆☆ | Think tank commentary | Brookings, PIIE, VoxEU |
+| ★☆☆☆☆ | Social media / blogs | Avoided unless verified expert |
 
 ---
 
 ## Quality Hooks
 
-Automated validation runs after every article write:
-
-| Hook | Trigger | What It Does |
-|------|---------|-------------|
-| `word-count-check` | PostToolUse:Write | Blocks output if >5000 words. Supports Chinese character counting. |
-| `entity-coverage-check` | PostToolUse:Write | Warns if any specified entity lacks a dedicated section and ≥3 mentions. |
-| `reference-validator` | PostToolUse:Write | Warns if inline citations `[N]` don't match reference entries. |
-| `research-summary` | Stop | Logs session metadata to `~/.sci-research/sessions/` (async, non-blocking). |
+| Hook | Pipeline | Trigger | What It Does |
+|------|----------|---------|-------------|
+| `word-count-check` | A | PostToolUse:Write | Blocks if >5000 words. Supports Chinese character counting. |
+| `entity-coverage-check` | A | PostToolUse:Write | Warns if any entity lacks dedicated section and ≥3 mentions. |
+| `reference-validator` | A | PostToolUse:Write | Warns if inline citations `[N]` don't match reference entries. |
+| `news-freshness-check` | B | PostToolUse:Write | Warns if no sources from the last 7 days in news reports. |
+| `research-summary` | A & B | Stop | Logs session metadata (async, non-blocking). |
 
 ---
 
@@ -198,36 +221,44 @@ Automated validation runs after every article write:
 ```
 sci-research/
 ├── .claude-plugin/
-│   └── plugin.json                 # Plugin metadata
-├── agents/
-│   ├── researcher.md               # Multi-source retrieval (per entity)
-│   ├── comparator.md               # Cross-entity comparison analysis
-│   ├── fact-checker.md             # Claim verification specialist
-│   └── writer.md                   # Multilingual article writer
-├── commands/
-│   ├── sci-research.md             # /sci-research — main entry point
-│   ├── add-entity.md              # /add-entity — add entities mid-session
-│   └── set-lang.md                # /set-lang — switch output language
-├── skills/
-│   └── sci-research/
-│       └── SKILL.md                # Core skill: full workflow definition
+│   ├── plugin.json                    # Plugin metadata
+│   └── marketplace.json              # Marketplace manifest
+├── agents/                            # 6 agents across 2 pipelines
+│   ├── researcher.md                  # [A] Per-entity information retrieval
+│   ├── comparator.md                  # [A] Cross-entity comparison analysis
+│   ├── fact-checker.md                # [A] Claim verification specialist
+│   ├── writer.md                      # [A] Multilingual article writer
+│   ├── news-scanner.md                # [B] Per-entity real-time news retrieval
+│   └── news-analyst.md               # [B] News timeline and impact analysis
+├── commands/                          # 4 slash commands
+│   ├── sci-research.md                # /sci-research — deep research entry point
+│   ├── news-scan.md                   # /news-scan — news analysis entry point
+│   ├── add-entity.md                  # /add-entity — add entities mid-session
+│   └── set-lang.md                    # /set-lang — switch output language
+├── skills/                            # 2 independent skill definitions
+│   ├── sci-research/
+│   │   └── SKILL.md                   # Deep research workflow
+│   └── news-scan/
+│       └── SKILL.md                   # News scan workflow
 ├── contexts/
-│   └── sci-research.md             # Research mode behavioral context
+│   └── sci-research.md                # Research mode behavioral context
 ├── hooks/
-│   └── hooks.json                  # Hook configuration (4 hooks)
-├── scripts/hooks/
-│   ├── word-count-check.js         # Word limit enforcement
-│   ├── entity-coverage-check.js    # Entity coverage validation
-│   ├── reference-validator.js      # Citation integrity check
-│   └── research-summary.js        # Session logging
-├── rules/research/
-│   ├── source-credibility.md       # Source grading standards
-│   └── output-format.md           # Article format standards
-├── examples/
-│   ├── nuclear-fusion-zh.md        # Full Chinese example (nuclear fusion)
-│   └── mrna-vaccine-en.md          # English example (mRNA vaccines)
-├── CLAUDE.md                       # Claude Code project guidance
-├── AGENTS.md                       # Agent pipeline reference
+│   └── hooks.json                     # Hook configuration (5 hooks)
+├── scripts/hooks/                     # Hook implementations
+│   ├── word-count-check.js            # [A] ≤5000 word enforcement
+│   ├── entity-coverage-check.js       # [A] Entity coverage validation
+│   ├── reference-validator.js         # [A] Citation integrity check
+│   ├── news-freshness-check.js        # [B] News recency validation
+│   └── research-summary.js            # [A&B] Session logging
+├── rules/research/                    # 3 quality rules
+│   ├── source-credibility.md          # Academic source grading (Pipeline A)
+│   ├── output-format.md               # Article format standards (Pipeline A)
+│   └── news-source.md                 # News source grading & dedup (Pipeline B)
+├── examples/                          # Sample outputs
+│   ├── nuclear-fusion-zh.md           # Full Chinese example (nuclear fusion)
+│   └── mrna-vaccine-en.md             # English example (mRNA vaccines)
+├── CLAUDE.md                          # Claude Code project guidance
+├── AGENTS.md                          # Agent pipeline reference (both pipelines)
 └── README.md
 ```
 
@@ -246,11 +277,11 @@ See the [`examples/`](./examples/) directory for complete sample outputs:
 
 ### Adding a New Language
 
-1. Add language guidelines to `agents/writer.md` Section 3 (Language-Specific Guidelines)
+1. Add language guidelines to `agents/writer.md` and `agents/news-analyst.md`
 2. Update `commands/set-lang.md` supported languages table
 3. Add an example output in `examples/`
 
-### Adjusting Word Limit
+### Adjusting Word Limit (Pipeline A)
 
 Edit `scripts/hooks/word-count-check.js`:
 ```javascript
@@ -258,7 +289,15 @@ const WORD_LIMIT = 5000;      // Change this
 const CHAR_LIMIT_ZH = 7500;   // Chinese character equivalent
 ```
 
-### Adding Comparison Dimensions
+### Adjusting News Freshness Window (Pipeline B)
+
+Edit `scripts/hooks/news-freshness-check.js`:
+```javascript
+const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+// Change 7 to your preferred window
+```
+
+### Adding Comparison Dimensions (Pipeline A)
 
 Edit `agents/comparator.md` Section 1 (Dimension Selection) to add new topic-type dimension sets.
 
@@ -268,7 +307,7 @@ Edit `agents/comparator.md` Section 1 (Dimension Selection) to add new topic-typ
 
 - [Claude Code](https://claude.ai/code) CLI
 - Node.js ≥ 18 (for hook scripts)
-- Internet access (for WebSearch/WebFetch during research)
+- Internet access (for WebSearch/WebFetch during research and news scanning)
 
 ---
 

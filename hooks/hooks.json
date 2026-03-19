@@ -34,6 +34,17 @@
           }
         ],
         "description": "Validate all inline citations [N] have matching reference entries"
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/hooks/news-freshness-check.js\"",
+            "timeout": 10
+          }
+        ],
+        "description": "Check news analysis reports contain sources from the last 7 days"
       }
     ],
     "Stop": [
