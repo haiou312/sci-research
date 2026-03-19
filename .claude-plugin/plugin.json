@@ -1,0 +1,22 @@
+{
+  "name": "sci-research",
+  "version": "1.0.0",
+  "description": "Scientific popular-science deep research plugin — multi-source retrieval, cross-entity comparison, and structured report generation with authoritative references",
+  "author": {
+    "name": "Peter Wang"
+  },
+  "homepage": "https://github.com/haiou312/sci-research",
+  "repository": "https://github.com/haiou312/sci-research",
+  "license": "MIT",
+  "keywords": [
+    "claude-code",
+    "deep-research",
+    "science",
+    "popular-science",
+    "comparison",
+    "multi-entity",
+    "references",
+    "agents",
+    "skills"
+  ]
+}
