@@ -44,16 +44,22 @@ User Input (topic, entities, period, lang)
         ├──→ [News-Scanner] × N (one per entity, parallel)
         │         │
         │         ▼
-        │    Raw news items per entity
+        │    Raw news items per entity (8-12 events, no images)
         │         │
         ▼         ▼
-   [News-Analyst] ← aggregated news items
+   Identify top 3-5 events by significance
         │
         ▼
-   Deduplicated timeline + impact analysis
+   [News-Imager] ← top event URLs
         │
         ▼
-   News briefing (1000-3000 words)
+   Image URLs + alt text (or "No image available")
+        │
+        ▼
+   [News-Analyst] ← news items + image data
+        │
+        ▼
+   Final briefing with embedded images
         │
         ▼
    [Hooks] → news freshness check
@@ -76,8 +82,9 @@ User Input (topic, entities, period, lang)
 
 | Agent | Model | Tools | Role |
 |-------|-------|-------|------|
-| news-scanner | sonnet | WebSearch, WebFetch, Read, Grep, Glob | Per-entity real-time news retrieval |
-| news-analyst | opus | Read, Write, Edit, Grep | News dedup, timeline, impact analysis |
+| news-scanner | sonnet | WebSearch, WebFetch, Read, Grep, Glob | Per-entity real-time news retrieval (no images) |
+| news-imager | sonnet | WebFetch, Read, Grep, Glob | Extract article images for top events |
+| news-analyst | opus | Read, Write, Edit, Grep | News dedup, timeline, impact analysis, report generation |
 
 ---
 
@@ -90,8 +97,9 @@ User Input (topic, entities, period, lang)
 - **writer**: Last. Produces the final article in the target language.
 
 ### Pipeline B (`/news-scan`)
-- **news-scanner**: Always first. One instance per entity, run in parallel.
-- **news-analyst**: After all scanners complete. Produces the final briefing.
+- **news-scanner**: Always first. One instance per entity, run in parallel. Only finds news, no images.
+- **news-imager**: After scanners. Receives top 3-5 event URLs, extracts article images.
+- **news-analyst**: Last. Receives news items + image data, produces the final briefing.
 
 ### Key Difference
-Pipelines A and B are **completely independent**. They share no agents. A `/sci-research` run never invokes news-scanner or news-analyst, and a `/news-scan` run never invokes researcher, comparator, fact-checker, or writer.
+Pipelines A and B are **completely independent**. They share no agents. A `/sci-research` run never invokes news-scanner, news-imager, or news-analyst, and a `/news-scan` run never invokes researcher, comparator, fact-checker, or writer.

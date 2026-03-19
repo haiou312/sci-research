@@ -13,9 +13,9 @@ This is a **Claude Code plugin** with two independent feature lines:
 
 The plugin is organized into the following components:
 
-- **agents/** — 6 specialized subagents across two pipelines:
+- **agents/** — 7 specialized subagents across two pipelines:
   - Pipeline A (deep research): researcher, comparator, fact-checker, writer
-  - Pipeline B (news scan): news-scanner, news-analyst
+  - Pipeline B (news scan): news-scanner, news-imager, news-analyst
 - **skills/** — Core workflow definitions for each pipeline
 - **commands/** — User-facing slash commands: `/sci-research`, `/news-scan`, `/add-entity`, `/set-lang`
 - **contexts/** — Research mode context for behavioral tuning
@@ -41,7 +41,7 @@ Pipeline A (/sci-research):
   User Input → Researcher (parallel) → Comparator → Fact-Checker → Writer → Hooks → Output
 
 Pipeline B (/news-scan):
-  User Input → News-Scanner (parallel) → News-Analyst → Hooks → Output
+  User Input → News-Scanner (parallel) → News-Imager (top events) → News-Analyst → Hooks → Output
 ```
 
 The two pipelines are **completely independent** and share no agents.

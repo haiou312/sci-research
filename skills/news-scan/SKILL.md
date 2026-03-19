@@ -46,29 +46,45 @@ Launch one **News-Scanner** agent per entity (or one for broad search):
 ```
 For each entity in [Entity A, Entity B, ...]:
   → Spawn News-Scanner agent with (topic, entity, period)
-  → Agent searches wire services, financial media, industry press
+  → Agent searches official/regulatory sources, wire services, financial media, industry press
   → Agent returns structured news items with metadata
+  → Agent does NOT extract images
 ```
 
 **Search Strategy:**
-- 4-6 queries per entity, mixing topic keywords with entity name
+- 6-8 queries per entity, covering official announcements, legislation, market impact, data releases
 - Search in entity's primary language AND English
-- Prioritize: wire services > financial media > industry press > commentary
-- Target 10-20 unique news events total
+- Prioritize: official/regulatory > wire services > financial media > industry press > commentary
+- Target 8-12 unique news events per entity
 
-### Phase 2: Analysis & Report
+### Phase 2: Image Extraction
 
-Launch **News-Analyst** agent with all scanner results:
+Launch **News-Imager** agent with the top 3-5 events from Phase 1:
+
+```
+News-Imager receives:
+  - List of top 3-5 events with their primary source URLs
+
+News-Imager produces:
+  - Image URL + alt text for each event (or "No image available")
+  - Does NOT analyze news content — only extracts images
+```
+
+### Phase 3: Analysis & Report
+
+Launch **News-Analyst** agent with scanner results + image data:
 
 ```
 News-Analyst receives:
-  - All news items from all scanners
+  - All news items from all scanners (Phase 1)
+  - Image data from imager (Phase 2)
   - Topic, entities, period, target language
 
 News-Analyst produces:
   - Deduplicated event list with inline citations [N]
   - Chronological timeline with source references [N]
   - Top 3-5 key events with impact analysis, every fact cited [N]
+  - Images embedded for events where available (skipped if not)
   - Trend signals and risk alerts with evidence citations [N]
   - Numbered reference list with full URLs (same format as /sci-research)
   - Source credibility assessment table
