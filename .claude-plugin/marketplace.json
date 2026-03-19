@@ -1,0 +1,46 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "sci-research",
+  "description": "Claude Code plugin for scientific deep research with multi-entity comparison and authoritative references",
+  "owner": {
+    "name": "Peter Wang"
+  },
+  "metadata": {
+    "description": "Scientific deep research with multi-agent pipeline, source credibility grading, and automated quality gates"
+  },
+  "plugins": [
+    {
+      "name": "sci-research",
+      "source": "./",
+      "description": "Give it a topic and entities to compare — get a ≤5000-word cited article with 4-agent pipeline (researcher, comparator, fact-checker, writer), source credibility grading, and automated quality gates",
+      "version": "1.0.0",
+      "author": {
+        "name": "Peter Wang"
+      },
+      "homepage": "https://github.com/haiou312/sci-research",
+      "repository": "https://github.com/haiou312/sci-research",
+      "license": "MIT",
+      "keywords": [
+        "deep-research",
+        "science",
+        "popular-science",
+        "comparison",
+        "multi-entity",
+        "references",
+        "agents",
+        "skills"
+      ],
+      "category": "research",
+      "tags": [
+        "deep-research",
+        "agents",
+        "skills",
+        "hooks",
+        "commands",
+        "scientific",
+        "comparison"
+      ],
+      "strict": false
+    }
+  ]
+}
