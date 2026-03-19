@@ -84,7 +84,8 @@ Write the report in the user-specified language following this structure:
 ## 1. 核心事件摘要 / Key Events Summary
 
 [3-5 most significant events, each in 2-3 sentences. Lead with what happened,
-then why it matters. Include the date and primary source.]
+then why it matters. Use inline citations [N] for every factual claim,
+linking to the numbered reference list at the end of the report.]
 
 ---
 
@@ -92,7 +93,7 @@ then why it matters. Include the date and primary source.]
 
 | 日期 | 事件 | 实体 | 重要性 | 来源 |
 |------|------|------|--------|------|
-| YYYY-MM-DD | Event description | Entity | High/Med/Low | [Source] |
+| YYYY-MM-DD | Event description | Entity | High/Med/Low | [1][2] |
 | ... | ... | ... | ... | ... |
 
 ---
@@ -101,7 +102,8 @@ then why it matters. Include the date and primary source.]
 
 ### 3.1 {Entity A}
 [Narrative summary of what happened for this entity during the period.
-Group related events. Note any policy shifts, market changes, or institutional actions.]
+Group related events. Note any policy shifts, market changes, or institutional actions.
+Use inline citations [N] for every factual claim.]
 
 ### 3.2 {Entity B}
 [Same structure]
@@ -113,19 +115,19 @@ Group related events. Note any policy shifts, market changes, or institutional a
 ### 4.1 {Key Event 1}: {Title}
 
 **发生了什么 / What happened:**
-[Factual description, 3-5 sentences]
+[Factual description, 3-5 sentences. Every fact must have an inline citation [N].]
 
 **为什么重要 / Why it matters:**
-[Context and significance, 2-3 sentences]
+[Context and significance, 2-3 sentences. Cite sources [N] for any data or claims.]
 
 **影响矩阵 / Impact Matrix:**
 
-| 维度 | 短期影响 (0-3月) | 长期影响 (1-3年) | 受影响方 | 确定性 |
-|------|-----------------|-----------------|----------|--------|
-| 市场/Market | ... | ... | ... | Confirmed/Probable |
-| 政策/Policy | ... | ... | ... | ... |
-| 技术/Tech | ... | ... | ... | ... |
-| 消费者/Consumer | ... | ... | ... | ... |
+| 维度 | 短期影响 (0-3月) | 长期影响 (1-3年) | 受影响方 | 确定性 | 来源 |
+|------|-----------------|-----------------|----------|--------|------|
+| 市场/Market | ... | ... | ... | Confirmed/Probable | [N] |
+| 政策/Policy | ... | ... | ... | ... | [N] |
+| 技术/Tech | ... | ... | ... | ... | [N] |
+| 消费者/Consumer | ... | ... | ... | ... | [N] |
 
 ### 4.2 {Key Event 2}: {Title}
 [Same structure]
@@ -135,24 +137,40 @@ Group related events. Note any policy shifts, market changes, or institutional a
 ## 5. 趋势信号与风险提示 / Trend Signals & Risk Alerts
 
 ### 上升趋势 / Acceleration Signals
-- [Trend 1]: [Evidence from N events]
+- [Trend 1]: [Evidence with citations [N][N]]
 - [Trend 2]: ...
 
 ### 风险信号 / Risk Signals
-- [Risk 1]: [Evidence and potential consequence]
+- [Risk 1]: [Evidence and potential consequence [N]]
 - [Risk 2]: ...
 
 ### 新兴主题 / Emerging Themes
-- [Theme 1]: [First appearance in this period]
+- [Theme 1]: [First appearance in this period [N]]
 
 ---
 
-## 来源列表 / Sources
+## 参考文献 / References
 
-| # | 来源 | 类型 | 可信度 | 日期 | URL |
-|---|------|------|--------|------|-----|
-| 1 | ... | ... | ★★★★★ | ... | ... |
-| 2 | ... | ... | ... | ... | ... |
+CRITICAL: Every source cited as [N] in the report MUST appear here.
+Every entry MUST include a clickable URL. Format follows the same
+standard as /sci-research output.
+
+### 官方与监管来源 / Official & Regulatory Sources
+[1] Author/Org. (YYYY-MM-DD). *Title*. Publication. URL
+[2] ...
+
+### 行业与媒体来源 / Industry & Media Sources
+[N] Author/Org. (YYYY-MM-DD). Title. *Publication*. URL
+[N+1] ...
+
+---
+
+## 附录：来源可信度评级 / Appendix: Source Credibility Assessment
+
+| 来源 | 类型 | 可信度 |
+|------|------|--------|
+| Source Name [N] | Type | ★★★★★ |
+| ... | ... | ... |
 ```
 
 ## Language-Specific Guidelines
@@ -170,8 +188,10 @@ Group related events. Note any policy shifts, market changes, or institutional a
 ## Quality Rules
 
 1. **Facts before analysis.** Always state what happened before interpreting significance.
-2. **Source every claim.** Every event must link to at least one source.
-3. **Distinguish confirmed from anticipated.** Clearly separate things that happened from things expected to happen.
-4. **No padding.** If only 2 significant events occurred, report 2 — don't inflate to 5.
-5. **Acknowledge gaps.** If a period was quiet, say so rather than manufacturing significance.
-6. **Cross-entity lens.** Always note when an event in one entity has implications for another.
+2. **Cite every claim with [N].** Every factual statement must have an inline citation [N] linking to the References section. No unsourced assertions.
+3. **Every [N] must have a URL.** The References section must include a clickable URL for every cited source. If no URL exists, the source cannot be cited.
+4. **Distinguish confirmed from anticipated.** Clearly separate things that happened from things expected to happen.
+5. **No padding.** If only 2 significant events occurred, report 2 — don't inflate to 5.
+6. **Acknowledge gaps.** If a period was quiet, say so rather than manufacturing significance.
+7. **Cross-entity lens.** Always note when an event in one entity has implications for another.
+8. **Reference integrity.** Every [N] in the text must map to exactly one entry in References. No orphaned references, no missing references.

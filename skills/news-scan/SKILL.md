@@ -66,11 +66,12 @@ News-Analyst receives:
   - Topic, entities, period, target language
 
 News-Analyst produces:
-  - Deduplicated event list
-  - Chronological timeline
-  - Top 3-5 key events with impact analysis
-  - Trend signals and risk alerts
-  - Source list with credibility grades
+  - Deduplicated event list with inline citations [N]
+  - Chronological timeline with source references [N]
+  - Top 3-5 key events with impact analysis, every fact cited [N]
+  - Trend signals and risk alerts with evidence citations [N]
+  - Numbered reference list with full URLs (same format as /sci-research)
+  - Source credibility assessment table
 ```
 
 ## Output Structure
@@ -80,15 +81,16 @@ News-Analyst produces:
 
 > 时间范围 | 关注实体 | 生成日期 | 事件总数 | 来源数
 
-## 1. 核心事件摘要（3-5条最重要的）
-## 2. 完整事件时间线（表格）
-## 3. 分实体动态
+## 1. 核心事件摘要（3-5条，每个事实标注 [N] 引用）
+## 2. 完整事件时间线（表格，来源列用 [N] 编号）
+## 3. 分实体动态（正文内每个事实标注 [N]）
    ### Entity A
    ### Entity B
 ## 4. 影响分析（每个核心事件的影响矩阵）
-   | 维度 | 短期影响 | 长期影响 | 受影响方 | 确定性 |
-## 5. 趋势信号与风险提示
-## 来源列表
+   | 维度 | 短期影响 | 长期影响 | 受影响方 | 确定性 | 来源 [N] |
+## 5. 趋势信号与风险提示（每个趋势/风险标注证据 [N]）
+## 参考文献（编号对应正文 [N]，每条含 URL，分类排列）
+## 附录：来源可信度评级
 ```
 
 ## News Source Credibility
@@ -110,6 +112,9 @@ News-Analyst produces:
 5. **No inflation.** If only 2 significant events occurred, report 2.
 6. **Date every event.** Exact publication date required.
 7. **Flag single-source claims.** Mark as "[unconfirmed — single source]".
+8. **Cite every fact with [N].** Every factual claim in the report must have an inline citation [N] linking to the References section. Same standard as `/sci-research`.
+9. **Every reference must have a URL.** No URL = cannot be cited. Readers must be able to click through to verify.
+10. **Reference integrity.** Every [N] in text maps to one entry in References. No orphans, no gaps.
 
 ## Examples
 

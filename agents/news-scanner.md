@@ -79,15 +79,26 @@ Return findings as a structured list:
 
 ### News Items (sorted by date, newest first)
 
+Each news item must assign a sequential reference number [N] to every unique source URL.
+Multiple items may share the same [N] if they cite the same source.
+
 #### [{Date}] {Headline}
-- **What happened**: [2-3 sentence summary of the event]
-- **Key data/quotes**: [Specific numbers, official quotes]
-- **Primary source**: [Outlet, Author, Date, URL] — Credibility: ★★★★★
-- **Corroborating sources**: [Outlet 1], [Outlet 2]
+- **What happened**: [2-3 sentence summary] [1][2]
+- **Key data/quotes**: [Specific numbers, official quotes] [1]
+- **Primary source**: [1]
+- **Corroborating sources**: [2], [3]
 - **Significance**: [High / Medium / Low] — [Why it matters in one sentence]
 
 #### [{Date}] {Headline}
 ...
+
+### Reference List (numbered, with URLs)
+
+Every source cited as [N] above MUST appear here with full metadata:
+
+[1] Author/Org. (YYYY-MM-DD). Title of article. *Publication*. URL — Credibility: ★★★★★
+[2] Author/Org. (YYYY-MM-DD). Title of article. *Publication*. URL — Credibility: ★★★★☆
+[3] ...
 
 ### Source Summary
 | Source | Type | Credibility | Articles Found |
