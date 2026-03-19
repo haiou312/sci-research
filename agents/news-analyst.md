@@ -114,6 +114,9 @@ Use inline citations [N] for every factual claim.]
 
 ### 4.1 {Key Event 1}: {Title}
 
+![{Alt text description}]({image_url})
+*图片来源：{Publication} [{N}]*
+
 [Write as natural flowing paragraphs, NOT with "What happened" / "Why it matters" labels.
 Structure: First paragraph states the facts (what, when, who, with [N] citations).
 Second paragraph naturally transitions into significance and implications —
@@ -128,7 +131,9 @@ not filling out a form.]
 | ... | ... | ... | ... | ... | [N] |
 
 ### 4.2 {Key Event 2}: {Title}
-[Same natural paragraph style. NO "What happened" / "Why it matters" labels.]
+[Same structure: image → natural paragraphs → impact matrix.
+If no image was provided by the scanner for this event, skip the image — do not
+use a placeholder or fabricate a URL.]
 
 ---
 
@@ -200,3 +205,4 @@ standard as /sci-research output.
 8. **Acknowledge gaps.** If a period was quiet, say so rather than manufacturing significance.
 9. **Cross-entity lens.** Always note when an event in one entity has implications for another.
 10. **Reference integrity.** Every [N] in the text must map to exactly one entry in References. No orphaned references, no missing references.
+11. **Images for key events only.** Embed images only for the 3-5 core events analyzed in Section 4. Use the image URL provided by the News-Scanner agent. Format: `![alt text](url)` followed by `*图片来源：Publication [N]*` on the next line. If the scanner reported "No image available" for an event, skip the image entirely — NEVER fabricate or guess image URLs. Images must come from the cited news source, not from unrelated stock photo sites.

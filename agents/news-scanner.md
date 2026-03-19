@@ -57,6 +57,7 @@ For the top 5-8 most significant news items:
 - Extract: what happened, when, who was involved, official statements/quotes, data points
 - Identify: is this a primary report or a rewrite of another outlet's story?
 - Trace to original source if it's a rewrite
+- **Extract image URL**: Look for the article's main image — typically the `og:image` meta tag, hero image, or first prominent image in the article body. Record the full image URL and a brief alt-text description (e.g., "FCA headquarters building", "Open Banking statistics chart"). If no image is found or the URL is behind a paywall/CDN that blocks direct access, note "No image available".
 
 ### 4. Deduplication
 
@@ -88,6 +89,7 @@ Multiple items may share the same [N] if they cite the same source.
 - **Primary source**: [1]
 - **Corroborating sources**: [2], [3]
 - **Significance**: [High / Medium / Low] — [Why it matters in one sentence]
+- **Image**: [URL of og:image or main article image, if available] | [alt text description]
 
 #### [{Date}] {Headline}
 ...

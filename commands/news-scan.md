@@ -66,3 +66,5 @@ Agent(subagent_type="news-analyst") with prompt:
 
 - Display the full report in chat
 - Save to file: `{topic}-news-{date}.md`
+- If user requests Word export, use: `pandoc --extract-media=./media {file}.md -o {file}.docx` to ensure remote images are downloaded and embedded
+- If user requests PDF export, use: `md-to-pdf` (remote images render natively)
