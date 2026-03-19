@@ -114,23 +114,21 @@ Use inline citations [N] for every factual claim.]
 
 ### 4.1 {Key Event 1}: {Title}
 
-**发生了什么 / What happened:**
-[Factual description, 3-5 sentences. Every fact must have an inline citation [N].]
+[Write as natural flowing paragraphs, NOT with "What happened" / "Why it matters" labels.
+Structure: First paragraph states the facts (what, when, who, with [N] citations).
+Second paragraph naturally transitions into significance and implications —
+use phrases like "这份文件的分量在于", "这直接威胁到", "两者叠加的意义在于"
+rather than mechanical labels. The reader should feel they are reading analysis,
+not filling out a form.]
 
-**为什么重要 / Why it matters:**
-[Context and significance, 2-3 sentences. Cite sources [N] for any data or claims.]
-
-**影响矩阵 / Impact Matrix:**
+[Impact matrix follows the narrative paragraphs:]
 
 | 维度 | 短期影响 (0-3月) | 长期影响 (1-3年) | 受影响方 | 确定性 | 来源 |
 |------|-----------------|-----------------|----------|--------|------|
-| 市场/Market | ... | ... | ... | Confirmed/Probable | [N] |
-| 政策/Policy | ... | ... | ... | ... | [N] |
-| 技术/Tech | ... | ... | ... | ... | [N] |
-| 消费者/Consumer | ... | ... | ... | ... | [N] |
+| ... | ... | ... | ... | ... | [N] |
 
 ### 4.2 {Key Event 2}: {Title}
-[Same structure]
+[Same natural paragraph style. NO "What happened" / "Why it matters" labels.]
 
 ---
 
@@ -178,20 +176,27 @@ standard as /sci-research output.
 **Chinese (zh):**
 - 新闻分析风格，简洁有力
 - 标题用事件导向而非描述导向（「英国FCA发布开放金融路线图」而非「关于英国FCA的一些动态」）
-- 影响分析用判断性语言，但标注确定性等级
+- 影响分析用自然段落叙述，禁止使用「发生了什么」「为什么重要」等机械标签
+- 用过渡性表达衔接事实与分析，如"这份文件的分量在于""这直接威胁到""两者叠加的意义在于"
+- 专有名词/缩写首次出现时必须附中文全称和一句话解释
 
 **English (en):**
 - Briefing style, direct and concise
 - Lead with the most important event
 - Use active voice throughout
+- Write impact analysis as natural flowing paragraphs — NEVER use "What happened:" / "Why it matters:" labels
+- Use transitional phrases like "The significance of this is...", "This directly threatens...", "Taken together, these two developments mean..."
+- Define all acronyms on first use
 
 ## Quality Rules
 
 1. **Facts before analysis.** Always state what happened before interpreting significance.
-2. **Cite every claim with [N].** Every factual statement must have an inline citation [N] linking to the References section. No unsourced assertions.
-3. **Every [N] must have a URL.** The References section must include a clickable URL for every cited source. If no URL exists, the source cannot be cited.
-4. **Distinguish confirmed from anticipated.** Clearly separate things that happened from things expected to happen.
-5. **No padding.** If only 2 significant events occurred, report 2 — don't inflate to 5.
-6. **Acknowledge gaps.** If a period was quiet, say so rather than manufacturing significance.
-7. **Cross-entity lens.** Always note when an event in one entity has implications for another.
-8. **Reference integrity.** Every [N] in the text must map to exactly one entry in References. No orphaned references, no missing references.
+2. **Natural prose, no mechanical labels.** NEVER use "What happened:" / "Why it matters:" / "发生了什么" / "为什么重要" as section labels. Write impact analysis as flowing paragraphs — first paragraph covers facts, second naturally transitions to significance using connective phrases.
+3. **Cite every claim with [N].** Every factual statement must have an inline citation [N] linking to the References section. No unsourced assertions.
+4. **Every [N] must have a URL.** The References section must include a clickable URL for every cited source. If no URL exists, the source cannot be cited.
+5. **Define all acronyms on first use.** Every abbreviation must include full name and a one-sentence explanation when first introduced. Include a terminology quick-reference table at the top of the report.
+6. **Distinguish confirmed from anticipated.** Clearly separate things that happened from things expected to happen.
+7. **No padding.** If only 2 significant events occurred, report 2 — don't inflate to 5.
+8. **Acknowledge gaps.** If a period was quiet, say so rather than manufacturing significance.
+9. **Cross-entity lens.** Always note when an event in one entity has implications for another.
+10. **Reference integrity.** Every [N] in the text must map to exactly one entry in References. No orphaned references, no missing references.
