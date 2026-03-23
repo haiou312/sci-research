@@ -13,7 +13,7 @@
       "name": "sci-research",
       "source": "./",
       "description": "Give it a topic and entities to compare — get a ≤5000-word cited article with 4-agent pipeline (researcher, comparator, fact-checker, writer), source credibility grading, and automated quality gates",
-      "version": "1.3.1",
+      "version": "1.3.2",
       "author": {
         "name": "Peter Wang"
       },

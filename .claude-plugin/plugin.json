@@ -1,6 +1,6 @@
 {
   "name": "sci-research",
-  "version": "1.3.1",
+  "version": "1.3.2",
   "description": "Scientific popular-science deep research plugin — multi-source retrieval, cross-entity comparison, and structured report generation with authoritative references",
   "author": {
     "name": "Peter Wang"

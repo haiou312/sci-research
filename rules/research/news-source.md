@@ -45,6 +45,14 @@ These rules MUST be followed when retrieving and using news sources in `/news-sc
 
 If the minimum cannot be met, state "limited news coverage found for this period" rather than padding with older or irrelevant results.
 
+## Source Balance Requirement
+
+The final news scan output MUST maintain a roughly equal balance between:
+- **Official/regulatory sources** (~50%): government publications, regulator announcements, central bank communications, official statistics
+- **News media sources** (~50%): wire services, mainstream financial/business media, industry vertical media
+
+If the scanner finds 10 sources, aim for approximately 5 official and 5 news media. A ratio worse than 60/40 in either direction requires the scanner to actively search for more sources from the underrepresented track.
+
 ## Language and Geographic Bias Awareness
 
 - English-language sources dominate global news indexing — actively search in the entity's local language
