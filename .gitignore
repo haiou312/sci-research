@@ -11,6 +11,10 @@ node_modules/
 *.swp
 *.swo
 
+# Claude Code user-local state (IDE settings, local hooks, MCP approvals, etc.)
+# NOTE: this is NOT .claude-plugin/ (which holds plugin metadata and IS tracked).
+.claude/
+
 # Generated output files (produced by the plugin at runtime).
 # These patterns intentionally match user-facing report outputs.
 # Source files in plugin subdirectories are whitelisted below.
