@@ -1,6 +1,6 @@
 {
   "name": "sci-research",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "description": "Claude Code plugin with three independent pipelines — deep research (/sci-research), real-time news scan (/news-scan), and single-country daily news intelligence (/daily-news-intelligence). Multi-agent orchestration with source credibility grading, per-URL date verification, editorial-desk filtering, and automated quality gates.",
   "author": {
     "name": "Peter Wang"

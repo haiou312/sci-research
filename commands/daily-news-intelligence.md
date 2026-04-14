@@ -13,7 +13,7 @@ Parse the user input into the following parameters:
 1. `--country` (required): Single country or region. Accepts input in any language (e.g. `"Japan"`, `"日本"`, `"United Kingdom"`, `"中国"`, `"Germany"`).
 2. `--date` (optional, default: today): Target publication date in ISO `YYYY-MM-DD` format. Used for both the WebFetch date gate and the report filename.
 3. `--lang` (optional, default: `zh`): Output language for the final report. Supported values: `zh` (Simplified Chinese), `en` (English), `ja` (Japanese). Scanner always operates in English regardless of this setting.
-4. `--out-dir` (optional, default: `/Users/peterwang/Desktop/deep-research/`): Absolute output directory with trailing slash.
+4. `--out-dir` (optional, default: `~/Desktop/daily-news-reports/`): Output directory with trailing slash. `~` is expanded to the user's home directory at runtime. The directory is auto-created if it doesn't exist.
 5. `--min-per-category` (optional, default: `2`): Minimum stories per fixed category.
 
 Normalize the country name:
@@ -103,7 +103,7 @@ The skill enforces five H2 sections in fixed order. The actual H2 text is langua
 ### Example 5: Custom output directory
 
 ```
-/daily-news-intelligence --country "France" --date 2026-04-14 --lang en --out-dir "/Users/peterwang/Desktop/reports/"
+/daily-news-intelligence --country "France" --date 2026-04-14 --lang en --out-dir "~/Documents/news-briefings/"
 ```
 
 ## Related Skills

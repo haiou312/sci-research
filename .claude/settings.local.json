@@ -9,7 +9,8 @@
       "Bash(node -e ':*)",
       "Bash(git check-ignore:*)",
       "Bash(touch /tmp/_test_gitignore)",
-      "Bash(mv /tmp/_test_gitignore ./japan-news-2026-04-14.md)"
+      "Bash(mv /tmp/_test_gitignore ./japan-news-2026-04-14.md)",
+      "Bash(grep -H '\"version\"' .claude-plugin/*.json)"
     ]
   }
 }

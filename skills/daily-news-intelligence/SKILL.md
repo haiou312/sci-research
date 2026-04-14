@@ -35,7 +35,7 @@ Hard rules:
 | `country` | Yes | — | Single country or region, e.g. `United Kingdom`, `Japan`, `China`, `Germany` |
 | `date` | No | today | Target publication date in ISO `YYYY-MM-DD` |
 | `lang` | No | `zh` | Output language for the final report: `zh`, `en`, `ja` |
-| `out_dir` | No | `/Users/peterwang/Desktop/deep-research/` | Absolute output directory with trailing slash |
+| `out_dir` | No | `~/Desktop/daily-news-reports/` | Output directory with trailing slash. `~` is expanded to the user's home directory at runtime. The directory is auto-created if missing (Workflow Step 8). |
 | `min_per_category` | No | `2` | Minimum stories per category |
 
 Derived fields (`date_en`, `date_display`, `country_display`, `out_md`, `out_docx`) are computed per `lang` — see `references/language-spec.md`.
@@ -56,11 +56,15 @@ Derived fields (`date_en`, `date_display`, `country_display`, `out_md`, `out_doc
 
 7. **Second-pass filter** (Verifier stage). Consume the Scanner bundle and apply the four-check rubric in `references/rubric.md` § Authority & Impact Rubric (originality, authority, impact, dedup). Apply the two-step fallback if any category drops below `min_per_category`. Emit the Verifier Output Schema from `references/schemas.md`.
 
-8. **Translate and write the report** (Writer stage). Consume the Verifier's KEEP set only. Translate narrative into `lang` per `references/language-spec.md`. Produce Markdown obeying `references/output-spec.md`. Use the `Write` tool to overwrite `out_md`.
+8. **Translate and write the report** (Writer stage). Ensure the output directory exists, then write. Run:
+   ```bash
+   mkdir -p "{out_dir}"
+   ```
+   (expand `~` first). Consume the Verifier's KEEP set only. Translate narrative into `lang` per `references/language-spec.md`. Produce Markdown obeying `references/output-spec.md`. Use the `Write` tool to overwrite `out_md`.
 
 9. **Export to Word.** Run:
    ```bash
-   pandoc --extract-media=./media "{out_md}" -o "{out_docx}"
+   cd "{out_dir}" && pandoc --extract-media=./media "{out_md}" -o "{out_docx}"
    ```
    Working directory must be `out_dir` so `--extract-media` resolves cleanly.
 
