@@ -25,10 +25,20 @@ function main() {
       const data = JSON.parse(input);
 
       const filePath = data?.tool_input?.file_path || "";
-      // Only check files that look like news reports
+
+      // Early exit for plugin-internal files (agents, skills, commands, config, docs)
       if (
-        !filePath.match(/news.*\.md$/i) &&
-        !filePath.match(/新闻.*\.md$/i)
+        filePath.match(/\/(agents|commands|skills|\.claude-plugin|hooks|scripts|rules|contexts|examples)\//) ||
+        filePath.match(/\/(README|CLAUDE|AGENTS|LICENSE)\.md$/i)
+      ) {
+        process.exit(0);
+      }
+
+      // Only check files that look like news-report outputs
+      // Matches: *-news-*.md, *news-report*.md, *每日热点新闻*.md, *デイリーニュース*.md, *新闻报告*.md, *新闻简报*.md
+      if (
+        !filePath.match(/(?:-news-|news-report|news-briefing|daily-news)[^/]*\.md$/i) &&
+        !filePath.match(/(?:每日热点新闻|新闻报告|新闻简报|新闻分析|デイリーニュース)[^/]*\.md$/)
       ) {
         process.exit(0);
       }

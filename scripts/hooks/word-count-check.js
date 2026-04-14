@@ -49,9 +49,21 @@ function main() {
     try {
       const data = JSON.parse(input);
 
-      // Only check files that look like research articles
       const filePath = data?.tool_input?.file_path || "";
-      if (!filePath.match(/research.*\.md$/i) && !filePath.match(/研究.*\.md$/i)) {
+
+      // Early exit for plugin-internal files (agents, skills, commands, config, docs)
+      if (
+        filePath.match(/\/(agents|commands|skills|\.claude-plugin|hooks|scripts|rules|contexts|examples)\//) ||
+        filePath.match(/\/(README|CLAUDE|AGENTS|LICENSE)\.md$/i)
+      ) {
+        process.exit(0);
+      }
+
+      // Only check files that look like deep-research article outputs
+      if (
+        !filePath.match(/(?:deep-research|research-report|研究报告|research-article)[^/]*\.md$/i) &&
+        !filePath.match(/研究.*\.md$/i)
+      ) {
         process.exit(0);
       }
 
