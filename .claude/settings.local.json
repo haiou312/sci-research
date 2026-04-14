@@ -6,7 +6,10 @@
       "Bash(node scripts/hooks/news-freshness-check.js)",
       "Bash(echo \"exit: $?\")",
       "Bash(node scripts/hooks/reference-validator.js)",
-      "Bash(node -e ':*)"
+      "Bash(node -e ':*)",
+      "Bash(git check-ignore:*)",
+      "Bash(touch /tmp/_test_gitignore)",
+      "Bash(mv /tmp/_test_gitignore ./japan-news-2026-04-14.md)"
     ]
   }
 }

@@ -13,7 +13,7 @@
       "name": "sci-research",
       "source": "./",
       "description": "Three independent pipelines: (1) /sci-research — ≤5000-word comparative article from researcher → comparator → fact-checker → writer; (2) /news-scan — real-time news briefing with image extraction from news-scanner → news-imager → news-analyst; (3) /daily-news-intelligence — dated single-country daily news briefing in zh/en/ja from news-scanner → news-verifier → daily-news-writer with per-URL WebFetch date verification, T1-T4 source gating, editorial-desk filtering (originality + authority + impact + dedup), five-category coverage enforcement, and APA 7th references",
-      "version": "1.4.0",
+      "version": "1.4.1",
       "author": {
         "name": "Peter Wang"
       },
