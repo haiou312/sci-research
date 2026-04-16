@@ -1,12 +1,25 @@
 ---
 name: daily-news-intelligence
-description: Generate a dated single-country daily news briefing in the requested target language using a three-stage Scanner → Verifier → Writer pipeline. Scanner performs English WebSearch + per-URL WebFetch date verification against T1-T4 sources under five fixed categories. Verifier enforces a second-pass filter on originality, authority, impact, and dedup — keeping only influential wire-grade reporting. Writer compiles the final report in the target language with strict heading syntax and APA 7th references, then pandoc exports to .docx.
+description: "Generate a dated single-country daily news briefing (daily news, news intelligence, daily briefing, country news report, 每日新闻, 每日情报, デイリーニュース). Three-stage Scanner → Verifier → Writer pipeline: English WebSearch with per-URL date verification against T1-T4 sources, editorial second-pass filter, then target-language Markdown + docx report with APA 7th references. Supports scheduled/automated execution."
 origin: sci-research-plugin
 ---
 
 # Daily News Intelligence (Single Country)
 
-Generate a professional dated daily report for institutional readers covering a single country or region. Evidence collection is always performed in English against verified live web sources; the final report is translated into the requested target language at the end.
+Generate a professional dated daily report for institutional readers covering a single country or region. Designed for both interactive and **scheduled/automated** execution. Evidence collection is always performed in English against verified live web sources; the final report is translated into the requested target language at the end.
+
+## Quick Reference (Orchestrator Checklist)
+
+```
+1. Validate params → compute derived fields → expand ~
+2. Launch Scanner agent → capture Scanner Output Schema
+3. IF zero candidates → STOP with message
+4. Launch Verifier agent (Scanner output in prompt) → capture Verifier Output Schema
+5. Launch Writer agent (Verifier output + params in prompt) → Writer calls Write tool
+6. mkdir -p → pandoc export (skip if pandoc missing)
+7. IF --email → send via Python script (dry-run or real)
+8. Verify: ls both files, grep H2/H3 counts
+```
 
 ## Operating Principle
 
