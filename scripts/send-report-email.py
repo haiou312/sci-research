@@ -33,7 +33,10 @@ import os
 import smtplib
 import ssl
 import sys
-from email.message import EmailMessage
+from email.mime.base import MIMEBase
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email import encoders
 from pathlib import Path
 
 
@@ -97,13 +100,19 @@ def read_body(body_text, body_file):
 
 
 def build_message(cfg, recipients, subject, body, attachments):
-    """Construct an EmailMessage with attachments."""
-    msg = EmailMessage()
+    """Construct a MIMEMultipart message with RFC 2231 encoded filenames.
+
+    Uses MIMEMultipart("mixed") instead of EmailMessage to ensure
+    attachments are properly included and CJK filenames are encoded
+    via RFC 2231 for maximum client compatibility.
+    """
+    msg = MIMEMultipart("mixed")
     from_name = cfg["from_name"] or cfg["user"]
     msg["From"] = f'"{from_name}" <{cfg["user"]}>'
     msg["To"] = ", ".join(recipients)
     msg["Subject"] = subject
-    msg.set_content(body, charset="utf-8")
+
+    msg.attach(MIMEText(body, "plain", "utf-8"))
 
     for path in attachments:
         p = Path(path).expanduser()
@@ -116,13 +125,20 @@ def build_message(cfg, recipients, subject, body, attachments):
             ctype = "application/octet-stream"
         maintype, subtype = ctype.split("/", 1)
 
+        part = MIMEBase(maintype, subtype)
         with open(p, "rb") as f:
-            msg.add_attachment(
-                f.read(),
-                maintype=maintype,
-                subtype=subtype,
-                filename=p.name,
-            )
+            part.set_payload(f.read())
+        encoders.encode_base64(part)
+
+        # RFC 2231 encoding for CJK filenames — (charset, language, value)
+        part.set_param("name", p.name, header="Content-Type", charset="utf-8")
+        part.add_header(
+            "Content-Disposition",
+            "attachment",
+            filename=("utf-8", "", p.name),
+        )
+        msg.attach(part)
+
     return msg
 
 
@@ -134,16 +150,21 @@ def send(cfg, msg, dry_run):
         print(f"From: {msg['From']}")
         print(f"To: {msg['To']}")
         print(f"Subject: {msg['Subject']}")
-        attachment_names = [a.get_filename() or "(unnamed)" for a in msg.iter_attachments()]
+        attachment_names = []
+        body_text = ""
+        for part in msg.walk():
+            fn = part.get_filename()
+            if fn:
+                attachment_names.append(fn)
+            elif part.get_content_type() == "text/plain" and not body_text:
+                body_text = part.get_payload(decode=True).decode("utf-8", errors="replace")
         print(f"Attachments ({len(attachment_names)}): {attachment_names}")
-        # Print first 800 chars of body for inspection
-        body_part = msg.get_body(preferencelist=("plain",))
-        if body_part:
-            body_preview = body_part.get_content()[:800]
+        if body_text:
+            body_preview = body_text[:800]
             print("--- body preview ---")
             print(body_preview)
-            if len(body_part.get_content()) > 800:
-                print(f"... (body truncated, total {len(body_part.get_content())} chars)")
+            if len(body_text) > 800:
+                print(f"... (body truncated, total {len(body_text)} chars)")
         return
 
     try:
