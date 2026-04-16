@@ -74,7 +74,7 @@ def parse_curator_output(text):
             i += 2
 
     # Extract REFERENCES
-    refs_match = re.search(r"^REFERENCES:\s*\n(.+?)(?=^DISCLAIMER:|$)", text, re.M | re.S)
+    refs_match = re.search(r"^REFERENCES:\s*\n(.+?)(?=\nDISCLAIMER:)", text, re.M | re.S)
     if refs_match:
         for line in refs_match.group(1).strip().split("\n"):
             line = line.strip()
@@ -186,10 +186,8 @@ def generate_docx(template_path, data, output_path):
         run = p_toc.add_run(toc_item)
         set_run_font(run, bold=True, size_pt=10.5)
 
-    # 4. Separator after TOC
-    p_sep = doc.add_paragraph()
-    run_sep = p_sep.add_run("\\")
-    set_run_font(run_sep, bold=True)
+    # 4. Empty paragraph after TOC
+    doc.add_paragraph()
 
     # 5. Story bodies
     for story in data["stories"]:
@@ -221,10 +219,29 @@ def generate_docx(template_path, data, output_path):
     run_ref = p_ref_heading.add_run("References")
     set_run_font(run_ref, bold=True, size_pt=12)
 
-    # 8. References table
+    # 8. References table (borderless, matching template)
     if data["references"]:
         table = doc.add_table(rows=len(data["references"]), cols=2)
-        table.style = "Table Grid"
+        # Remove all borders for a clean look
+        tbl = table._tbl
+        tblPr = tbl.find(qn("w:tblPr"))
+        if tblPr is None:
+            tblPr = OxmlElement("w:tblPr")
+            tbl.insert(0, tblPr)
+        tblBorders = OxmlElement("w:tblBorders")
+        for border_name in ("top", "left", "bottom", "right", "insideH", "insideV"):
+            border = OxmlElement(f"w:{border_name}")
+            border.set(qn("w:val"), "none")
+            border.set(qn("w:sz"), "0")
+            border.set(qn("w:space"), "0")
+            border.set(qn("w:color"), "auto")
+            tblBorders.append(border)
+        # Remove existing borders if any
+        existing = tblPr.find(qn("w:tblBorders"))
+        if existing is not None:
+            tblPr.remove(existing)
+        tblPr.append(tblBorders)
+
         for i, ref in enumerate(data["references"]):
             row = table.rows[i]
             # Column 1: [N]
