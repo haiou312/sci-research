@@ -13,7 +13,7 @@ Parse the user input into the following parameters:
 1. `--country` (required): Single country or region. Accepts input in any language (e.g. `"Japan"`, `"日本"`, `"United Kingdom"`, `"中国"`, `"Germany"`).
 2. `--date` (optional, default: today): Target publication date in ISO `YYYY-MM-DD` format. Used for both the WebFetch date gate and the report filename.
 3. `--lang` (optional, default: `zh`): Output language for the final report. Supported values: `zh` (Simplified Chinese), `en` (English), `ja` (Japanese). Scanner always operates in English regardless of this setting.
-4. `--out-dir` (optional, default: `~/Desktop/daily-news-reports/`): Output directory with trailing slash. `~` is expanded to the user's home directory at runtime. The directory is auto-created if it doesn't exist.
+4. `--out-dir` (optional, default: `~/Desktop/daily-news-reports/{date}/`): Output directory. `{date}` is replaced with the ISO date (e.g. `2026-04-16`). `~` is expanded at runtime. The directory is auto-created if it doesn't exist.
 5. `--min-per-category` (optional, default: `2`): Minimum stories per fixed category.
 6. `--email` (optional, default: empty): Comma-separated recipient email addresses. When non-empty, the report is sent via Gmail SMTP at the end of the pipeline. Requires `GOOGLE_EMAIL_USERNAME` and `GOOGLE_EMAIL_APP_PASSWORD` environment variables. See `.env.example` at the repo root.
 7. `--email-subject` (optional, default: auto-generated): Email subject line. Default pattern is `{country_display} {title_label} — {date_display}` rendered in `lang`.
