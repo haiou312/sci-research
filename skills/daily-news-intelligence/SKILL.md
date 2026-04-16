@@ -1,12 +1,25 @@
 ---
 name: daily-news-intelligence
-description: Generate a dated single-country daily news briefing in the requested target language using a three-stage Scanner → Verifier → Writer pipeline. Scanner performs English WebSearch + per-URL WebFetch date verification against T1-T4 sources under five fixed categories. Verifier enforces a second-pass filter on originality, authority, impact, and dedup — keeping only influential wire-grade reporting. Writer compiles the final report in the target language with strict heading syntax and APA 7th references, then pandoc exports to .docx.
+description: "Generate a dated single-country daily news briefing (daily news, news intelligence, daily briefing, country news report, 每日新闻, 每日情报, デイリーニュース). Three-stage Scanner → Verifier → Writer pipeline: English WebSearch with per-URL date verification against T1-T4 sources, editorial second-pass filter, then target-language Markdown + docx report with APA 7th references. Supports scheduled/automated execution."
 origin: sci-research-plugin
 ---
 
 # Daily News Intelligence (Single Country)
 
-Generate a professional dated daily report for institutional readers covering a single country or region. Evidence collection is always performed in English against verified live web sources; the final report is translated into the requested target language at the end.
+Generate a professional dated daily report for institutional readers covering a single country or region. Designed for both interactive and **scheduled/automated** execution. Evidence collection is always performed in English against verified live web sources; the final report is translated into the requested target language at the end.
+
+## Quick Reference (Orchestrator Checklist)
+
+```
+1. Validate params → compute derived fields → expand ~
+2. Launch Scanner agent → capture Scanner Output Schema
+3. IF zero candidates → STOP with message
+4. Launch Verifier agent (Scanner output in prompt) → capture Verifier Output Schema
+5. Launch Writer agent (Verifier output + params in prompt) → Writer calls Write tool
+6. mkdir -p → pandoc export (skip if pandoc missing)
+7. IF --email → send via Python script (dry-run or real)
+8. Verify: ls both files, grep H2/H3 counts
+```
 
 ## Operating Principle
 
@@ -47,11 +60,39 @@ Derived fields (`date_en`, `date_display`, `country_display`, `out_md`, `out_doc
 
 Email delivery reads Gmail SMTP credentials from environment variables (`GOOGLE_EMAIL_USERNAME`, `GOOGLE_EMAIL_APP_PASSWORD`, `GOOGLE_EMAIL_FROM_NAME`, `GOOGLE_EMAIL_HOST`, `GOOGLE_EMAIL_PORT`, `GOOGLE_EMAIL_START_TLS`). See `.env.example` at the repo root and `references/email-spec.md` for the full spec.
 
+## Data Handoff Between Stages
+
+Each stage runs as a subagent. The orchestrator passes data between stages via the subagent **prompt text** — not files, not environment variables. Specifically:
+
+- **Scanner → Verifier**: The orchestrator includes the Scanner's full output (Scanner Output Schema from `references/schemas.md`) verbatim in the Verifier agent's prompt.
+- **Verifier → Writer**: The orchestrator includes the Verifier's full output (Verifier Output Schema) plus runtime parameters (`country`, `date`, `lang`, `out_md`, `min_per_category`) in the Writer agent's prompt.
+
+The orchestrator must not summarise, truncate, or reformat the upstream output — pass it verbatim so downstream agents can parse the expected schema.
+
 ## Workflow
 
-1. **Validate scope.** Normalize `country` for English search and target-language rendering. Default `date` to today if omitted. Build all derived fields via `references/language-spec.md`.
+1. **Validate scope.** Normalize `country` for English search and target-language rendering. Default `date` to today (`date +%Y-%m-%d`). Build all derived fields per `references/language-spec.md`:
+   - `date_en` — e.g. `April 16, 2026`
+   - `date_display` — per `lang` (e.g. `2026年4月16日` for zh/ja)
+   - `country_display` — country name in `lang`
+   - `out_md` / `out_docx` — per filename pattern in `references/language-spec.md`
+   Expand `~` in `out_dir` immediately:
+   ```bash
+   OUT_DIR="${out_dir/#\~/$HOME}"
+   ```
+   Use `OUT_DIR` (expanded) in all subsequent bash commands.
 
-2. **Scan candidates** (Scanner stage, English only). Generate at least three distinct query patterns per category. Collect 20-30 candidate URLs across the five fixed categories. Prioritise breadth over depth.
+2. **Scan candidates** (Scanner stage, English only). Generate at least three distinct query patterns per category using this template structure:
+
+   | Category | Example queries (substitute `{country}` and `{date_en}`) |
+   |----------|----------------------------------------------------------|
+   | Economy | `{country} economy GDP trade {date_en}`, `{country} central bank interest rate {date_en}`, `{country} stock market {date_en}` |
+   | Politics | `{country} politics legislation parliament {date_en}`, `{country} diplomacy foreign policy {date_en}`, `{country} election regulation {date_en}` |
+   | Technology | `{country} technology AI semiconductor {date_en}`, `{country} tech industry startup {date_en}`, `{country} digital infrastructure {date_en}` |
+   | Society | `{country} society health education {date_en}`, `{country} demographics labor {date_en}`, `{country} environment climate {date_en}` |
+   | Other | `{country} news today {date_en}`, `{country} major events {date_en}`, `{country} breaking news {date_en}` |
+
+   Collect 20-30 candidate URLs across the five fixed categories. Prioritise breadth over depth. If Scanner returns zero candidates across all categories, stop and report: "No news candidates found for {country} on {date}. The date may be a future date, a holiday, or WebSearch may be temporarily unavailable." Do not proceed to the Verifier.
 
 3. **Verify each candidate.** For every candidate URL, call `web_fetch` and extract the publication date. Apply the rules in `references/rubric.md` § Date Verification Rules — keep only stories where publication date equals `date` (local or UTC match).
 
@@ -59,21 +100,25 @@ Email delivery reads Gmail SMTP credentials from environment variables (`GOOGLE_
 
 5. **Enforce category coverage.** If any category has fewer than `min_per_category`, run a second search pass scoped to that category. If still insufficient, record the gap — do not substitute low-tier sources.
 
-6. **Compose the Scanner output.** Return a single English data bundle matching `references/schemas.md` § Scanner Output Schema.
+6. **Compose the Scanner output.** The Scanner agent returns a single English data bundle matching `references/schemas.md` § Scanner Output Schema. The orchestrator captures this output for the next step.
 
-7. **Second-pass filter** (Verifier stage). Consume the Scanner bundle and apply the four-check rubric in `references/rubric.md` § Authority & Impact Rubric (originality, authority, impact, dedup). Apply the two-step fallback if any category drops below `min_per_category`. Emit the Verifier Output Schema from `references/schemas.md`.
+7. **Second-pass filter** (Verifier stage). Launch a Verifier agent with the Scanner's full output included verbatim in its prompt. The Verifier applies the four-check rubric in `references/rubric.md` § Authority & Impact Rubric (originality, authority, impact, dedup). Applies the two-step fallback if any category drops below `min_per_category`. Emits the Verifier Output Schema from `references/schemas.md`. The orchestrator captures this output for the Writer.
 
-8. **Translate and write the report** (Writer stage). Ensure the output directory exists, then write. Run:
+8. **Translate and write the report** (Writer stage). Ensure the output directory exists:
    ```bash
-   mkdir -p "{out_dir}"
+   mkdir -p "$OUT_DIR"
    ```
-   (expand `~` first). Consume the Verifier's KEEP set only. Translate narrative into `lang` per `references/language-spec.md`. Produce Markdown obeying `references/output-spec.md`. Use the `Write` tool to overwrite `out_md`.
+   If `mkdir -p` fails (permissions, read-only filesystem), stop and report the error — do not silently write to a fallback location. Consume the Verifier's KEEP set only. Translate narrative into `lang` per `references/language-spec.md`. Produce Markdown obeying `references/output-spec.md`. Use the `Write` tool to overwrite `out_md`.
 
-9. **Export to Word.** Run:
+9. **Export to Word.** First verify pandoc is available:
    ```bash
-   cd "{out_dir}" && pandoc --extract-media=./media "{out_md}" -o "{out_docx}"
+   command -v pandoc >/dev/null 2>&1
    ```
-   Working directory must be `out_dir` so `--extract-media` resolves cleanly.
+   If pandoc is not installed, skip docx export and report: "pandoc not found — .docx export skipped. Install pandoc to enable Word export." The Markdown file is still valid output. If pandoc is available, run:
+   ```bash
+   cd "$OUT_DIR" && pandoc --extract-media=./media "$(basename "$out_md")" -o "$(basename "$out_docx")"
+   ```
+   If pandoc exits non-zero, report the error but do not delete the Markdown file.
 
 10. **Send email** (optional — only if `email` parameter is non-empty). Build the subject and body per `references/email-spec.md`, write the body to a temp file, and invoke:
     ```bash
