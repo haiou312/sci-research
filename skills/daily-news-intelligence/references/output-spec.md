@@ -44,6 +44,26 @@ Markdown heading markers are syntax tokens, not natural language.
 - The `summary_marker`, `analysis_marker`, and `references_marker` each occupy their own line; paragraph body starts on the next line.
 - URLs must appear verbatim in the `References` line, never wrapped as `[text](url)`.
 
+## Reference Format Rules (CRITICAL)
+
+Every story MUST end with the `{references_marker}` block containing exactly one APA 7th formatted reference with a bare URL. The following alternative formats are **strictly prohibited**:
+
+| Prohibited format | Why it's wrong |
+|---|---|
+| `[来源名](https://...)` | Markdown hyperlink — URL hidden in rendered output, not copyable |
+| `来源：\n- 来源名 https://...` | Bullet-list style — not APA format, no date/title metadata |
+| `（来源：来源名 https://...）` | Inline parenthetical — breaks story block structure |
+| `（*Japan Times*，2026年4月15日）` with refs at bottom | In-text citation + global ref list — user must scroll to find URL |
+| `来源：Bloomberg https://...` (indented) | Missing APA fields, breaks block structure |
+
+The ONLY acceptable format is the APA 7th reference colocated with each story:
+
+```md
+**References**
+
+Reuters. (2026, April 16). Article title here. Reuters. https://www.reuters.com/...
+```
+
 ### Invalid examples
 
 ```md
@@ -52,6 +72,9 @@ Markdown heading markers are syntax tokens, not natural language.
 **Summary**The Bank of Japan held…
 **References** Reuters (2026, April 14). Title. https://…
 [Reuters: BoJ holds rates](https://example.com)
+来源：
+- Reuters https://www.reuters.com/...
+（来源：[Reuters](https://www.reuters.com/...)）
 ```
 
 ### Valid example (`lang=en`)

@@ -200,10 +200,11 @@ Before calling `Write`, silently verify:
 2. `h1_pattern` matches exactly for the chosen `lang`.
 3. Five H2 headings appear in order and match their Localisation Table values exactly.
 4. Every story title line starts with `### ` and satisfies Title Length Rules for `lang`.
-5. Every `**References**` (or its localised equivalent) line is followed on the next line by a single APA 7th reference.
-6. No Markdown link syntax `[text](url)` appears in the document.
-7. Every category either has `min_per_category` stories or carries a single italic `gap_note` line.
-8. `analysis_marker` never appears with an empty body.
+5. Every `**References**` line is followed on the next line by a single APA 7th reference in the format: `Author. (Year, Month Day). Title. Outlet. https://...`
+6. No Markdown link syntax `[text](url)` appears anywhere in the document.
+7. No alternative reference formats appear: no `来源：` blocks, no `（来源：...）` inline citations, no bullet-list URLs, no global reference section at the end.
+8. Every category either has `min_per_category` stories or carries a single italic `gap_note` line.
+9. `analysis_marker` never appears with an empty body.
 
 If any check fails, fix before writing. Do not ship a document that fails self-check.
 
