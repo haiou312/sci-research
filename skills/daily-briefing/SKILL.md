@@ -44,10 +44,12 @@ Derived fields:
 
 ## Workflow
 
-1. **Validate params.** Default `date` to today (`date +%Y-%m-%d`). Parse `countries` into a list. Expand `~` in `source_dir`:
+1. **Validate params.** Default `date` to today (`date +%Y-%m-%d`). Parse `countries` into a comma-separated list. Expand `~` in `source_dir`. Compute derived fields:
    ```bash
    SOURCE_DIR="${source_dir/#\~/$HOME}"
    DATE_DIR="$SOURCE_DIR/$DATE"
+   DATE_DISPLAY="$(python3 -c "from datetime import date; d=date.fromisoformat('$DATE'); print(f'{d.year}年{d.month}月{d.day}日')")"
+   OUT_DOCX="$DATE_DIR/${DATE} 简报.docx"
    ```
 
 2. **Check source directory.** List Markdown files:
@@ -80,25 +82,35 @@ Derived fields:
    ```
    If `pip3 install` also fails, stop and report: "python-docx installation failed. Install manually: pip3 install python-docx"
 
-6. **Curate and rewrite stories.** Launch a `briefing-curator` Agent (opus) with this prompt structure:
-
-   ```
-   Read all Markdown files in {DATE_DIR}. The available countries are: {countries}.
-   Select the {total} most impactful stories, distributed evenly across countries.
-   Date for this briefing: {date_display}
-   
-   Here are the files to read:
-   {list of full paths to each .md file in DATE_DIR}
-   
-   Output in the exact structured format specified in your system prompt.
-   ```
-
-   The Agent returns structured text (TITLE/DATE/TOC/STORIES/REFERENCES/DISCLAIMER).
-
-7. **Generate branded docx.** Write the Agent output to a temp file, then invoke:
+6. **Curate and rewrite stories.** First, list the source files for the agent:
    ```bash
-   CURATOR_FILE=$(mktemp /tmp/briefing-curator.XXXXXX.txt)
-   # (write Agent output to $CURATOR_FILE)
+   MD_FILES=$(find "$DATE_DIR" -maxdepth 1 -name "*.md" -type f | sort)
+   ```
+   Launch a `briefing-curator` Agent (opus, subagent_type: `general-purpose`, model: `opus`) with this prompt:
+
+   ```
+   Read all Markdown files listed below and produce a unified briefing.
+   
+   Countries: {countries}
+   Target stories: {total}
+   Date: {DATE_DISPLAY}
+   
+   Files to read (use the Read tool on each):
+   {each line of MD_FILES as a full path, one per line}
+   
+   Write the output to /tmp/briefing-curator-output.txt using the Write tool.
+   
+   Output format: TITLE/DATE/TOC/STORIES/REFERENCES/DISCLAIMER
+   as specified in your system prompt (agents/briefing-curator.md).
+   ```
+
+   The Agent reads each MD file via the Read tool, selects and rewrites stories, then writes its structured output to a temp file. The orchestrator uses this file as input to Step 7.
+   
+   If the Agent output file is empty or missing, stop and report: "Curator agent produced no output."
+
+7. **Generate branded docx.** Use the curator output file from Step 6:
+   ```bash
+   CURATOR_FILE="/tmp/briefing-curator-output.txt"
    
    python3 "${SKILL_DIR}/scripts/generate-branded-docx.py" \
      --template "${SKILL_DIR}/template/briefing-template.docx" \
@@ -152,10 +164,11 @@ Derived fields:
 
 | File | Contents |
 |------|----------|
+| `agents/briefing-curator.md` (repo root) | Curator agent definition: selection criteria, writing style, output format schema |
 | `references/email-spec.md` | Email subject/body templates, exit code handling |
 | `template/briefing-template.docx` | SPD Bank branded docx template (header logo + footer decoration) |
-| `scripts/generate-branded-docx.py` | Docx generation from curator output |
-| `scripts/send-briefing-email.py` | Gmail SMTP email sender |
+| `scripts/generate-branded-docx.py` | Docx generation from curator output (exit codes 0-4) |
+| `scripts/send-briefing-email.py` | Gmail SMTP email sender (exit codes 0-5) |
 
 ## Invocation Examples
 
