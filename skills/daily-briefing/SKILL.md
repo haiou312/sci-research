@@ -10,20 +10,6 @@ Generate a branded SPD Bank Word document containing 13-15 curated news stories 
 
 Designed for both interactive and **scheduled/automated** execution.
 
-## Quick Reference (Orchestrator Checklist)
-
-```
-1. Validate params → expand ~ → compute paths
-2. Check source dir for MD files
-3. IF no files and --no-wait not set → sleep 300 → recheck
-4. IF still no files → send "no report" email → STOP
-5. Ensure python-docx installed
-6. Launch briefing-curator Agent → capture structured output
-7. Write output to temp file → run generate-branded-docx.py
-8. IF --email → run send-briefing-email.py
-9. Verify: ls docx, report story count
-```
-
 ## Input Parameters
 
 | Parameter | Required | Default | Description |
@@ -106,6 +92,24 @@ Derived fields:
 
    The Agent reads each MD file via the Read tool, selects and rewrites stories, then writes its structured output to a temp file. The orchestrator uses this file as input to Step 7.
    
+   Expected output schema (see `agents/briefing-curator.md` for full spec):
+   ```
+   TITLE: 新闻简报
+   DATE: {YYYY年M月D日}
+   TOC:
+   - {headline 1}
+   ...
+   STORIES:
+   **1.{title}**
+   {paragraph} [1]
+   ...
+   REFERENCES:
+   [1]  {URL}
+   ...
+   DISCLAIMER:
+   免责声明：...
+   ```
+   
    If the Agent output file is empty or missing, stop and report: "Curator agent produced no output."
 
 7. **Generate branded docx.** Use the curator output file from Step 6:
@@ -151,14 +155,6 @@ Derived fields:
    ls -la "$OUT_DOCX"
    ```
    Report file path, size, and story count.
-
-## Stage → Agent Map
-
-| Stage | Agent | Model | Tools |
-|-------|-------|-------|-------|
-| Curator | `briefing-curator` | opus | Read, Grep, Glob |
-| Docx generation | — (Python script) | — | — |
-| Email delivery | — (Python script) | — | — |
 
 ## References
 
