@@ -47,15 +47,39 @@ Derived fields (`date_en`, `date_display`, `country_display`, `out_md`, `out_doc
 
 Email delivery reads Gmail SMTP credentials from environment variables (`GOOGLE_EMAIL_USERNAME`, `GOOGLE_EMAIL_APP_PASSWORD`, `GOOGLE_EMAIL_FROM_NAME`, `GOOGLE_EMAIL_HOST`, `GOOGLE_EMAIL_PORT`, `GOOGLE_EMAIL_START_TLS`). See `.env.example` at the repo root and `references/email-spec.md` for the full spec.
 
+## Data Handoff Between Stages
+
+Each stage runs as a subagent. The orchestrator passes data between stages via the subagent **prompt text** — not files, not environment variables. Specifically:
+
+- **Scanner → Verifier**: The orchestrator includes the Scanner's full output (Scanner Output Schema from `references/schemas.md`) verbatim in the Verifier agent's prompt.
+- **Verifier → Writer**: The orchestrator includes the Verifier's full output (Verifier Output Schema) plus runtime parameters (`country`, `date`, `lang`, `out_md`, `min_per_category`) in the Writer agent's prompt.
+
+The orchestrator must not summarise, truncate, or reformat the upstream output — pass it verbatim so downstream agents can parse the expected schema.
+
 ## Workflow
 
-1. **Validate scope.** Normalize `country` for English search and target-language rendering. Default `date` to today if omitted. Build all derived fields via `references/language-spec.md`. Expand `~` in `out_dir` immediately:
+1. **Validate scope.** Normalize `country` for English search and target-language rendering. Default `date` to today (`date +%Y-%m-%d`). Build all derived fields per `references/language-spec.md`:
+   - `date_en` — e.g. `April 16, 2026`
+   - `date_display` — per `lang` (e.g. `2026年4月16日` for zh/ja)
+   - `country_display` — country name in `lang`
+   - `out_md` / `out_docx` — per filename pattern in `references/language-spec.md`
+   Expand `~` in `out_dir` immediately:
    ```bash
    OUT_DIR="${out_dir/#\~/$HOME}"
    ```
    Use `OUT_DIR` (expanded) in all subsequent bash commands.
 
-2. **Scan candidates** (Scanner stage, English only). Generate at least three distinct query patterns per category. Collect 20-30 candidate URLs across the five fixed categories. Prioritise breadth over depth. If Scanner returns zero candidates across all categories, stop and report: "No news candidates found for {country} on {date}. The date may be a future date, a holiday, or WebSearch may be temporarily unavailable." Do not proceed to the Verifier.
+2. **Scan candidates** (Scanner stage, English only). Generate at least three distinct query patterns per category using this template structure:
+
+   | Category | Example queries (substitute `{country}` and `{date_en}`) |
+   |----------|----------------------------------------------------------|
+   | Economy | `{country} economy GDP trade {date_en}`, `{country} central bank interest rate {date_en}`, `{country} stock market {date_en}` |
+   | Politics | `{country} politics legislation parliament {date_en}`, `{country} diplomacy foreign policy {date_en}`, `{country} election regulation {date_en}` |
+   | Technology | `{country} technology AI semiconductor {date_en}`, `{country} tech industry startup {date_en}`, `{country} digital infrastructure {date_en}` |
+   | Society | `{country} society health education {date_en}`, `{country} demographics labor {date_en}`, `{country} environment climate {date_en}` |
+   | Other | `{country} news today {date_en}`, `{country} major events {date_en}`, `{country} breaking news {date_en}` |
+
+   Collect 20-30 candidate URLs across the five fixed categories. Prioritise breadth over depth. If Scanner returns zero candidates across all categories, stop and report: "No news candidates found for {country} on {date}. The date may be a future date, a holiday, or WebSearch may be temporarily unavailable." Do not proceed to the Verifier.
 
 3. **Verify each candidate.** For every candidate URL, call `web_fetch` and extract the publication date. Apply the rules in `references/rubric.md` § Date Verification Rules — keep only stories where publication date equals `date` (local or UTC match).
 
@@ -63,9 +87,9 @@ Email delivery reads Gmail SMTP credentials from environment variables (`GOOGLE_
 
 5. **Enforce category coverage.** If any category has fewer than `min_per_category`, run a second search pass scoped to that category. If still insufficient, record the gap — do not substitute low-tier sources.
 
-6. **Compose the Scanner output.** Return a single English data bundle matching `references/schemas.md` § Scanner Output Schema.
+6. **Compose the Scanner output.** The Scanner agent returns a single English data bundle matching `references/schemas.md` § Scanner Output Schema. The orchestrator captures this output for the next step.
 
-7. **Second-pass filter** (Verifier stage). Consume the Scanner bundle and apply the four-check rubric in `references/rubric.md` § Authority & Impact Rubric (originality, authority, impact, dedup). Apply the two-step fallback if any category drops below `min_per_category`. Emit the Verifier Output Schema from `references/schemas.md`.
+7. **Second-pass filter** (Verifier stage). Launch a Verifier agent with the Scanner's full output included verbatim in its prompt. The Verifier applies the four-check rubric in `references/rubric.md` § Authority & Impact Rubric (originality, authority, impact, dedup). Applies the two-step fallback if any category drops below `min_per_category`. Emits the Verifier Output Schema from `references/schemas.md`. The orchestrator captures this output for the Writer.
 
 8. **Translate and write the report** (Writer stage). Ensure the output directory exists:
    ```bash
