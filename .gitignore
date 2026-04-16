@@ -33,7 +33,8 @@ node_modules/
 !scripts/**
 !rules/**
 !contexts/**
-!examples/**
+!examples/**/*.md
+# examples/*.docx are reference samples, not tracked (template copy lives in skills/daily-briefing/template/)
 !.claude-plugin/**
 
 # Session logs
