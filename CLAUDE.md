@@ -6,15 +6,15 @@
 
 ## 项目定位
 
-这是一个 **Claude Code 插件**（`sci-research`，当前版本 1.5.0），通过多 Agent 编排，将"主题 + 比较实体 + 输出语言"转化为高质量研究/新闻产出。插件包含三条**完全独立**的流水线，互不共享 Agent：
+这是一个 **Claude Code 插件**（`sci-research`，当前版本 1.6.0），通过多 Agent 编排，将"主题 + 比较实体 + 输出语言"转化为高质量研究/新闻产出。插件包含四条**完全独立**的流水线，互不共享 Agent：
 
-| 特性 | `/sci-research`（深度研究） | `/news-scan`（实时新闻） | `/daily-news-intelligence`（每日情报） |
-|---|---|---|---|
-| **目标** | 多实体对比的科普研究文章 | 指定时间窗内的新闻简报 | 单国每日新闻简报 |
-| **时间焦点** | 历史 + 当前 | 近 7/30/90 天 | 单日（指定日期） |
-| **来源** | 学术论文、官方报告、权威媒体 | 通讯社、财经媒体、行业媒体 | T1-T4 分级媒体（逐 URL 日期核验） |
-| **Agent 链** | researcher → comparator → fact-checker → writer | news-scanner → news-imager → news-analyst | news-scanner → news-verifier → daily-news-writer |
-| **产出** | ≤5000 字结构化文章（含 APA 引用） | 1000-3000 字简报（含事件时间线 + 图片） | 五类固定栏目简报（Markdown + docx，可邮件投递） |
+| 特性 | `/sci-research`（深度研究） | `/news-scan`（实时新闻） | `/daily-news-intelligence`（每日情报） | `/daily-briefing`（品牌简报） |
+|---|---|---|---|---|
+| **目标** | 多实体对比的科普研究文章 | 指定时间窗内的新闻简报 | 单国每日新闻简报 | 多国品牌新闻简报（SPD Bank） |
+| **时间焦点** | 历史 + 当前 | 近 7/30/90 天 | 单日（指定日期） | 单日（读取已有报告） |
+| **来源** | 学术论文、官方报告、权威媒体 | 通讯社、财经媒体、行业媒体 | T1-T4 分级媒体（逐 URL 日期核验） | Pipeline C 产出的各国 Markdown |
+| **Agent 链** | researcher → comparator → fact-checker → writer | news-scanner → news-imager → news-analyst | news-scanner → news-verifier → daily-news-writer | briefing-curator → docx 脚本 → 邮件脚本 |
+| **产出** | ≤5000 字结构化文章（含 APA 引用） | 1000-3000 字简报（含事件时间线 + 图片） | 五类固定栏目简报（Markdown + docx，可邮件投递） | 13-15 条品牌 Word 文档（含邮件投递） |
 
 ---
 
@@ -34,25 +34,36 @@ sci-research/
 │   ├── news-imager.md           # [B] 热点事件图片提取与校验
 │   ├── news-analyst.md          # [B] 去重、时间线、影响分析
 │   ├── news-verifier.md         # [C] 编辑台二次筛选（原创性/权威性/影响力/去重）
-│   └── daily-news-writer.md     # [C] 多语言每日简报合成（仅消费 Verifier KEEP 集）
-├── commands/                    # 5 个 Slash 命令
+│   ├── daily-news-writer.md     # [C] 多语言每日简报合成（仅消费 Verifier KEEP 集）
+│   └── briefing-curator.md      # [D] 多国新闻筛选改写（读取已有 MD，不搜索）
+├── commands/                    # 6 个 Slash 命令
 │   ├── sci-research.md          # /sci-research 入口
 │   ├── news-scan.md             # /news-scan 入口
 │   ├── daily-news-intelligence.md # /daily-news-intelligence 入口
+│   ├── daily-briefing.md        # /daily-briefing 入口
 │   ├── add-entity.md            # /add-entity 会话中加实体
 │   └── set-lang.md              # /set-lang 切换输出语言
-├── skills/                      # 三个独立 Skill 工作流
+├── skills/                      # 四个独立 Skill 工作流
 │   ├── sci-research/SKILL.md
 │   ├── news-scan/SKILL.md
-│   └── daily-news-intelligence/
+│   ├── daily-news-intelligence/
+│   │   ├── SKILL.md
+│   │   └── references/          # Pipeline C 的规范文档
+│   │       ├── email-spec.md
+│   │       ├── language-spec.md
+│   │       ├── output-spec.md
+│   │       ├── rubric.md
+│   │       ├── schemas.md
+│   │       └── verification.md
+│   └── daily-briefing/          # Pipeline D（完全独立）
 │       ├── SKILL.md
-│       └── references/          # Pipeline C 的规范文档
-│           ├── email-spec.md    # Gmail SMTP 邮件投递规范
-│           ├── language-spec.md # 多语言本地化表
-│           ├── output-spec.md   # 输出格式规范
-│           ├── rubric.md        # 来源分级与日期核验规则
-│           ├── schemas.md       # 数据结构定义
-│           └── verification.md  # 核验流程规范
+│       ├── template/
+│       │   └── briefing-template.docx  # SPD Bank 品牌模板
+│       ├── references/
+│       │   └── email-spec.md    # 独立邮件模板规范
+│       └── scripts/
+│           ├── generate-branded-docx.py  # docx 生成脚本
+│           └── send-briefing-email.py    # 独立邮件发送脚本
 ├── contexts/
 │   └── sci-research.md          # 研究模式行为上下文
 ├── hooks/
@@ -94,6 +105,9 @@ sci-research/
 # 单国每日新闻情报（支持邮件投递）
 /daily-news-intelligence --country "Japan" [--date 2026-04-14] [--lang zh|en|ja] [--out-dir <path>] [--min-per-category <N>] [--email <a@x.com,b@y.com>] [--email-attach both|docx|md|none] [--email-dry-run]
 
+# 多国品牌新闻简报（读取已有报告，生成 SPD Bank 品牌 Word）
+/daily-briefing [--date 2026-04-16] [--countries "中国,英国,美国,欧洲,日本,韩国"] [--total 14] [--email <a@x.com>] [--email-dry-run] [--no-wait]
+
 # 会话中追加实体（Pipeline A & B）
 /add-entity "Entity3,Entity4"
 
@@ -105,7 +119,7 @@ sci-research/
 
 ---
 
-## 三条流水线的 Agent 编排
+## 四条流水线的 Agent 编排
 
 ### Pipeline A — `/sci-research`
 
@@ -167,6 +181,25 @@ User Input (country, date, lang)
 
 **输出**：Markdown 文件 + pandoc 导出 docx，可选 Gmail SMTP 邮件投递（支持 `--email-dry-run` 预览）
 
+### Pipeline D — `/daily-briefing`
+
+```
+daily-news-reports/YYYY-MM-DD/*.md  (各国已有报告)
+  │
+  └─→ Briefing-Curator ─→ generate-branded-docx.py ─→ send-briefing-email.py
+      (opus)                (python-docx)               (Gmail SMTP)
+      读取各国 MD，          基于 SPD Bank 模板           邮件投递品牌 docx
+      筛选+改写 13-15 条     生成品牌 Word 文档
+```
+
+| 组件 | 模型 | 工具 | 职责 |
+|---|---|---|---|
+| briefing-curator | opus | Read, Grep, Glob | 读取各国 MD，筛选最重要的 13-15 条新闻，改写为统一风格 |
+| generate-branded-docx.py | — | python-docx | 基于 SPD Bank 模板生成品牌 Word 文档 |
+| send-briefing-email.py | — | Gmail SMTP | 邮件投递品牌 docx |
+
+**输出**：SPD Bank 品牌 Word 文档（header 有银行 logo、footer 有装饰图案），可选邮件投递
+
 ---
 
 ## 来源分级体系
@@ -221,7 +254,7 @@ User Input (country, date, lang)
 - **Command 文件**：Markdown + description frontmatter
 - **Hook 配置**：JSON，含 matcher 条件
 - **文件命名**：全小写 + 连字符（kebab-case）
-- **三条流水线完全独立**：修改一条流水线的 Agent 不影响其他流水线
+- **四条流水线完全独立**：修改一条流水线的 Agent 不影响其他流水线
 - **多语言**：默认支持 zh / en / ja，新增语言需同步更新 `writer.md`、`news-analyst.md`、`daily-news-writer.md` 与 `set-lang.md`
 - **Pipeline C 规范文档**：集中在 `skills/daily-news-intelligence/references/` 目录下，修改前需通读相关 spec
 
@@ -243,6 +276,10 @@ User Input (country, date, lang)
 | 调整 C 邮件投递 | `skills/daily-news-intelligence/references/email-spec.md` + `scripts/send-report-email.py` |
 | 调整 C 栏目分类 / 本地化 | `skills/daily-news-intelligence/references/language-spec.md` |
 | 修改 A 文章格式 | `rules/research/output-format.md` |
+| 调整 D 品牌模板 | `skills/daily-briefing/template/briefing-template.docx` |
+| 调整 D 新闻筛选逻辑 | `agents/briefing-curator.md` |
+| 调整 D docx 生成 | `skills/daily-briefing/scripts/generate-branded-docx.py` |
+| 调整 D 邮件投递 | `skills/daily-briefing/references/email-spec.md` + `skills/daily-briefing/scripts/send-briefing-email.py` |
 
 ---
 
