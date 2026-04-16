@@ -52,9 +52,10 @@ Derived fields:
 
 2. **Check source directory.** List Markdown files:
    ```bash
-   find "$DATE_DIR" -maxdepth 1 -name "*.md" -type f 2>/dev/null
+   MD_FILES=$(find "$DATE_DIR" -maxdepth 1 -name "*.md" -type f 2>/dev/null)
+   MD_COUNT=$(echo "$MD_FILES" | grep -c .)
    ```
-   If at least one `.md` file exists, proceed to Step 5. If none found and `--no-wait` is set, jump to Step 4. Otherwise proceed to Step 3.
+   If `MD_COUNT >= 1`, proceed to Step 5. If zero and `--no-wait` is set, jump to Step 4. Otherwise proceed to Step 3. Note: the source directory may not exist yet (e.g. if Pipeline C hasn't run), which is normal — `find` returns empty.
 
 3. **Wait and retry** (5 minutes). Report: "Source files not found. Waiting 5 minutes for upstream pipeline to complete..."
    ```bash
@@ -77,6 +78,7 @@ Derived fields:
    ```bash
    python3 -c "import docx" 2>/dev/null || pip3 install python-docx --user --quiet
    ```
+   If `pip3 install` also fails, stop and report: "python-docx installation failed. Install manually: pip3 install python-docx"
 
 6. **Curate and rewrite stories.** Launch a `briefing-curator` Agent (opus) with this prompt structure:
 
@@ -106,7 +108,14 @@ Derived fields:
    GEN_EXIT=$?
    rm -f "$CURATOR_FILE"
    ```
-   If exit code non-zero, report error and stop. Do not proceed to email.
+   Handle exit codes:
+   - 0 = success, proceed to email
+   - 1 = python-docx not installed → report and stop
+   - 2 = template file not found → report and stop
+   - 3 = curator output could not be parsed (empty/malformed) → report and stop
+   - 4 = docx save failed → report and stop
+   
+   On any non-zero exit, do NOT proceed to email.
 
 8. **Send email** (optional — only if `email` is non-empty). Build subject and body per `references/email-spec.md`, then:
    ```bash
