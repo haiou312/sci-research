@@ -49,9 +49,13 @@ Email delivery reads Gmail SMTP credentials from environment variables (`GOOGLE_
 
 ## Workflow
 
-1. **Validate scope.** Normalize `country` for English search and target-language rendering. Default `date` to today if omitted. Build all derived fields via `references/language-spec.md`.
+1. **Validate scope.** Normalize `country` for English search and target-language rendering. Default `date` to today if omitted. Build all derived fields via `references/language-spec.md`. Expand `~` in `out_dir` immediately:
+   ```bash
+   OUT_DIR="${out_dir/#\~/$HOME}"
+   ```
+   Use `OUT_DIR` (expanded) in all subsequent bash commands.
 
-2. **Scan candidates** (Scanner stage, English only). Generate at least three distinct query patterns per category. Collect 20-30 candidate URLs across the five fixed categories. Prioritise breadth over depth.
+2. **Scan candidates** (Scanner stage, English only). Generate at least three distinct query patterns per category. Collect 20-30 candidate URLs across the five fixed categories. Prioritise breadth over depth. If Scanner returns zero candidates across all categories, stop and report: "No news candidates found for {country} on {date}. The date may be a future date, a holiday, or WebSearch may be temporarily unavailable." Do not proceed to the Verifier.
 
 3. **Verify each candidate.** For every candidate URL, call `web_fetch` and extract the publication date. Apply the rules in `references/rubric.md` § Date Verification Rules — keep only stories where publication date equals `date` (local or UTC match).
 
@@ -63,17 +67,21 @@ Email delivery reads Gmail SMTP credentials from environment variables (`GOOGLE_
 
 7. **Second-pass filter** (Verifier stage). Consume the Scanner bundle and apply the four-check rubric in `references/rubric.md` § Authority & Impact Rubric (originality, authority, impact, dedup). Apply the two-step fallback if any category drops below `min_per_category`. Emit the Verifier Output Schema from `references/schemas.md`.
 
-8. **Translate and write the report** (Writer stage). Ensure the output directory exists, then write. Run:
+8. **Translate and write the report** (Writer stage). Ensure the output directory exists:
    ```bash
-   mkdir -p "{out_dir}"
+   mkdir -p "$OUT_DIR"
    ```
-   (expand `~` first). Consume the Verifier's KEEP set only. Translate narrative into `lang` per `references/language-spec.md`. Produce Markdown obeying `references/output-spec.md`. Use the `Write` tool to overwrite `out_md`.
+   If `mkdir -p` fails (permissions, read-only filesystem), stop and report the error — do not silently write to a fallback location. Consume the Verifier's KEEP set only. Translate narrative into `lang` per `references/language-spec.md`. Produce Markdown obeying `references/output-spec.md`. Use the `Write` tool to overwrite `out_md`.
 
-9. **Export to Word.** Run:
+9. **Export to Word.** First verify pandoc is available:
    ```bash
-   cd "{out_dir}" && pandoc --extract-media=./media "{out_md}" -o "{out_docx}"
+   command -v pandoc >/dev/null 2>&1
    ```
-   Working directory must be `out_dir` so `--extract-media` resolves cleanly.
+   If pandoc is not installed, skip docx export and report: "pandoc not found — .docx export skipped. Install pandoc to enable Word export." The Markdown file is still valid output. If pandoc is available, run:
+   ```bash
+   cd "$OUT_DIR" && pandoc --extract-media=./media "$(basename "$out_md")" -o "$(basename "$out_docx")"
+   ```
+   If pandoc exits non-zero, report the error but do not delete the Markdown file.
 
 10. **Send email** (optional — only if `email` parameter is non-empty). Build the subject and body per `references/email-spec.md`, write the body to a temp file, and invoke:
     ```bash

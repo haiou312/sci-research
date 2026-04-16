@@ -1,0 +1,17 @@
+[
+  {
+    "id": 1,
+    "prompt": "/daily-news-intelligence --country \"Japan\" --lang zh",
+    "expected": "5-category zh Markdown + docx, >=2 stories per category, correct APA refs, proper quote_marks「」"
+  },
+  {
+    "id": 2,
+    "prompt": "/daily-news-intelligence --country \"United Kingdom\" --lang en --min-per-category 3",
+    "expected": "5-category en Markdown + docx, >=3 stories per category or italic gap_note, no tier relaxation to fill gaps"
+  },
+  {
+    "id": 3,
+    "prompt": "/daily-news-intelligence --country \"China\" --email \"test@example.com\" --email-dry-run --lang zh",
+    "expected": "Full zh Markdown + docx + email dry-run preview with correct subject/body template, no SMTP connection"
+  }
+]
