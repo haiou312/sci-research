@@ -208,7 +208,7 @@ Before calling `Write`, silently verify:
 
 ### Language-specific rules
 
-If `lang=zh`, additionally verify that the output complies with every rule in **`references/language-spec.md` § Language-Specific Rules — `lang=zh` only** (quote marks, official titles, country prefixes, time anchors, terminology precision, foreign media naming). Failure on any rule is a Self-Check failure — fix before writing.
+If `lang=zh`, additionally verify that the output complies with every rule in **`skills/daily-news-intelligence/references/language-spec.md` § Language-Specific Rules — `lang=zh` only** (quote marks, official titles, country prefixes, time anchors, terminology precision, foreign media naming). Read that file if not already in context. Failure on any rule is a Self-Check failure — fix before writing.
 
 If any check fails, fix before writing. Do not ship a document that fails self-check.
 
