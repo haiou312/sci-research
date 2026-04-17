@@ -80,3 +80,34 @@ Target-language tokens used by the Writer. Scanner and Verifier output stays Eng
 - Institutional, declarative, testable against the cited URL.
 - No event merging. Each story tracks a single event thread.
 - No filler. If the category finishes with two stories, stop at two — do not inflate.
+
+### Language-Specific Rules — `lang=zh` only
+
+These rules apply **only when `lang=zh`**. Ignore for `lang=en` and `lang=ja`.
+
+1. **引号方向（Quote marks）**
+   - 中文直接引语**必须**使用全角方引号 `「」`。
+   - **禁止**使用 `""`、`""`、`"…"`（英文直引号或方向错误的弯引号）。
+   - 嵌套引语用 `『』`。
+   - 例（正确）：行长表示：「物价稳定是核心。」
+   - 例（错误）：行长表示："物价稳定是核心。" ❌
+
+2. **人物首次出现必须带头衔**
+   - 国家元首、部长级官员、央行行长、机构负责人、国际组织领导人**首次出现**时，必须形如「{国家/机构}+{职位}+{人名}」。
+   - 例：`韩国总统李在明`、`欧盟委员会主席冯德莱恩`、`英国财政大臣里夫斯（Rachel Reeves）`、`美联储主席鲍威尔（Jerome Powell）`。
+   - 同一故事后续提及可省略头衔，只用姓氏。
+
+3. **标题/段首国家前缀**
+   - 单国报告的 `### 故事标题`：如果主语是泛指性名词（"首相质询时间"、"制造企业"、"央行"），**必须**加国家前缀（"英国首相..."、"英国制造企业..."、"韩国央行..."）。
+   - 仅当主语已是该国专有机构/地名（"日本央行"、"白宫"、"人民大会堂"）时可省略。
+   - `summary_marker` 段落**首句必须**包含明确时间锚点，如「2026年4月16日，...」或「4月16日，...」。
+
+4. **术语精准度（中文语境）**
+   - **禁用**"全国"作为非中国语境的副词——美国语境用「全美」，英国语境用「全英」，日本语境用「全日」。
+   - 数量词歧义：`"万家"` 歧义（可指 1 万家或"很多家"）——改用具体数字（`10,000 余家`）或 `数万家`。
+   - `"上万"` / `"数千"` 等中文模糊量词仅在源文本确为模糊表述时使用。
+
+5. **外文机构/媒体首次出现附中文译名**
+   - 主流媒体、非通用缩写机构**首次**出现时写作 `{中文译名}（{英文原名}）`。
+   - 例：`美国消费者新闻与商业频道（CNBC）`、`英国广播公司（BBC）`、`路透社（Reuters）`。
+   - **豁免**：已通用的极简缩写可直接使用，无需译名：Fed、ECB、BoJ、BoE、IMF、WHO、NATO、OECD、G7、G20、GDP、CPI、PPI、PMI、FOMC、NASDAQ、FTSE。
