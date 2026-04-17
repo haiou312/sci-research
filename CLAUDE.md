@@ -6,7 +6,7 @@
 
 ## 项目定位
 
-这是一个 **Claude Code 插件**（`sci-research`，当前版本 1.6.0），通过多 Agent 编排，将"主题 + 比较实体 + 输出语言"转化为高质量研究/新闻产出。插件包含四条**完全独立**的流水线，互不共享 Agent：
+这是一个 **Claude Code 插件**（`sci-research`，当前版本 1.6.1），通过多 Agent 编排，将"主题 + 比较实体 + 输出语言"转化为高质量研究/新闻产出。插件包含四条**完全独立**的流水线，互不共享 Agent：
 
 | 特性 | `/sci-research`（深度研究） | `/news-scan`（实时新闻） | `/daily-news-intelligence`（每日情报） | `/daily-briefing`（品牌简报） |
 |---|---|---|---|---|

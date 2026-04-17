@@ -228,6 +228,15 @@ def main():
 
     args = parser.parse_args()
 
+    if not args.attach:
+        print(
+            "ERROR: no --attach paths provided. The orchestrator must compute "
+            "out_md/out_docx in earlier steps and pass them via "
+            "--attach <path> [<path> ...]. Refusing to send attachment-less email.",
+            file=sys.stderr,
+        )
+        sys.exit(6)
+
     cfg = load_env()
     recipients = parse_recipients(args.to)
     body = read_body(args.body, args.body_file)
