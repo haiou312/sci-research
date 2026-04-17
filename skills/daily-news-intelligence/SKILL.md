@@ -109,7 +109,7 @@ The orchestrator must not summarise, truncate, or reformat the upstream output �
    ```bash
    mkdir -p "$OUT_DIR"
    ```
-   If `mkdir -p` fails (permissions, read-only filesystem), stop and report the error — do not silently write to a fallback location. Consume the Verifier's KEEP set only. Translate narrative into `lang` per `references/language-spec.md`. Produce Markdown obeying `references/output-spec.md`. Use the `Write` tool to overwrite `out_md`.
+   If `mkdir -p` fails (permissions, read-only filesystem), stop and report the error — do not silently write to a fallback location. Consume the Verifier's KEEP set only. Translate narrative into `lang` per `references/language-spec.md`. **When `lang=zh`, the Writer must also comply with `references/language-spec.md` § Language-Specific Rules (quote marks `「」`, official titles, country prefixes, time anchors, terminology, foreign media naming).** Produce Markdown obeying `references/output-spec.md`. Use the `Write` tool to overwrite `out_md`.
 
 9. **Export to Word.** First verify pandoc is available:
    ```bash
@@ -153,7 +153,7 @@ See `references/verification.md` § Recommended Agent Assignment for substitutio
 | `references/schemas.md` | Scanner Output Schema, Verifier Output Schema | Scanner, Verifier |
 | `references/rubric.md` | Source Tier Rules, Authority & Impact Rubric, Two-Step Fallback, Date Verification Rules, Category Coverage Rules | Scanner, Verifier |
 | `references/output-spec.md` | Required Markdown Output, Markdown Syntax Contract, Invalid + Valid examples (`lang=en`, `lang=zh`), APA 7th Reference Format | Writer |
-| `references/language-spec.md` | Localisation Table, Derived Display Fields, Filename Pattern, Language Rules, Title Length Rules, Writing Standard | Writer |
+| `references/language-spec.md` | Localisation Table, Derived Display Fields, Filename Pattern, Language Rules, Title Length Rules, Writing Standard, **Language-Specific Rules — `lang=zh` only** (quote marks, official titles, country prefixes, time anchors, terminology precision, foreign media naming) | Writer |
 | `references/verification.md` | Output Rules, Writer Self-Check, End-to-End Verification, Flow Diagram, Recommended Agent Assignment, Invocation Examples | Writer (self-check), Orchestrator (delivery check) |
 | `references/email-spec.md` | Email subject / body templates, env var contract, attachment selection, exit-code handling, security | Orchestrator (Step 10 only when `email` is set) |
 
