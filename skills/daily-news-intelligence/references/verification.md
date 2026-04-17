@@ -29,14 +29,7 @@ Silently verify all of the following. If any check fails, fix before writing —
 8. Every category either has `min_per_category` stories or carries a single italic `gap_note` line.
 9. `analysis_marker` never appears with an empty body.
 
-When `lang=zh`, additionally verify (see `references/language-spec.md` § Language-Specific Rules):
-
-10. All direct quotes use `「」`, never `""` or `""`.
-11. Every named official's first appearance includes their role + country/institution prefix.
-12. Every `summary_marker` paragraph opens with an explicit time anchor (e.g. `2026年4月16日，...`).
-13. Story titles with generic subjects carry a country/region prefix.
-14. `全国` is not used for non-China contexts (use `全美`/`全英`/etc.).
-15. Foreign media first mention follows `中文译名（English）` format (except pre-approved shortforms).
+When `lang=zh`, additionally verify that the output complies with every rule in `references/language-spec.md` § Language-Specific Rules — `lang=zh` only. That document is the single source of truth for zh-specific writing rules (quote marks, official titles, country prefixes, time anchors, terminology, foreign media naming).
 
 ## End-to-End Verification (after pandoc export)
 

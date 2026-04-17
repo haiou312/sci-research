@@ -206,14 +206,9 @@ Before calling `Write`, silently verify:
 8. Every category either has `min_per_category` stories or carries a single italic `gap_note` line.
 9. `analysis_marker` never appears with an empty body.
 
-### If `lang=zh`, additionally verify:
+### Language-specific rules
 
-10. All direct quotes use `「」` (and nested `『』`). No `""`, no `""`, no mixed/reversed directional quotes.
-11. Every named official's first appearance includes their role title: `{国家/机构}{职位}{姓名}` (e.g. `韩国总统李在明`, `欧盟委员会主席冯德莱恩`).
-12. Every story's `summary_marker` paragraph opens with an explicit time anchor (e.g. `2026年4月16日，...`).
-13. Story titles with generic subjects carry a country/region prefix (`英国首相质询时间` not just `首相质询时间`).
-14. `全国` is NOT used in non-China contexts — use `全美`/`全英`/`全日` instead.
-15. Foreign media/institutions first appearing are written as `中文译名（English）`, except for the pre-approved shortform list in `references/language-spec.md` § Language-Specific Rules (Fed, ECB, BoJ, IMF, etc.).
+If `lang=zh`, additionally verify that the output complies with every rule in **`references/language-spec.md` § Language-Specific Rules — `lang=zh` only** (quote marks, official titles, country prefixes, time anchors, terminology precision, foreign media naming). Failure on any rule is a Self-Check failure — fix before writing.
 
 If any check fails, fix before writing. Do not ship a document that fails self-check.
 
