@@ -32,6 +32,8 @@ from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email import encoders
+from email.header import Header, decode_header, make_header
+from email.utils import encode_rfc2231
 from pathlib import Path
 
 REQUIRED_ENV = ["GOOGLE_EMAIL_USERNAME", "GOOGLE_EMAIL_APP_PASSWORD"]
@@ -97,8 +99,15 @@ def build_message(cfg, recipients, subject, body, attachments):
         with open(p, "rb") as f:
             part.set_payload(f.read())
         encoders.encode_base64(part)
-        part.set_param("name", p.name, header="Content-Type", charset="utf-8")
-        part.add_header("Content-Disposition", "attachment", filename=("utf-8", "", p.name))
+        # Emit BOTH filename= (RFC 2047) and filename*= (RFC 2231) so non-ASCII
+        # filenames survive corporate Exchange/Outlook, which drop attachments
+        # as "noname" when only the RFC 2231 extended form is present.
+        legacy = Header(p.name, "utf-8").encode()
+        extended = encode_rfc2231(p.name, "utf-8")
+        part.add_header(
+            "Content-Disposition",
+            f'attachment; filename="{legacy}"; filename*={extended}',
+        )
         msg.attach(part)
     return msg
 
@@ -114,7 +123,7 @@ def send(cfg, msg, dry_run):
         for part in msg.walk():
             fn = part.get_filename()
             if fn:
-                names.append(fn)
+                names.append(str(make_header(decode_header(fn))))
             elif part.get_content_type() == "text/plain" and not body_text:
                 body_text = part.get_payload(decode=True).decode("utf-8", errors="replace")
         print(f"Attachments ({len(names)}): {names}")

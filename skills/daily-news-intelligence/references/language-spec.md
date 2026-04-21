@@ -38,6 +38,16 @@ Target-language tokens used by the Writer. Scanner and Verifier output stays Eng
   - `lang=ja` → `{out_dir}{country_display}デイリーニュース-{date}.md`
 - `out_docx` — same as `out_md` with `.docx` extension.
 
+**Never use the raw `--country` input value as the filename slug.** The country segment of the filename is `country_display` (rendered in the target `lang`), not the input string. Common failure modes and the correct output:
+
+| Input | ❌ Wrong (raw slug) | ✅ Correct (`country_display`) |
+|---|---|---|
+| `--country "China" --lang zh` | `china-2026-04-21.md` | `中国每日热点新闻-2026-04-21.md` |
+| `--country "South Korea" --lang zh` | `south-korea-2026-04-21.md` | `韩国每日热点新闻-2026-04-21.md` |
+| `--country "Germany" --lang ja` | `germany-2026-04-21.docx` | `ドイツデイリーニュース-2026-04-21.docx` |
+
+If `lang` is `zh` or `ja` and the resolved filename contains only ASCII letters in the country segment, the translation step was skipped — regenerate before writing.
+
 ## Language Rules
 
 - Search queries: English only, regardless of `lang`.
