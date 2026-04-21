@@ -1,6 +1,12 @@
 #!/usr/bin/env python3
 """
-Send daily news intelligence report via Gmail SMTP.
+Send sci-research pipeline reports via Gmail SMTP.
+
+Supports three body modes (mutually exclusive, exactly one required):
+  --body          plain text inline
+  --body-file     plain text from file (used by Pipelines C / D)
+  --body-html-file  HTML from file → builds multipart/alternative with auto
+                  text/plain fallback (used by reputation-track / Pipeline E)
 
 Reads credentials from environment variables:
   GOOGLE_EMAIL_USERNAME        — Gmail address (e.g. user@gmail.com)
@@ -11,11 +17,19 @@ Reads credentials from environment variables:
   GOOGLE_EMAIL_START_TLS       — 'true' to use STARTTLS on port 587 (default: true)
 
 Usage:
+  # Text body + attachments (Pipelines C / D)
   send-report-email.py \\
     --to "alice@foo.com,bob@bar.com" \\
     --subject "中国每日热点新闻 — 2026年4月14日" \\
     --body-file /tmp/body.txt \\
     --attach /path/to/report.md /path/to/report.docx \\
+    [--dry-run]
+
+  # HTML body, no attachment (reputation-track)
+  send-report-email.py \\
+    --to "risk@foo.com" \\
+    --subject "[Reputation Alert] Acme — 2026-04-21" \\
+    --body-html-file /tmp/report.html \\
     [--dry-run]
 
 Exit codes:
@@ -25,11 +39,13 @@ Exit codes:
   3 — SMTP connection or send failure
   4 — attachment file not found
   5 — body file not found
+  6 — no content to send (neither --attach nor --body-html-file provided, when using a plain-text body)
 """
 
 import argparse
 import mimetypes
 import os
+import re
 import smtplib
 import ssl
 import sys
@@ -101,12 +117,50 @@ def read_body(body_text, body_file):
     return body_text or ""
 
 
-def build_message(cfg, recipients, subject, body, attachments):
-    """Construct a MIMEMultipart message with RFC 2231 encoded filenames.
+def read_html_body(html_file):
+    """Read an HTML body file. Exit 5 if missing."""
+    p = Path(html_file).expanduser()
+    if not p.exists():
+        print(f"ERROR: body HTML file not found: {p}", file=sys.stderr)
+        sys.exit(5)
+    return p.read_text(encoding="utf-8")
 
-    Uses MIMEMultipart("mixed") instead of EmailMessage to ensure
-    attachments are properly included and CJK filenames are encoded
-    via RFC 2231 for maximum client compatibility.
+
+def html_to_text(html):
+    """Generate a readable text/plain fallback from an HTML body.
+
+    Purpose is the multipart/alternative text fallback for mail clients that
+    don't render HTML — not a perfect round-trip. Strips script/style blocks,
+    converts common block-ending tags to newlines, decodes a handful of
+    entities, and collapses whitespace.
+    """
+    text = re.sub(r"<(script|style)[^>]*>.*?</\1>", "", html, flags=re.DOTALL | re.IGNORECASE)
+    text = re.sub(r"<br\s*/?>", "\n", text, flags=re.IGNORECASE)
+    text = re.sub(r"</(p|div|h[1-6]|li|tr|blockquote)>", "\n", text, flags=re.IGNORECASE)
+    text = re.sub(r"<[^>]+>", "", text)
+    entities = {
+        "&nbsp;": " ", "&amp;": "&", "&lt;": "<", "&gt;": ">",
+        "&quot;": '"', "&#39;": "'", "&apos;": "'",
+        "&ldquo;": '"', "&rdquo;": '"', "&lsquo;": "'", "&rsquo;": "'",
+        "&middot;": "·", "&mdash;": "—", "&ndash;": "–",
+    }
+    for k, v in entities.items():
+        text = text.replace(k, v)
+    text = re.sub(r"\n\s*\n\s*\n+", "\n\n", text)
+    text = re.sub(r"[ \t]+", " ", text)
+    return text.strip()
+
+
+def build_message(cfg, recipients, subject, body_text, attachments, body_html=None):
+    """Construct a MIMEMultipart("mixed") message.
+
+    When `body_html` is provided, the body becomes a multipart/alternative
+    containing both text/plain (auto-generated fallback) and text/html. When
+    body_html is None, a single text/plain part is attached (legacy path for
+    Pipelines C / D).
+
+    Attachment filenames use both RFC 2047 `filename=` and RFC 2231
+    `filename*=` so non-ASCII names survive corporate Exchange clients.
     """
     msg = MIMEMultipart("mixed")
     from_name = cfg["from_name"] or cfg["user"]
@@ -114,7 +168,13 @@ def build_message(cfg, recipients, subject, body, attachments):
     msg["To"] = ", ".join(recipients)
     msg["Subject"] = subject
 
-    msg.attach(MIMEText(body, "plain", "utf-8"))
+    if body_html:
+        alt = MIMEMultipart("alternative")
+        alt.attach(MIMEText(body_text, "plain", "utf-8"))
+        alt.attach(MIMEText(body_html, "html", "utf-8"))
+        msg.attach(alt)
+    else:
+        msg.attach(MIMEText(body_text, "plain", "utf-8"))
 
     for path in attachments:
         p = Path(path).expanduser()
@@ -156,16 +216,25 @@ def send(cfg, msg, dry_run):
         print(f"Subject: {msg['Subject']}")
         attachment_names = []
         body_text = ""
+        html_len = 0
         for part in msg.walk():
             fn = part.get_filename()
             if fn:
                 attachment_names.append(str(make_header(decode_header(fn))))
-            elif part.get_content_type() == "text/plain" and not body_text:
+                continue
+            ctype = part.get_content_type()
+            if ctype == "text/plain" and not body_text:
                 body_text = part.get_payload(decode=True).decode("utf-8", errors="replace")
+            elif ctype == "text/html":
+                payload = part.get_payload(decode=True)
+                if payload:
+                    html_len = len(payload.decode("utf-8", errors="replace"))
         print(f"Attachments ({len(attachment_names)}): {attachment_names}")
+        print(f"HTML body: {'yes, ' + str(html_len) + ' chars' if html_len else 'no'}")
         if body_text:
             body_preview = body_text[:800]
-            print("--- body preview ---")
+            src = "auto-stripped from HTML" if html_len else "text body"
+            print(f"--- text preview ({src}) ---")
             print(body_preview)
             if len(body_text) > 800:
                 print(f"... (body truncated, total {len(body_text)} chars)")
@@ -218,6 +287,14 @@ def main():
         "--body-file",
         help="Path to a UTF-8 text file containing the email body.",
     )
+    body_group.add_argument(
+        "--body-html-file",
+        help=(
+            "Path to an HTML file used as the email body. Builds a "
+            "multipart/alternative with an auto-generated text/plain fallback. "
+            "Used by reputation-track (Pipeline E)."
+        ),
+    )
     parser.add_argument(
         "--attach",
         nargs="*",
@@ -232,26 +309,33 @@ def main():
 
     args = parser.parse_args()
 
-    if not args.attach:
+    if not args.attach and not args.body_html_file:
         print(
-            "ERROR: no --attach paths provided. The orchestrator must compute "
-            "out_md/out_docx in earlier steps and pass them via "
-            "--attach <path> [<path> ...]. Refusing to send attachment-less email.",
+            "ERROR: no content to send. Provide --attach <paths> (Pipelines C/D) "
+            "or --body-html-file (reputation-track / Pipeline E). Refusing to "
+            "send an email with only a plain-text body and no attachments.",
             file=sys.stderr,
         )
         sys.exit(6)
 
     cfg = load_env()
     recipients = parse_recipients(args.to)
-    body = read_body(args.body, args.body_file)
 
-    msg = build_message(cfg, recipients, args.subject, body, args.attach)
+    if args.body_html_file:
+        body_html = read_html_body(args.body_html_file)
+        body = html_to_text(body_html)
+    else:
+        body_html = None
+        body = read_body(args.body, args.body_file)
+
+    msg = build_message(cfg, recipients, args.subject, body, args.attach, body_html=body_html)
     send(cfg, msg, args.dry_run)
 
     if not args.dry_run:
+        body_kind = "html" if body_html else "text"
         print(
-            f"OK: email sent to {len(recipients)} recipient(s) with "
-            f"{len(args.attach)} attachment(s)."
+            f"OK: email sent to {len(recipients)} recipient(s) "
+            f"(body={body_kind}, attachments={len(args.attach)})."
         )
 
 
