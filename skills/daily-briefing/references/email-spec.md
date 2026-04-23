@@ -69,6 +69,9 @@ Always attach only the branded docx file. No Markdown attachment.
 | 3 | Print SMTP error — do NOT delete docx |
 | 4 | Print attachment not found — do NOT delete docx |
 | 5 | Print body file not found — do NOT delete docx |
+| 7 | Print "⚠️ email blocked: attachment has empty filename stem (e.g. `.docx`). Check filename construction and retry." |
+| 8 | Print "⚠️ email blocked: attachment has no file extension. Check pandoc output and retry." |
+| 9 | Print "⚠️ email failed: Content-Disposition missing dual filename encoding (script regression). Inspect `skills/daily-briefing/scripts/send-briefing-email.py § build_message`. Do NOT delete docx." |
 
 Email failure never deletes the local docx file.
 

@@ -20,6 +20,9 @@ Exit codes:
   3 — SMTP connection or send failure
   4 — attachment file not found
   5 — body file not found
+  7 — attachment has an empty filename stem (e.g. ".docx")
+  8 — attachment has no file extension
+  9 — Content-Disposition missing dual filename= / filename*= encoding (regression guard)
 """
 
 import argparse
@@ -91,6 +94,27 @@ def build_message(cfg, recipients, subject, body, attachments):
         if not p.exists():
             print(f"ERROR: attachment not found: {p}", file=sys.stderr)
             sys.exit(4)
+
+        # Guard 1: reject files whose basename stem is empty / whitespace-only
+        # (e.g. "/tmp/.docx"). Mail clients show these as "noname".
+        if not p.stem.strip():
+            print(
+                f"ERROR: attachment {p.name!r} has an empty filename stem. "
+                f"Mail clients cannot render this. Check out_md/out_docx construction.",
+                file=sys.stderr,
+            )
+            sys.exit(7)
+
+        # Guard 2: reject files with no extension. Mail clients key off the
+        # extension (+ Content-Type) to decide how to display / open.
+        if not p.suffix:
+            print(
+                f"ERROR: attachment {p.name!r} has no file extension. "
+                f"Mail clients need an extension (.md, .docx, .pdf, ...) to render.",
+                file=sys.stderr,
+            )
+            sys.exit(8)
+
         ctype, encoding = mimetypes.guess_type(str(p))
         if ctype is None or encoding is not None:
             ctype = "application/octet-stream"
@@ -108,6 +132,18 @@ def build_message(cfg, recipients, subject, body, attachments):
             "Content-Disposition",
             f'attachment; filename="{legacy}"; filename*={extended}',
         )
+
+        # Guard 3: regression check. Verify the dual-filename encoding is
+        # actually present. Catches future refactors that drop one form.
+        cd = part.get("Content-Disposition", "")
+        if 'filename="' not in cd or "filename*=" not in cd:
+            print(
+                f"ERROR: Content-Disposition for {p.name!r} missing dual-filename "
+                f"encoding (filename= AND filename*=). Got: {cd!r}",
+                file=sys.stderr,
+            )
+            sys.exit(9)
+
         msg.attach(part)
     return msg
 

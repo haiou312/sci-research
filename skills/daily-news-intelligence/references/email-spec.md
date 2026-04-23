@@ -162,6 +162,9 @@ If `--email-dry-run` is set, append `--dry-run` to the Python call. The script w
 | 3 | Print "⚠️ email failed: SMTP error {message}. Local files are preserved." — do NOT delete reports |
 | 4 | Print "⚠️ email failed: attachment not found. Local files are preserved." — do NOT delete reports |
 | 5 | Print "⚠️ email failed: body file not found." — do NOT delete reports |
+| 7 | Print "⚠️ email blocked: attachment has empty filename stem (e.g. `.docx`). Check `out_md` / `out_docx` construction per `language-spec.md` § Filename Pattern. Re-derive the filename and retry." |
+| 8 | Print "⚠️ email blocked: attachment has no file extension. Check pandoc output or filename slug. Re-derive and retry." |
+| 9 | Print "⚠️ email failed: Content-Disposition header is missing dual-filename encoding (script-internal regression). Inspect recent changes to `scripts/send-report-email.py § build_message` — both `filename=` (RFC 2047) and `filename*=` (RFC 2231) must be present. Local files are preserved." |
 
 **Hard rule**: email failure never deletes, moves, or overwrites the local `.md` or `.docx` files. The report has already been delivered by Step 8 and Step 9.
 

@@ -40,6 +40,9 @@ Exit codes:
   4 — attachment file not found
   5 — body file not found
   6 — no content to send (neither --attach nor --body-html-file provided, when using a plain-text body)
+  7 — attachment has an empty filename stem (e.g. ".docx", "   .docx")
+  8 — attachment has no file extension (e.g. "briefing" with no suffix)
+  9 — Content-Disposition header is missing the dual filename= / filename*= encoding (script-internal regression guard)
 """
 
 import argparse
@@ -182,6 +185,30 @@ def build_message(cfg, recipients, subject, body_text, attachments, body_html=No
             print(f"ERROR: attachment not found: {p}", file=sys.stderr)
             sys.exit(4)
 
+        # Guard 1: reject files whose basename stem is empty or whitespace-only.
+        # e.g. "/tmp/.docx" → stem="", "/tmp/   .docx" → stem="   ". Mail
+        # clients show these as "noname" even with correct MIME encoding.
+        if not p.stem.strip():
+            print(
+                f"ERROR: attachment {p.name!r} has an empty filename stem. "
+                f"Mail clients cannot render this. Check your out_md/out_docx "
+                f"construction — the filename must have a non-empty name before "
+                f"the extension.",
+                file=sys.stderr,
+            )
+            sys.exit(7)
+
+        # Guard 2: reject files with no extension. Mail clients key off the
+        # extension (and Content-Type) to decide how to display / open.
+        if not p.suffix:
+            print(
+                f"ERROR: attachment {p.name!r} has no file extension. "
+                f"Mail clients need an extension (.md, .docx, .pdf, ...) to "
+                f"render the attachment. Check pandoc output or slug construction.",
+                file=sys.stderr,
+            )
+            sys.exit(8)
+
         ctype, encoding = mimetypes.guess_type(str(p))
         if ctype is None or encoding is not None:
             ctype = "application/octet-stream"
@@ -201,6 +228,22 @@ def build_message(cfg, recipients, subject, body_text, attachments, body_html=No
             "Content-Disposition",
             f'attachment; filename="{legacy}"; filename*={extended}',
         )
+
+        # Guard 3: regression check. Verify the dual-filename encoding is
+        # actually present in the Content-Disposition header we just set.
+        # Catches future refactors that might drop one of the two forms.
+        cd = part.get("Content-Disposition", "")
+        if 'filename="' not in cd or "filename*=" not in cd:
+            print(
+                f"ERROR: Content-Disposition header for {p.name!r} is missing "
+                f"the dual-filename encoding (RFC 2047 filename= AND RFC 2231 "
+                f"filename*=). Got: {cd!r}. This is a script-internal regression "
+                f"— both forms are required so attachments don't become "
+                f'"noname" on corporate Exchange / Outlook.',
+                file=sys.stderr,
+            )
+            sys.exit(9)
+
         msg.attach(part)
 
     return msg
