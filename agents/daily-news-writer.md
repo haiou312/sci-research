@@ -90,7 +90,8 @@ Derive `country_display`:
 
 {references_marker}
 
-<Surname>, <Initial>. (<Year>, <Month> <Day>). <Original English title>. <Outlet name>. <full https URL>
+[N] <Surname>, <Initial>. (<Year>, <Month> <Day>). <Original English title>. <Outlet name>. <full https URL>
+[N+1] <second reference if Verifier delivered corroborating sources — same APA format, next counter>
 
 ---
 
@@ -164,13 +165,14 @@ Markdown heading markers are syntax tokens, not natural language.
 
 ## APA 7th Reference Format
 
-- Pattern: `<Author surname>, <Given-name initials>. (<Year>, <Month> <Day>). <Original English title>. <Outlet>. <URL>`
-- Reference lines are rendered in English regardless of `lang`.
+- Pattern: `[N] <Author surname>, <Given-name initials>. (<Year>, <Month> <Day>). <Original English title>. <Outlet>. <URL>`
+- Reference lines are rendered in English regardless of `lang` (the leading `[N]` prefix is language-neutral).
 - When the byline is an organisation (Reuters, Bloomberg, GOV.UK, ECB, Bank of Japan), write the organisation name where the author would go.
 - The title stays in original English — do not translate.
 - Date segment uses English month names: `(2026, April 14)`.
 - URL is bare — never `[text](url)`.
-- Exactly one reference per story, colocated in the story's `references_marker` block.
+- **One or more** references per story, colocated in the story's `references_marker` block. When the Verifier delivers corroborating T1-T2 sources, list them all — each on its own line with the next `[N]`.
+- **`[N]` is mandatory**. Counter runs continuously from `[1]` at the first reference through `[total]` at the last, across story boundaries.
 - No global sources list at the end of the document.
 
 ## Coverage Gap Handling
@@ -200,11 +202,18 @@ Before calling `Write`, silently verify:
 2. `h1_pattern` matches exactly for the chosen `lang`.
 3. Five H2 headings appear in order and match their Localisation Table values exactly.
 4. Every story title line starts with `### ` and satisfies Title Length Rules for `lang`.
-5. Every `**References**` line is followed on the next line by a single APA 7th reference in the format: `Author. (Year, Month Day). Title. Outlet. https://...`
-6. No Markdown link syntax `[text](url)` appears anywhere in the document.
-7. No alternative reference formats appear: no `来源：` blocks, no `（来源：...）` inline citations, no bullet-list URLs, no global reference section at the end.
-8. Every category either has `min_per_category` stories or carries a single italic `gap_note` line.
-9. `analysis_marker` never appears with an empty body.
+5. **Count invariants**: `count(### ) == count({summary_marker}) == count(**References**)`. One of each per story, no exceptions.
+6. **Reference numbering**: every line inside a `**References**` block starts with `[N] ` where `N` runs **continuously from 1** across the entire document, never resets per story. Every reference line contains a bare `https://` URL.
+7. No Markdown link syntax `[text](url)` anywhere in the document.
+8. **No prohibited reference patterns** — the following are blocked by hook and by spec:
+   - No `## 参考文献` / `## References` / `## Sources` H2 heading anywhere.
+   - No `> **来源**: ...` / `> **Source**: ...` blockquote.
+   - No `*来源：Author (Year); ...*` / `*Sources: ...*` italic in-text citation.
+   - No `（来源：...）` inline parenthetical, no bullet-list URLs, no global reference section.
+9. Every category either has `min_per_category` stories or carries a single italic `gap_note` line.
+10. `analysis_marker` never appears with an empty body.
+
+**A PostToolUse hook `scripts/hooks/daily-news-format-check.js` enforces items 5, 6, and 8 mechanically.** If your output fails any of those, `Write` will be blocked with `exit 2` and you must regenerate. Self-check first — do not rely on the hook to catch you.
 
 ### Language-specific rules
 

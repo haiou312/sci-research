@@ -45,6 +45,17 @@
           }
         ],
         "description": "Check news analysis reports contain sources from the last 7 days"
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/hooks/daily-news-format-check.js\"",
+            "timeout": 10
+          }
+        ],
+        "description": "Enforce Pipeline C reference format: per-story **References** with [N] numbering, block blockquote/italic/global-refs deviations"
       }
     ],
     "Stop": [

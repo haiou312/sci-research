@@ -21,13 +21,16 @@ Each story must use this exact block structure (markers come from the Localisati
 
 {references_marker}
 
-<Surname>, <Initial>. (<Year>, <Month> <Day>). <Original English title>. <Outlet name>. <full https URL>
+[N] <Surname>, <Initial>. (<Year>, <Month> <Day>). <Original English title>. <Outlet name>. <full https URL>
+[N+1] <second reference if the story has corroborating sources, same APA format>
 
 ---
 ```
 
 Between consecutive stories use a standalone `---` separator line.
 Do not emit a trailing global references or sources section.
+
+**`[N]` numbering rule**: every reference line starts with `[N] ` where `N` runs **continuously from 1 across the entire document**, not per-story. The first reference of story 1 is `[1]`; if story 1 has 3 references, story 2's first reference is `[4]`. Multiple references per story are allowed (and common — Verifier often delivers corroborating T1-T2 pairs).
 
 If a category has fewer kept stories than `min_per_category` after the Scanner gap pass, keep the section heading and append exactly one italic `gap_note` line before the next `---`.
 
@@ -46,7 +49,7 @@ Markdown heading markers are syntax tokens, not natural language.
 
 ## Reference Format Rules (CRITICAL)
 
-Every story MUST end with the `{references_marker}` block containing exactly one APA 7th formatted reference with a bare URL. The following alternative formats are **strictly prohibited**:
+Every story MUST end with the `{references_marker}` block containing **one or more** APA 7th formatted references with bare URLs, each prefixed with `[N] ` where `N` is a globally continuous counter across the entire document. The following alternative formats are **strictly prohibited**:
 
 | Prohibited format | Why it's wrong |
 |---|---|
@@ -55,13 +58,19 @@ Every story MUST end with the `{references_marker}` block containing exactly one
 | `（来源：来源名 https://...）` | Inline parenthetical — breaks story block structure |
 | `（*Japan Times*，2026年4月15日）` with refs at bottom | In-text citation + global ref list — user must scroll to find URL |
 | `来源：Bloomberg https://...` (indented) | Missing APA fields, breaks block structure |
+| `## 参考文献` / `## References` / `## Sources` section at end | **Global** ref list prohibited — refs must be per-story, not aggregated at the bottom |
+| `> **来源**: Author. (Year). Title. Outlet. URL` blockquote | Blockquote replacement for `**References**` block — not a recognised format |
+| `*来源：Author (Year); Author (Year)*` italic in-text | Shortened in-text citation with a separate global URL list — reader cannot find URL without scrolling |
+| Reference line without `[N]` prefix | Mandatory numbering missing — breaks continuous-counter contract |
+| Reference line without a bare `https://` URL | Every reference must carry a verifiable URL |
 
-The ONLY acceptable format is the APA 7th reference colocated with each story:
+The ONLY acceptable format is the numbered APA 7th reference(s) colocated with each story:
 
 ```md
 **References**
 
-Reuters. (2026, April 16). Article title here. Reuters. https://www.reuters.com/...
+[1] Reuters. (2026, April 16). Article title here. Reuters. https://www.reuters.com/...
+[2] Bloomberg. (2026, April 16). Corroborating title. Bloomberg. https://www.bloomberg.com/...
 ```
 
 ### Invalid examples
@@ -96,7 +105,8 @@ Mizuho Securities chief economist Shunsuke Kobayashi described the decision as "
 
 **References**
 
-Reuters. (2026, April 14). Bank of Japan keeps benchmark rate at 0.5%. Reuters. https://www.reuters.com/...
+[1] Reuters. (2026, April 14). Bank of Japan keeps benchmark rate at 0.5%. Reuters. https://www.reuters.com/...
+[2] Bloomberg. (2026, April 14). BOJ holds rates, signals patience on hikes. Bloomberg. https://www.bloomberg.com/...
 
 ---
 ```
@@ -120,17 +130,34 @@ Reuters. (2026, April 14). Bank of Japan keeps benchmark rate at 0.5%. Reuters. 
 
 **References**
 
-Reuters. (2026, April 14). Bank of Japan keeps benchmark rate at 0.5%. Reuters. https://www.reuters.com/...
+[3] Reuters. (2026, April 14). Bank of Japan keeps benchmark rate at 0.5%. Reuters. https://www.reuters.com/...
+[4] Bloomberg. (2026, April 14). BOJ holds rates, signals patience on hikes. Bloomberg. https://www.bloomberg.com/...
 
 ---
 ```
 
+(Note: `[3]`/`[4]` in the `lang=zh` example assumes the previous `lang=en` story consumed `[1]`/`[2]`. `[N]` is a **document-wide** continuous counter, never reset per story or per language.)
+
 ## APA 7th Reference Format
 
-- Pattern: `<Author surname>, <Given-name initials>. (<Year>, <Month> <Day>). <Original English title>. <Outlet>. <URL>`
-- Reference lines are always rendered in English regardless of `lang`.
+- Pattern: `[N] <Author surname>, <Given-name initials>. (<Year>, <Month> <Day>). <Original English title>. <Outlet>. <URL>`
+- Reference lines are always rendered in English regardless of `lang` (only the leading `[N]` prefix is language-neutral).
 - When the byline is an organisation (Reuters, Bloomberg, GOV.UK, ECB), write the organisation name in place of the author.
 - The title stays in the original English — do not translate.
 - The date segment uses English month names, e.g. `(2026, April 14)`.
 - URLs are bare — never wrap in `[text](url)`.
-- Exactly one reference per story, colocated in the story's references block. Do not emit a global sources list.
+- One or more references per story, colocated in the story's references block. Do NOT emit a global sources list.
+- `[N]` prefix is mandatory, counter runs continuously from `[1]` at the document's first reference through `[total]` at the last, regardless of story boundaries.
+
+## Self-Check Checksum (Writer must verify before emitting)
+
+Before calling `Write`, count your own output:
+
+1. `count(### ) == count(**Summary**/摘要/要約) == count(**References**)` — one of each marker per story.
+2. `[N]` runs continuously from 1 to the total number of reference lines — no gaps, no duplicates, no reset per story.
+3. Every reference line contains a bare `https://` URL.
+4. No `^## 参考文献$` / `^## References$` / `^## Sources$` H2 heading anywhere.
+5. No `^> **来源**` / `^> **Source**` blockquote patterns.
+6. No `^*\s*来源[:：]` / `^*\s*Sources?[:：]` italic in-text citation patterns.
+
+If any check fails, regenerate. A PostToolUse hook (`scripts/hooks/daily-news-format-check.js`) enforces these same rules mechanically — it will block the `Write` if any is violated.
