@@ -6,7 +6,7 @@
 
 ## 项目定位
 
-这是一个 **Claude Code 插件**（`sci-research`，当前版本 1.7.3），通过多 Agent 编排，将"主题 + 比较实体 + 输出语言"转化为高质量研究/新闻产出。插件包含五条**完全独立**的流水线，互不共享 Agent：
+这是一个 **Claude Code 插件**（`sci-research`，当前版本 1.7.4），通过多 Agent 编排，将"主题 + 比较实体 + 输出语言"转化为高质量研究/新闻产出。插件包含五条**完全独立**的流水线，互不共享 Agent：
 
 | 特性 | `/sci-research` | `/news-scan` | `/daily-news-intelligence` | `/daily-briefing` | `/reputation-track` |
 |---|---|---|---|---|---|
@@ -231,14 +231,15 @@ User Input (company name|ticker, date, lang)
 | Agent / 组件 | 模型 | 工具 | 职责 |
 |---|---|---|---|
 | reputation-resolver | opus | WebFetch, WebSearch, Read, Grep, Glob | ticker/name 消歧（Yahoo Finance/SEC/Wikipedia），抓 5-8 名高管；resolution_confidence=low 时中止 |
-| reputation-scanner (×3) | sonnet | WebSearch, WebFetch, Read, Grep, Glob | 每源一个实例并行。News 走 WebSearch+T1-T4；Reddit 走 `/search.json`；X 走 `site:` search。只抓不判 |
+| reputation-scanner (×3) | sonnet | WebSearch, WebFetch, Read, Grep, Glob, **mcp__apidirect__search_reddit**, **mcp__apidirect__search_twitter** | 每源一个实例并行。News 走 WebSearch+T1-T4；**Reddit/X 走 apidirect MCP 单次调用**（月 50 token 预算，每次 run 2 token）。只抓不判 |
 | reputation-classifier | sonnet | Read, Grep, Glob, WebFetch | 逐条打 category + severity + 可信度；WebFetch 源文件提 verbatim quote；跨源去重；低于 severity_min 丢弃 |
 | reputation-writer | opus | Read, Write, Edit, Grep | 按 `html-template.md` 渲染内联 CSS HTML；verbatim quote 原样；生成 TL;DR |
 | send-report-email.py `--body-html-file` | — | Gmail SMTP | 扩展后支持 HTML body，multipart/alternative 自动生成 text/plain 降级 |
 
 **关键约束**：
 - `total_items_kept == 0` → 静默退出，不写 HTML 文件，不发邮件
-- **覆盖范围**：News (T1-T4) + Reddit（公开 sub）+ X（Google 索引）。**Facebook 和 Threads 不在 v1 覆盖**（公开搜索过稀，靠不住）
+- **覆盖范围**：News (T1-T4) + Reddit（apidirect MCP，单次调用）+ X（apidirect MCP，单次调用）。**Facebook 和 Threads 不在 v1 覆盖**
+- **apidirect 配额**：月 50 token 免费，每次 `/reputation-track` 烧 2 token（Reddit + X 各 1），支持 ~25 runs/month。Scanner 禁止重试或分页
 - 每条输出必须含源文件的 verbatim 引用 — 不改写、不编造
 - 低可信度（Reddit/X）声称 high/critical 时需 T1-T3 佐证，否则降级或丢弃
 

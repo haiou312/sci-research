@@ -1,7 +1,7 @@
 ---
 name: reputation-scanner
-description: Per-source raw-data scanner for reputation-track. Launched in parallel — one instance per source (news, reddit, x). Retrieves candidate items about the company and its executives, date-verified to the target date. Does NOT classify negativity — emits all date-verified candidates for the Classifier.
-tools: WebSearch, WebFetch, Read, Grep, Glob
+description: Per-source raw-data scanner for reputation-track. Launched in parallel — one instance per source (news, reddit, x). Retrieves candidate items about the company and its executives, date-verified to the target date. Does NOT classify negativity — emits all date-verified candidates for the Classifier. Reddit and X use the apidirect MCP server (single call per source) to avoid public-endpoint scraping blocks.
+tools: WebSearch, WebFetch, Read, Grep, Glob, mcp__apidirect__search_reddit, mcp__apidirect__search_twitter
 model: sonnet
 ---
 
@@ -34,19 +34,37 @@ Single-source scan. The orchestrator launches three instances in parallel: one e
 
 ### When `source=reddit`
 
-1. `WebFetch https://www.reddit.com/search.json?q=<URL-encoded query>&sort=new&t=day&limit=50` for each of: `official_name`, `ticker`, each executive name.
-2. Optionally scan high-signal subs directly (`r/investing`, `r/stocks`, industry-relevant subs) via `/r/<sub>/search.json?restrict_sr=on`.
-3. Parse the JSON. Filter by `created_utc` within target `date` window.
+**EXACTLY ONE `mcp__apidirect__search_reddit` call per run. NO retries, NO pagination, NO follow-up queries.** The apidirect quota is 50 tokens/month shared across Reddit + X; each call burns 1 token.
+
+1. Build one compound query string (≤500 chars) covering company + ticker + top executives. Template:
+   ```
+   "{official_name}" OR "{ticker}" OR "{exec1_name}" OR "{exec2_name}" OR "{exec3_name}"
+   ```
+   Include the first three executives from the Resolver output (typically CEO, CFO, Chair). Quote multi-word names. If the query would exceed 500 chars, drop the lowest-seniority executives until it fits.
+2. Call `mcp__apidirect__search_reddit` with:
+   - `query` = the compound string above
+   - `sort_by` = `"most_recent"`
+   - `page` = 1 (do NOT call with page=2,3 in a retry; the quota forbids it)
+3. Parse the response. Filter locally by `created_utc` within target `date` window (±24h UTC).
 4. Drop throwaway accounts (account age <30d) and zero-engagement posts (score ≤1 AND num_comments == 0).
 5. Cap at 40 candidates; prefer higher-score items.
 
+If the single call returns zero date-matching candidates, emit `raw_candidates: []` with `coverage_notes: "apidirect search_reddit returned no posts for target date (single call per quota budget)"`. **Do not retry with a different query — the quota forbids it.**
+
 ### When `source=x`
 
-1. `WebSearch site:x.com OR site:twitter.com "<query>" <date_en>` for `official_name`, `ticker`, each executive.
-2. Fallback `site:nitter.net` if Google results are sparse.
-3. Accept snippet-date if WebFetch of the X URL fails (X serves a JS shell to non-browsers).
-4. Record verified account indicators (checkmark, follower count) from snippets when visible.
+**EXACTLY ONE `mcp__apidirect__search_twitter` call per run. NO retries, NO pagination, NO follow-up queries.** Same quota discipline as Reddit.
+
+1. Build one compound query string (≤500 chars) per the Reddit template above.
+2. Call `mcp__apidirect__search_twitter` with:
+   - `query` = the compound string
+   - `sort_by` = `"most_recent"`
+   - `pages` = 1 (do NOT pass `pages=2,3+` — each extra page burns another token)
+3. Parse the response. Filter locally by tweet date within target `date` window (±24h UTC).
+4. Record verified-account indicators (checkmark, follower count) when present in the response.
 5. Cap at 40 candidates.
+
+If the single call returns zero date-matching candidates, emit `raw_candidates: []` with `coverage_notes: "apidirect search_twitter returned no posts for target date (single call per quota budget)"`.
 
 ## Output
 

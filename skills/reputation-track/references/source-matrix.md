@@ -7,10 +7,30 @@ Loaded by the Scanner. Defines the three sources the reputation-track MVP covers
 | Source | Tool | Reliability | Coverage |
 |---|---|---|---|
 | News | WebSearch + WebFetch | ★★★★★ | T1-T4 wire + financial + industry outlets |
-| Reddit | WebFetch `.json` endpoint | ★★★★☆ | Public subreddits, full content |
-| X (Twitter) | WebSearch `site:x.com` + nitter fallback | ★★☆☆☆ | Only Google-indexed public posts |
+| Reddit | `mcp__apidirect__search_reddit` (single call) | ★★★★☆ | Public subreddits, full content |
+| X (Twitter) | `mcp__apidirect__search_twitter` (single call) | ★★★★☆ | Full public-post stream (not just Google-indexed) |
 
-**Out of scope (disclosed in HTML footer):** Facebook and Threads are intentionally excluded in v1 — public-post discoverability via Google is too sparse to be trustworthy.
+**Out of scope (disclosed in HTML footer):** Facebook and Threads are intentionally excluded in v1 — not for tooling reasons (apidirect offers `search_facebook_*`) but to keep the alert concise; v2 may expand.
+
+## apidirect Quota Budget
+
+`mcp__apidirect__*` tools share a **50-token/month** free quota. Reputation-track's discipline:
+
+| Source | Calls per `/reputation-track` run | Tokens burned |
+|---|---|---|
+| News (WebSearch) | N (5-10 queries) | 0 (WebSearch is free) |
+| Reddit (apidirect) | **exactly 1** | 1 |
+| X (apidirect) | **exactly 1** | 1 |
+| **Per-run total** | — | **2** |
+
+At 2 tokens/run, the 50-token quota supports **~25 runs/month**. If you run daily, you exhaust the quota in ~3.5 weeks. If you run weekly, you have 6× headroom.
+
+**Hard rules** (enforced in `agents/reputation-scanner.md`):
+- No retries on failure — if apidirect returns an error or zero results, emit empty `raw_candidates` with a `coverage_notes` line. Do not retry with a different query.
+- No pagination — always `page=1` / `pages=1`. Extra pages cost extra tokens.
+- No per-executive loop — build ONE compound query covering company + ticker + top 3 executives, ≤500 chars.
+
+If quota is exhausted, apidirect calls will start failing; Scanner should emit empty candidates for the affected sources rather than retrying.
 
 ## News — Search Patterns
 
@@ -29,57 +49,68 @@ Each query must produce both tier-mixed results and tier-focused results. Prefer
 
 For every candidate URL: `WebFetch` and verify publication date matches target `date` (±24h for timezone) before admitting.
 
-## Reddit — Public JSON Endpoint
+## Reddit — `mcp__apidirect__search_reddit` (single call)
 
-Reddit's `.json` suffix works on any public URL without auth. Query patterns:
+Reddit's public `.json` endpoint is now blocked by Reddit's anti-bot measures for WebFetch user agents. Use `mcp__apidirect__search_reddit` instead — one call per `/reputation-track` run.
 
-```
-WebFetch https://www.reddit.com/search.json?q=<URL-encoded query>&sort=new&t=day&limit=50
-```
-
-Queries:
-- `"<company>"`
-- `"<ticker>"`
-- `"<exec name>"`
-
-Also scan high-signal subreddits directly if domain-relevant (e.g. `r/investing`, `r/stocks`, `r/<industry>`):
+**Call contract:**
 
 ```
-WebFetch https://www.reddit.com/r/<sub>/search.json?q=<company>&restrict_sr=on&sort=new&t=day
+mcp__apidirect__search_reddit(
+  query: <compound string, ≤500 chars>,
+  sort_by: "most_recent",
+  page: 1
+)
 ```
 
-Parse `data.children[].data`:
+**Compound query template** (fits 500-char limit for most companies):
+
+```
+"{official_name}" OR "{ticker}" OR "{exec1_name}" OR "{exec2_name}" OR "{exec3_name}"
+```
+
+Executives are the top 3 from the Resolver output (typically CEO, CFO, Chair). Drop lower-seniority execs first if the query would exceed 500 chars.
+
+**Response fields to parse** (per post returned):
 - `title`, `selftext`, `url`, `permalink`
 - `created_utc` (Unix timestamp — **authoritative date** for verification)
 - `subreddit`, `author`, `score`, `num_comments`
 
-**Filter at the Scanner stage:**
-- `created_utc` within target `date` window (±24h)
+**Client-side filters at Scanner stage:**
+- `created_utc` within target `date` window (±24h UTC)
 - Drop accounts with age < 30 days (likely throwaway)
-- Drop items with `score <= 1` and `num_comments == 0` (no community traction)
+- Drop items with `score ≤ 1` AND `num_comments == 0` (no community traction)
 - Keep `score > 50` or `num_comments > 10` as higher-signal items
+- Cap at 40 candidates
 
-## X (Twitter) — Search via Google
+## X (Twitter) — `mcp__apidirect__search_twitter` (single call)
 
-X blocks direct scraping without login. Coverage is limited to Google's public index.
+X blocks direct scraping without login, and Google's index of x.com is sparse enough to be unreliable. Use `mcp__apidirect__search_twitter` instead — one call per run.
 
-```
-WebSearch site:x.com OR site:twitter.com "<company>" <date_en>
-WebSearch site:x.com OR site:twitter.com "<exec name>" <date_en>
-```
-
-Fallback when Google returns sparse results:
+**Call contract:**
 
 ```
-WebSearch site:nitter.net "<company>" <date_en>
+mcp__apidirect__search_twitter(
+  query: <same compound string as Reddit, ≤500 chars>,
+  sort_by: "most_recent",
+  pages: 1
+)
 ```
 
-Nitter instances are intermittently up. If `WebFetch` on a nitter URL fails, accept the sparse coverage — do not retry more than twice.
+**Important**: `pages=1` is mandatory. Each extra page is an extra token; the quota forbids pagination loops.
 
-**Authority signals to record (even if partial):**
-- Verified checkmark evidence in snippet (blue/gold)
-- Follower count if the snippet shows it
-- Account handle for reader verification
+**Response fields to parse** (per tweet returned):
+- Tweet text, tweet ID, permalink
+- Created-at timestamp (authoritative date for verification)
+- Author handle, display name, verified status, follower count
+- Engagement (likes, retweets, replies)
+
+**Client-side filters at Scanner stage:**
+- Tweet date within target `date` window (±24h UTC)
+- Drop new/throwaway accounts (follower count < 100 AND age < 30 days if age is exposed)
+- Drop zero-engagement tweets
+- Record `verified` flag + `follower_count` for the Classifier's credibility weighting
+- Cap at 40 candidates
 
 ## Date Verification
 
@@ -88,8 +119,8 @@ Every candidate — across all three sources — must pass date verification bef
 | Source | Verification method |
 |---|---|
 | News | `WebFetch` article; parse `<meta property="article:published_time">` or visible byline date |
-| Reddit | `created_utc` in JSON response (authoritative) |
-| X | Snippet date if visible; otherwise Google's indexed date; otherwise drop |
+| Reddit | `created_utc` in apidirect response (authoritative) |
+| X | Tweet `created_at` in apidirect response (authoritative) |
 
 Tolerance: ±24 hours from target `date` (accommodates timezone differences). Reject anything outside this window.
 

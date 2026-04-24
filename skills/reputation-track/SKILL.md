@@ -28,6 +28,7 @@ Scans News + Reddit + X for adverse content about a single company and its top e
 - **Verbatim or drop.** Every surfaced item is backed by a verbatim quote from the source URL. No paraphrase, no synthesis.
 - **Noise protection over recall.** Low-credibility claims without corroboration are dropped, not downgraded. Missing a marginal signal is preferable to crying wolf.
 - **Honest coverage disclosure.** The HTML footer states which platforms were scanned and which (Facebook, Threads) were excluded.
+- **apidirect quota discipline.** Reddit and X each consume **exactly one** `mcp__apidirect__*` call per run (2 tokens total). The free quota is 50 tokens/month → ~25 runs/month. See `references/source-matrix.md` § apidirect Quota Budget. Scanner agents must NOT retry failed calls or paginate beyond `page=1` / `pages=1`.
 
 ## Input Parameters
 
