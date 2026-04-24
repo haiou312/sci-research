@@ -1,6 +1,19 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/hooks/email-send-guard.js\"",
+            "timeout": 5
+          }
+        ],
+        "description": "Block inline SMTP / email-library sends; force use of send-report-email.py or send-briefing-email.py"
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": "Write",

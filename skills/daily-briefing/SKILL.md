@@ -150,6 +150,8 @@ Derived fields:
    ```
    Email failure never deletes the generated docx.
 
+   **⚠️ Hard rule — sanctioned script only.** The orchestrator MUST invoke `scripts/send-briefing-email.py` via the Bash subprocess above. **Do NOT** implement email delivery inline using `smtplib`, `email.message`, `email.mime`, `MIMEMultipart`, `MIMEText`, `EmailMessage`, or by shelling out to `sendmail` / `mail -s`. Inline implementations skip the dual `Content-Disposition` filename encoding the sanctioned script applies — without both forms, attachments land as `noname` on corporate Exchange / Outlook. A PreToolUse hook (`scripts/hooks/email-send-guard.js`) rejects Bash commands matching inline SMTP patterns. On non-zero script exit, halt and report — do NOT fall back to inline SMTP.
+
 9. **Verify delivery.**
    ```bash
    ls -la "$OUT_DOCX"

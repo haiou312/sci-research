@@ -6,7 +6,7 @@
 
 ## 项目定位
 
-这是一个 **Claude Code 插件**（`sci-research`，当前版本 1.7.2），通过多 Agent 编排，将"主题 + 比较实体 + 输出语言"转化为高质量研究/新闻产出。插件包含五条**完全独立**的流水线，互不共享 Agent：
+这是一个 **Claude Code 插件**（`sci-research`，当前版本 1.7.3），通过多 Agent 编排，将"主题 + 比较实体 + 输出语言"转化为高质量研究/新闻产出。插件包含五条**完全独立**的流水线，互不共享 Agent：
 
 | 特性 | `/sci-research` | `/news-scan` | `/daily-news-intelligence` | `/daily-briefing` | `/reputation-track` |
 |---|---|---|---|---|---|
@@ -290,6 +290,7 @@ User Input (company name|ticker, date, lang)
 | reference-validator | A | PostToolUse:Write | 内文 `[N]` 与参考条目不一致则警告 |
 | news-freshness-check | B | PostToolUse:Write | 近 7 天内无来源则警告 |
 | **daily-news-format-check** | **C** | **PostToolUse:Write** | **Writer 输出格式违规即阻断（blockquote 来源 / 斜体 in-text / 全局 `## 参考文献` / 缺 `[N]` / `[N]` 不连续 / 缺 URL / `### == 摘要 == **References**` 数目不符）** |
+| **email-send-guard** | **C & D & E** | **PreToolUse:Bash** | **Bash 命令里检测到 inline `smtplib` / `email.message` / `MIMEMultipart` / `sendmail` / `mail -s` 且未调用 `send-*-email.py` → 阻断。防止 orchestrator 绕过 sanctioned 脚本导致附件 noname** |
 | research-summary | A & B | Stop | 异步记录会话元数据（非阻断） |
 
 ---
@@ -323,6 +324,7 @@ User Input (company name|ticker, date, lang)
 | 调整 C 邮件投递 | `skills/daily-news-intelligence/references/email-spec.md` + `scripts/send-report-email.py` |
 | 调整 C 栏目分类 / 本地化 | `skills/daily-news-intelligence/references/language-spec.md` |
 | 调整 C Reference 格式校验规则 | `scripts/hooks/daily-news-format-check.js` + `skills/daily-news-intelligence/references/output-spec.md` § Self-Check Checksum |
+| 调整邮件发送守卫（禁止 inline SMTP） | `scripts/hooks/email-send-guard.js` + 三份 SKILL.md 的 email Step 里的 "Hard rule" 段 |
 | 修改 A 文章格式 | `rules/research/output-format.md` |
 | 调整 D 品牌模板 | `skills/daily-briefing/template/briefing-template.docx` |
 | 调整 D 新闻筛选逻辑 | `agents/briefing-curator.md` |

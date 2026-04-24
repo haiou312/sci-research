@@ -107,6 +107,8 @@ Each stage runs as a subagent. The orchestrator passes data via the subagent pro
    ```
    Handle the script's non-zero exit codes per `references/email-spec.md` § Exit Code Handling. **Email failure must never delete `out_html`.**
 
+   **⚠️ Hard rule — sanctioned script only.** The orchestrator MUST invoke `scripts/send-report-email.py` via the Bash subprocess above. **Do NOT** implement email delivery inline using `smtplib`, `email.message`, `email.mime`, `MIMEMultipart`, `MIMEText`, `EmailMessage`, or by shelling out to `sendmail` / `mail -s`. For HTML-body sends, the sanctioned script automatically wraps the HTML as `multipart/alternative` with a text/plain fallback. A PreToolUse hook (`scripts/hooks/email-send-guard.js`) rejects Bash commands matching inline SMTP patterns. On non-zero script exit, halt and report — do NOT fall back to inline SMTP.
+
 9. **Print summary.**
    ```
    ✅ reputation-track complete
