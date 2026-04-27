@@ -44,3 +44,8 @@ node_modules/
 .env
 .env.local
 *.DS_Store
+
+# Python bytecode (skills/weekly-report ships Python scripts)
+__pycache__/
+*.pyc
+*.pyo

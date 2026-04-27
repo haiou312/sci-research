@@ -1,19 +1,19 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "sci-research",
-  "description": "Claude Code plugin for deep research, real-time news analysis, and country-level daily news intelligence with authoritative references",
+  "description": "Claude Code plugin for deep research, real-time news analysis, country-level daily news intelligence, multi-country branded briefings, company reputation tracking, and weekly macro & market reports with authoritative references",
   "owner": {
     "name": "Peter Wang"
   },
   "metadata": {
-    "description": "Three independent pipelines — deep research, real-time news scan, and single-country daily news intelligence — powered by nine specialised agents with source credibility grading, per-URL date verification, editorial-desk filtering, and automated quality gates"
+    "description": "Six independent pipelines — deep research, real-time news scan, single-country daily news intelligence, multi-country branded briefing, company reputation tracking, and weekly macro & market report — powered by specialised agents with source credibility grading, per-URL date verification, editorial-desk filtering, FRED/BOE/BOJ/yfinance market data, and automated quality gates"
   },
   "plugins": [
     {
       "name": "sci-research",
       "source": "./",
-      "description": "Three independent pipelines: (1) /sci-research — ≤5000-word comparative article from researcher → comparator → fact-checker → writer; (2) /news-scan — real-time news briefing with image extraction from news-scanner → news-imager → news-analyst; (3) /daily-news-intelligence — dated single-country daily news briefing in zh/en/ja from news-scanner → news-verifier → daily-news-writer with per-URL WebFetch date verification, T1-T4 source gating, editorial-desk filtering (originality + authority + impact + dedup), five-category coverage enforcement, and APA 7th references",
-      "version": "1.6.1",
+      "description": "Six independent pipelines: (1) /sci-research — ≤5000-word comparative article from researcher → comparator → fact-checker → writer; (2) /news-scan — real-time news briefing with image extraction from news-scanner → news-imager → news-analyst; (3) /daily-news-intelligence — dated single-country daily news briefing in zh/en/ja from news-scanner → news-verifier → daily-news-writer with per-URL WebFetch date verification, T1-T4 source gating, editorial-desk filtering (originality + authority + impact + dedup), five-category coverage enforcement, and APA 7th references; (4) /daily-briefing — multi-country branded briefing rendered to docx; (5) /reputation-track — company reputation monitoring with adverse-media and social-listening; (6) /weekly-report — weekly macro & market report fusing prior-week daily briefings with live FRED / Bank of England / Bank of Japan / yfinance market data, three-stage aggregator → market-data-collector → writer pipeline in zh/en/ja with PostToolUse format-check hook",
+      "version": "1.8.0",
       "author": {
         "name": "Peter Wang"
       },
@@ -25,6 +25,14 @@
         "news-scan",
         "daily-news",
         "news-intelligence",
+        "daily-briefing",
+        "reputation-track",
+        "weekly-report",
+        "macro",
+        "market-data",
+        "fred",
+        "yfinance",
+        "yield-curve",
         "science",
         "popular-science",
         "comparison",
@@ -39,6 +47,8 @@
         "deep-research",
         "news-analysis",
         "daily-briefing",
+        "weekly-report",
+        "macro-market",
         "agents",
         "skills",
         "hooks",

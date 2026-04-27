@@ -1,0 +1,47 @@
+{
+  "tests": [
+    {
+      "name": "default_zh",
+      "command": "/weekly-report",
+      "expects": {
+        "out_md_pattern": "^全球宏观与市场周报-\\d{4}-\\d{2}-\\d{2}_至_\\d{4}-\\d{2}-\\d{2}\\.md$",
+        "h2_count_min": 6,
+        "must_contain": ["市场事件", "货币市场", "固定收益", "外汇", "大宗商品", "来源"]
+      }
+    },
+    {
+      "name": "english_explicit_dates",
+      "command": "/weekly-report --end-date 2026-04-26 --lang en",
+      "expects": {
+        "out_md_pattern": "^Global-Macro-Market-Weekly-2026-04-20_to_2026-04-26\\.md$",
+        "must_contain": ["Market event", "Money Market", "Fixed Income", "Foreign Exchange", "Commodity", "Sources"]
+      }
+    },
+    {
+      "name": "japanese_narrow",
+      "command": "/weekly-report --end-date 2026-04-26 --lang ja --countries \"JP,US\"",
+      "expects": {
+        "out_md_pattern": "^グローバル・マクロ市場週報-\\d{4}-\\d{2}-\\d{2}_から_\\d{4}-\\d{2}-\\d{2}\\.md$",
+        "must_contain": ["市場イベント", "マネーマーケット", "債券市場", "外国為替", "コモディティ", "出典"]
+      }
+    },
+    {
+      "name": "dry_run_email",
+      "command": "/weekly-report --end-date 2026-04-26 --email \"test@example.com\" --email-dry-run",
+      "expects": {
+        "stdout_contains": ["DRY-RUN", "subject", "attach"],
+        "no_smtp_connection": true
+      }
+    }
+  ],
+  "smoke_tests_per_script": {
+    "yfinance_commodities.py": "python3 yfinance_commodities.py --days 14 | jq '.rows[].symbol' → expect [\"GC=F\",\"SI=F\",\"CL=F\"]",
+    "yfinance_kr_bond.py": "python3 yfinance_kr_bond.py --days 14 | jq '.row.symbol' → expect \"148070.KS\"",
+    "boe_yield_curve.py": "python3 boe_yield_curve.py --days 14 --tenors 2Y,10Y | jq '.tenors' → expect [\"2Y\",\"10Y\"]",
+    "boj_yield_curve.py": "python3 boj_yield_curve.py --days 14 --tenors 2Y,10Y | jq '.tenors' → expect [\"2Y\",\"10Y\"]",
+    "collect_weekly_news.py": "python3 collect_weekly_news.py --start-date 2026-04-09 --end-date 2026-04-15 --lang zh | jq '.summary.events_count'",
+    "fred_money_market.py": "FRED_API_KEY=… python3 fred_money_market.py --days 14 | jq '.rows[].selected_series_id' → expect [\"SOFR\",...]",
+    "fred_fixed_income.py": "FRED_API_KEY=… python3 fred_fixed_income.py --days 14 | jq '.us_treasuries[].instrument'",
+    "fred_fx.py": "FRED_API_KEY=… python3 fred_fx.py --days 14 | jq '.rows[].instrument'"
+  }
+}

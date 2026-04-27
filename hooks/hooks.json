@@ -69,6 +69,17 @@
           }
         ],
         "description": "Enforce Pipeline C reference format: per-story **References** with [N] numbering, block blockquote/italic/global-refs deviations"
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/hooks/weekly-report-format-check.js\"",
+            "timeout": 10
+          }
+        ],
+        "description": "Enforce /weekly-report Markdown structure: H1 with date range, six required H2 sections in order, market tables with allowed Source labels, [Sn] tags only in Market event/Sources"
       }
     ],
     "Stop": [
