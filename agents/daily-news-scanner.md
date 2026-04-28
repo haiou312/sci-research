@@ -154,6 +154,101 @@ Use **only** when a category is still below `min_per_category` after T4 → T2 r
 
 Personal blogs, Wikipedia, Reddit / forums, Google News aggregator pages, SEO content farms, unattributed rewrites, PR wire platforms (PR Newswire, Business Wire) — **unless** the issuing organisation is a T4 institution publishing its own release. Aggregator domains that republish wire content (Investing.com, Yahoo Finance reposts, MSN, Seeking Alpha mirrors) are excluded — find the original wire's domain instead.
 
+### Paywall Status
+
+Every non-T4 domain falls into one of three buckets. The bucket determines whether the outlet can serve as a `Lead` (provides factual body) or only as `Corroboration` (provides authority signal in `**References**` only).
+
+**Hard paywall** — WebFetch typically returns a stub (title + 1-2 paragraphs + paywall notice). **Cannot be a Lead.** Use `Corroborated by` only.
+
+| Outlet | Domain |
+|---|---|
+| Bloomberg News | bloomberg.com |
+| Wall Street Journal | wsj.com |
+| Financial Times | ft.com |
+| The Economist | economist.com |
+| Nikkei Asia | asia.nikkei.com |
+| Dow Jones Newswires | dowjones.com |
+| Caixin Global | caixinglobal.com |
+| FAZ English | faz.net/english |
+| Risk.net | risk.net |
+| GlobalCapital | globalcapital.com |
+| MLex | mlex.com |
+| Law360 | law360.com |
+| S&P Global Commodity Insights | spglobal.com/commodityinsights |
+| Health Affairs | healthaffairs.org |
+
+**Metered** — first few articles free. Treat as `free` if WebFetch returns ≥ 800 characters of body; treat as `hard` if WebFetch returns truncated body or `metered_paywall` indicators (`subscription-required`, `register to continue`, `<div class="paywall">`).
+
+| Outlet | Domain |
+|---|---|
+| New York Times | nytimes.com |
+| Washington Post | washingtonpost.com |
+| The Atlantic | theatlantic.com |
+| The Japan Times | japantimes.co.jp |
+| Mainichi English | mainichi.jp/english |
+| South China Morning Post | scmp.com |
+| Straits Times | straitstimes.com |
+| Daily Maverick | dailymaverick.co.za |
+| Business Day (SA) | businesslive.co.za |
+| Folha de S.Paulo English | www1.folha.uol.com.br/internacional/en |
+| Wired | wired.com |
+| MIT Technology Review | technologyreview.com |
+| STAT News | statnews.com |
+| BMJ News | bmj.com/news |
+
+**Free** — primary Lead pool, also the **paywall-fallback search target** in Step 3.5. All wire services and most country-flagship outlets fall here.
+
+| Outlet | Domain |
+|---|---|
+| Reuters | reuters.com |
+| Associated Press | apnews.com |
+| Agence France-Presse | afp.com |
+| Kyodo News English | english.kyodonews.net |
+| Yonhap English | en.yna.co.kr |
+| Xinhua English | english.news.cn |
+| China News Service English | ecns.cn |
+| TASS English | tass.com |
+| The Guardian | theguardian.com |
+| BBC News | bbc.com |
+| Le Monde English | lemonde.fr/en |
+| Spiegel International | spiegel.de/international |
+| El País English | english.elpais.com |
+| People's Daily English | en.people.cn |
+| Asahi Shimbun English | asahi.com/ajw |
+| Korea JoongAng Daily | koreajoongangdaily.joins.com |
+| The Hindu | thehindu.com |
+| Economic Times | economictimes.indiatimes.com |
+| CNBC | cnbc.com |
+| CNN | cnn.com |
+| NPR | npr.org |
+| Politico | politico.com |
+| Axios | axios.com |
+| NHK World | www3.nhk.or.jp/nhkworld |
+| ABC News Australia | abc.net.au |
+| Korea Herald | koreaherald.com |
+| Politico Europe | politico.eu |
+| Deutsche Welle | dw.com |
+| Euronews | euronews.com |
+| RFI English | rfi.fr/en |
+| Al Jazeera English | aljazeera.com |
+| Arab News | arabnews.com |
+| TechCrunch | techcrunch.com |
+| The Verge | theverge.com |
+| Ars Technica | arstechnica.com |
+| Finextra | finextra.com |
+| Energy Monitor | energymonitor.ai |
+| Carbon Brief | carbonbrief.org |
+| Korea Times | koreatimes.co.kr |
+| Korea Economic Daily English | kedglobal.com |
+| Pulse by Maeil Business News | pulse.mk.co.kr |
+| Business Korea | businesskorea.co.kr |
+| Yicai Global | yicaiglobal.com |
+| Sixth Tone | sixthtone.com |
+| Euractiv | euractiv.com |
+| EUobserver | euobserver.com |
+
+T4-official institutional releases are always treated as `free` for paywall purposes.
+
 ---
 
 ## Search Process
@@ -232,6 +327,35 @@ For **every** candidate URL collected at any tier in any category, call `WebFetc
 
 Keep only URLs that pass the date gate. Discard all others immediately — do not carry them forward, do not retry with relaxed rules, do not include them in the output.
 
+### Step 3.5 — Paywall fallback (mandatory when paywall detected)
+
+After the date gate passes, evaluate body retrievability. A **paywalled** candidate cannot serve as `Lead` because the Writer needs ≥200 words of factual body for the `summary_marker` paragraph. But the paywalled outlet's authority signal is too valuable to discard — it stays as `Corroboration`.
+
+**Paywall detection** (apply to every date-verified candidate):
+
+A candidate is paywalled if **any** of these is true:
+1. Its domain is in the **Hard paywall** list under Source Matrix § Paywall Status.
+2. Its domain is in the **Metered** list AND WebFetch returned < 800 characters of article body.
+3. The fetched HTML contains any of: `subscription-required`, `register to continue`, `subscribe to read`, `paywall`, `<div class="paywall">`, `metered-content`, `<meta name="article:opinion" content="paid">`.
+
+**When a candidate is paywalled:**
+
+1. **Preserve it as Corroboration**: keep its title, URL, outlet name, byline, and verified publication date. Do NOT discard.
+2. **Run a title-anchored fallback search** to find a free outlet covering the same event:
+   ```
+   site:reuters.com "<key noun phrase from title>" {date_en}
+   site:apnews.com "<key noun phrase from title>" {date_en}
+   site:afp.com "<key noun phrase from title>" {date_en}
+   site:bbc.com "<key noun phrase from title>" {date_en}
+   site:theguardian.com "<key noun phrase from title>" {date_en}
+   ```
+   Use 3-6 distinct word pairs from the paywalled title (e.g. `"BOJ" "split vote"`, `"rate hold" "Ueda"`). Run against **every Free-tier outlet** applicable to the country (Source Matrix § Paywall Status — Free table) until you find a match.
+3. **Verify the fallback URL**: it must pass the same Step 3 date gate (publication date equals `date`).
+4. **Promote the free outlet to `Lead`**: use its body for the factual excerpt; record the original paywalled outlet under `Corroborated by` with its URL.
+5. **If no free fallback exists**: the paywalled candidate becomes a `Corroboration-only` candidate. It does NOT count toward `min_per_category`. Continue down the source-tier ladder as normal to find a Lead from a free outlet.
+
+**Output convention**: the `Source:` field always names the Lead's outlet (which is always Free or T4-official). Paywalled outlets only ever appear in `Corroborated by`. The Writer emits one APA reference line per `Corroborated by` URL plus one for the Lead, so paywalled outlets surface in the final report's `**References**` block as authority signals.
+
 ### Step 4 — Classify, dedupe, and label
 
 For each date-verified story:
@@ -269,13 +393,13 @@ Return exactly the Scanner Output Schema. English only — no translation.
 
 ### [Category] <English headline>
 - Publish date (verified): <ISO timestamp or local date extracted from article HTML>
-- Source: <outlet name> [T4-official|T1-wire|T1-flagship|T2|T3]
+- Source: <outlet name> [T4-official|T1-wire|T1-flagship|T2|T3] (Lead must be Free or T4-official; Hard-paywall outlets cannot be Lead)
 - Impact tier: <Policy|Market|Structural|Humanitarian>
 - URL: <full https URL>
 - Byline: <author name or "No byline">
-- Corroborated by: <N outlets: name1, name2 — or "None">
-- Factual excerpt (≥200 words English): <fact-only extract with numbers, named officials with titles, direct quotations in quote marks, explicit time references>
-- Commentary: <verbatim analyst / official / institutional commentary from the article, or exactly "No analyst commentary in source">
+- Corroborated by: <each entry on its own indented line, formatted as "  - <outlet name> [<tier>|<paywall_status>] — <full https URL>" — or "None">
+- Factual excerpt (≥200 words English): <fact-only extract from the Lead URL, with numbers, named officials with titles, direct quotations in quote marks, explicit time references>
+- Commentary: <verbatim analyst / official / institutional commentary from the Lead article, or exactly "No analyst commentary in source">
 
 ... (repeat per story, in importance order) ...
 
@@ -299,6 +423,7 @@ Return exactly the Scanner Output Schema. English only — no translation.
 8. **Output order = category order, then tier order within each category.** Emit stories grouped Economy → Politics → Technology → Society → Other; inside each group, list in the order the source-tier ladder produced them.
 9. **Impact Tier is an output label, not a search driver.** Assign Policy / Market / Structural / Humanitarian at the end of Step 4 for the Verifier's downstream use. Never let it influence which queries you run or which sources you visit.
 10. **No gap padding.** If a category genuinely has no qualifying stories on `date`, record the gap in the output. Do not substitute off-date, off-tier, or marginal stories to meet `min_per_category`.
+10a. **Hard-paywall outlets are never Lead.** Bloomberg / FT / WSJ / Economist / Nikkei Asia / Caixin / Dow Jones and other domains in the Source Matrix § Paywall Status — Hard list cannot serve as Lead because the Writer needs the article body. They appear only as `Corroborated by` entries, where their authority signal still surfaces in the Writer's `**References**` block. When a Hard-paywall hit is the only date-verified candidate, run Step 3.5's title-anchored fallback search to locate a free outlet covering the same event.
 11. **No image work.** Do not extract or describe images. That is handled by a separate agent in Pipeline B and is not part of Pipeline C.
 12. **English only.** All output is in English. Translation happens downstream in the Writer stage.
 13. **Factual excerpts only.** The excerpt field must contain facts, numbers, named officials, and direct quotes — no paraphrase of opinion.

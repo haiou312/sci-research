@@ -6,7 +6,7 @@
 
 ## 项目定位
 
-这是一个 **Claude Code 插件**（`sci-research`，当前版本 1.8.2），通过多 Agent 编排，将"主题 + 比较实体 + 输出语言"转化为高质量研究/新闻产出。插件包含五条**完全独立**的流水线，互不共享 Agent：
+这是一个 **Claude Code 插件**（`sci-research`，当前版本 1.8.3），通过多 Agent 编排，将"主题 + 比较实体 + 输出语言"转化为高质量研究/新闻产出。插件包含五条**完全独立**的流水线，互不共享 Agent：
 
 | 特性 | `/sci-research` | `/news-scan` | `/daily-news-intelligence` | `/daily-briefing` | `/reputation-track` |
 |---|---|---|---|---|---|
@@ -191,7 +191,7 @@ User Input (country, date, lang)
 
 | Agent | 模型 | 工具 | 职责 |
 |---|---|---|---|
-| daily-news-scanner | sonnet | WebSearch, WebFetch, Read, Grep, Glob | 按 tier 顺序搜索（T4-official→T1-wire→T1-flagship→T2→T3），逐 URL WebFetch 严格日期核验（必须等于 date，不接受邻近日），按重要性排序输出 |
+| daily-news-scanner | sonnet | WebSearch, WebFetch, Read, Grep, Glob | 按 tier 顺序搜索（T4-official→T1-wire→T1-flagship→T2→T3），逐 URL WebFetch 严格日期核验（必须等于 date，不接受邻近日）。**付费墙补救（Step 3.5）**：硬付费墙域名（Bloomberg/FT/WSJ/Economist/Nikkei Asia/Caixin 等）不能当 Lead，但保留为 `Corroborated by`；用 title 关键词反搜免费媒体（Reuters/AP/AFP/BBC/Guardian/Kyodo）找替代 Lead。Verifier 透传 `Corroborated by`，Writer 给每个 URL 单独发一条 APA `[N]`。 |
 | news-verifier | sonnet | Read, Grep, Glob, WebFetch | 编辑台二次筛选：原创性、权威性、影响力、去重，输出 KEEP/DROP 集 |
 | daily-news-writer | opus | Read, Write, Edit, Grep | 消费 Verifier KEEP 集，翻译为目标语言，输出 Markdown + APA 引用 |
 
@@ -321,6 +321,8 @@ User Input (company name|ticker, date, lang)
 | 调整 A 来源分级 | `rules/research/source-credibility.md` |
 | 调整 B 新闻来源规则 | `rules/research/news-source.md` |
 | 调整 C 来源分级与日期核验 | `agents/daily-news-scanner.md` + `skills/daily-news-intelligence/references/rubric.md` |
+| 调整 C 付费墙补救逻辑（Step 3.5） | `agents/daily-news-scanner.md` § Source Matrix § Paywall Status + § Search Process § Step 3.5 |
+| 调整 C Corroborated by 透传 | `agents/news-verifier.md` + `agents/daily-news-writer.md` + `skills/daily-news-intelligence/references/schemas.md`（三处必须同时改） |
 | 调整 C Verifier 筛选逻辑 | `agents/news-verifier.md` |
 | 调整 C 输出格式 / Markdown 语法 | `skills/daily-news-intelligence/references/output-spec.md` |
 | 调整 C 邮件投递 | `skills/daily-news-intelligence/references/email-spec.md` + `scripts/send-report-email.py` |

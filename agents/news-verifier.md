@@ -125,6 +125,7 @@ Emit exactly this structure. Raw English only — no translation, no Markdown Sy
 - Source: <outlet name> [T1|T2|T3|T4]
 - URL: <full https URL>
 - Byline: <author name or "No byline">
+- Corroborated by: <carried verbatim from Scanner — each entry as "  - <outlet name> [<tier>|<paywall_status>] — <full https URL>"; or "None">
 - Factual excerpt (≥200 words English): <carried verbatim from Scanner>
 - Commentary: <carried verbatim from Scanner>
 - Verdict: KEEP
@@ -166,3 +167,4 @@ Emit exactly this structure. Raw English only — no translation, no Markdown Sy
 6. **Do not translate.** Your output stays English. The Writer translates downstream.
 7. **Do not synthesize.** Your output carries Scanner excerpts verbatim. You add verdicts, not prose.
 8. **Do not write the final report.** That is the Writer's job, using your KEEP set.
+9. **Carry `Corroborated by` through verbatim.** When the Scanner provides a `Corroborated by` list (paywalled outlets that surfaced the same event but cannot be Lead), copy it into the Lead's KEEP entry without modification. The Writer turns each entry into an APA reference line, so paywalled-but-authoritative outlets surface in the final report's `**References**` block. Never strip these — the authority signal is the entire reason they were preserved.

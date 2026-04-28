@@ -18,11 +18,12 @@ Scanner must return exactly this shape (English raw data — no translation):
 
 ### [Category] <English headline>
 - Publish date (verified): <ISO timestamp or local date from article>
-- Source: <outlet name> [T1|T2|T3|T4]
+- Source: <outlet name> [T1|T2|T3|T4] (Lead must be Free or T4-official; Hard-paywall outlets are recorded under Corroborated by, never as Lead)
 - URL: <full https URL>
 - Byline: <author name or "No byline">
-- Factual excerpt (≥200 words English): <fact-only extract with numbers, named officials with titles, direct quotations in quote marks, explicit time references>
-- Commentary: <verbatim analyst / official / institutional commentary from the article, or exactly "No analyst commentary in source">
+- Corroborated by: <each entry on its own indented line "  - <outlet name> [<tier>|<paywall_status>] — <full https URL>"; or "None">
+- Factual excerpt (≥200 words English): <fact-only extract from the Lead URL, with numbers, named officials with titles, direct quotations in quote marks, explicit time references>
+- Commentary: <verbatim analyst / official / institutional commentary from the Lead article, or exactly "No analyst commentary in source">
 
 ... (repeat per story) ...
 
@@ -50,6 +51,7 @@ Verifier must consume the Scanner bundle and emit exactly this shape (still Engl
 - Source: <outlet name> [T1|T2|T3|T4]
 - URL: <full https URL>
 - Byline: <author name or "No byline">
+- Corroborated by: <carried verbatim from Scanner — each entry as "  - <outlet name> [<tier>|<paywall_status>] — <full https URL>"; or "None">
 - Factual excerpt (≥200 words English): <carried verbatim from Scanner>
 - Commentary: <carried verbatim from Scanner>
 - Verdict: KEEP

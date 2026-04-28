@@ -63,7 +63,8 @@ Derive `country_display`:
    - Translate the headline into `lang` following Title Length Rules.
    - Rewrite the factual excerpt into a `summary_marker` paragraph per Writing Standard.
    - Rewrite any source commentary into an `analysis_marker` paragraph. If the source commentary is absent (`Commentary: No analyst commentary in source`), omit the `analysis_marker` block entirely.
-   - Build the APA 7th reference line in English (never translate).
+   - Build the APA 7th reference line for the **Lead** URL in English (never translate).
+   - **For each URL listed under `Corroborated by:`**, emit one additional APA reference line on its own `[N+1]`, `[N+2]`, ... line. Each gets the next continuous `[N]` counter. Paywalled outlets (Bloomberg/FT/WSJ/Nikkei Asia/etc.) MUST appear here — they are the report's authority signal even when their body is unreachable.
 
 3. **Emit Markdown.** Follow the Required Output structure. All five H2 sections appear in fixed order, even if a category is empty or underfilled.
 
@@ -171,7 +172,7 @@ Markdown heading markers are syntax tokens, not natural language.
 - The title stays in original English — do not translate.
 - Date segment uses English month names: `(2026, April 14)`.
 - URL is bare — never `[text](url)`.
-- **One or more** references per story, colocated in the story's `references_marker` block. When the Verifier delivers corroborating T1-T2 sources, list them all — each on its own line with the next `[N]`.
+- **One or more** references per story, colocated in the story's `references_marker` block. The first reference is the Lead URL; **every URL in the Verifier's `Corroborated by:` field gets its own additional `[N+k]` line in the same block**. Hard-paywall outlets (Bloomberg, FT, WSJ, Economist, Nikkei Asia, Caixin, etc.) carry the report's authority signal — never omit them.
 - **`[N]` is mandatory**. Counter runs continuously from `[1]` at the first reference through `[total]` at the last, across story boundaries.
 - No global sources list at the end of the document.
 
