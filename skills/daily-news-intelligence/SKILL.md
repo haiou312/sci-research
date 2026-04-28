@@ -147,7 +147,7 @@ The orchestrator must not summarise, truncate, or reformat the upstream output â
 
 | Stage | Recommended Agent | Required References |
 |-------|-------------------|---------------------|
-| Scanner | `sci-research:news-scanner` (sonnet) | `references/rubric.md`, `references/schemas.md` |
+| Scanner | `sci-research:daily-news-scanner` (sonnet) | `references/rubric.md`, `references/schemas.md` |
 | Verifier | `sci-research:news-verifier` (sonnet) | `references/rubric.md`, `references/schemas.md` |
 | Writer | `sci-research:daily-news-writer` (opus) | `references/language-spec.md`, `references/output-spec.md`, `references/verification.md` |
 | Email sender (Step 10) | â€” (Bash + `scripts/send-report-email.py`) | `references/email-spec.md` |

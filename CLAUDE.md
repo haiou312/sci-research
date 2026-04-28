@@ -6,14 +6,14 @@
 
 ## 项目定位
 
-这是一个 **Claude Code 插件**（`sci-research`，当前版本 1.7.4），通过多 Agent 编排，将"主题 + 比较实体 + 输出语言"转化为高质量研究/新闻产出。插件包含五条**完全独立**的流水线，互不共享 Agent：
+这是一个 **Claude Code 插件**（`sci-research`，当前版本 1.8.1），通过多 Agent 编排，将"主题 + 比较实体 + 输出语言"转化为高质量研究/新闻产出。插件包含五条**完全独立**的流水线，互不共享 Agent：
 
 | 特性 | `/sci-research` | `/news-scan` | `/daily-news-intelligence` | `/daily-briefing` | `/reputation-track` |
 |---|---|---|---|---|---|
 | **目标** | 多实体对比的科普研究文章 | 指定时间窗内的新闻简报 | 单国每日新闻简报 | 多国品牌新闻简报（SPD Bank） | 公司声誉风险监控 |
 | **时间焦点** | 历史 + 当前 | 近 7/30/90 天 | 单日（指定日期） | 单日（读取已有报告） | 单日（指定日期） |
 | **来源** | 学术论文、官方报告、权威媒体 | 通讯社、财经媒体、行业媒体 | T1-T4 分级媒体（逐 URL 日期核验） | Pipeline C 产出的各国 Markdown | News (T1-T4) + Reddit + X |
-| **Agent 链** | researcher → comparator → fact-checker → writer | news-scanner → news-imager → news-analyst | news-scanner → news-verifier → daily-news-writer | briefing-curator → docx 脚本 → 邮件脚本 | reputation-resolver → reputation-scanner×3 → reputation-classifier → reputation-writer |
+| **Agent 链** | researcher → comparator → fact-checker → writer | news-scanner → news-imager → news-analyst | daily-news-scanner → news-verifier → daily-news-writer | briefing-curator → docx 脚本 → 邮件脚本 | reputation-resolver → reputation-scanner×3 → reputation-classifier → reputation-writer |
 | **产出** | ≤5000 字结构化文章（含 APA 引用） | 1000-3000 字简报（含事件时间线 + 图片） | 五类固定栏目简报（Markdown + docx，可邮件投递） | 13-15 条品牌 Word 文档（含邮件投递） | 仅当命中负面时发送 HTML 邮件（inline body，无附件） |
 
 ---
@@ -30,7 +30,8 @@ sci-research/
 │   ├── comparator.md            # [A] 跨实体维度对比分析
 │   ├── fact-checker.md          # [A] 关键论断核验
 │   ├── writer.md                # [A] 多语言文章合成
-│   ├── news-scanner.md          # [B/C] 每实体实时新闻抓取（不取图）
+│   ├── news-scanner.md          # [B] 每实体实时新闻抓取（时间窗 7d/30d/90d，不取图）
+│   ├── daily-news-scanner.md    # [C] 单日精确新闻扫描（严格日期核验，按 tier 顺序搜索）
 │   ├── news-imager.md           # [B] 热点事件图片提取与校验
 │   ├── news-analyst.md          # [B] 去重、时间线、影响分析
 │   ├── news-verifier.md         # [C] 编辑台二次筛选（原创性/权威性/影响力/去重）
@@ -190,7 +191,7 @@ User Input (country, date, lang)
 
 | Agent | 模型 | 工具 | 职责 |
 |---|---|---|---|
-| news-scanner | sonnet | WebSearch, WebFetch, Read, Grep, Glob | 英文检索 20-30 候选 URL，逐 URL WebFetch 日期核验，T1-T4 分级 |
+| daily-news-scanner | sonnet | WebSearch, WebFetch, Read, Grep, Glob | 按 tier 顺序搜索（T4-official→T1-wire→T1-flagship→T2→T3），逐 URL WebFetch 严格日期核验（必须等于 date，不接受邻近日），按重要性排序输出 |
 | news-verifier | sonnet | Read, Grep, Glob, WebFetch | 编辑台二次筛选：原创性、权威性、影响力、去重，输出 KEEP/DROP 集 |
 | daily-news-writer | opus | Read, Write, Edit, Grep | 消费 Verifier KEEP 集，翻译为目标语言，输出 Markdown + APA 引用 |
 
@@ -319,7 +320,7 @@ User Input (company name|ticker, date, lang)
 | 新增输出语言 | `agents/writer.md` + `agents/news-analyst.md` + `agents/daily-news-writer.md` + `commands/set-lang.md` + `skills/daily-news-intelligence/references/language-spec.md` |
 | 调整 A 来源分级 | `rules/research/source-credibility.md` |
 | 调整 B 新闻来源规则 | `rules/research/news-source.md` |
-| 调整 C 来源分级与日期核验 | `skills/daily-news-intelligence/references/rubric.md` |
+| 调整 C 来源分级与日期核验 | `agents/daily-news-scanner.md` + `skills/daily-news-intelligence/references/rubric.md` |
 | 调整 C Verifier 筛选逻辑 | `agents/news-verifier.md` |
 | 调整 C 输出格式 / Markdown 语法 | `skills/daily-news-intelligence/references/output-spec.md` |
 | 调整 C 邮件投递 | `skills/daily-news-intelligence/references/email-spec.md` + `scripts/send-report-email.py` |

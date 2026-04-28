@@ -92,7 +92,7 @@ Both files must exist. Then spot-check the Markdown:
 
 | Stage | Recommended subagent | Model | Rationale |
 |-------|----------------------|-------|-----------|
-| Scanner | `sci-research:news-scanner` | sonnet | WebSearch + WebFetch + built-in source-tier awareness, 50/50 official/media balance, rewrite tracing, dedup protocol — directly matches the Scanner stage contract |
+| Scanner | `sci-research:daily-news-scanner` | sonnet | Purpose-built single-date scanner for Pipeline C. Searches in tier order (T4-official → T1-wire → T1-flagship → T2 → T3) with strict per-URL WebFetch date verification — publication date must equal `date` exactly, no neighbouring days. Do NOT substitute `sci-research:news-scanner` — that agent uses time windows (7d/30d/90d) and lacks single-date enforcement |
 | Verifier | `sci-research:news-verifier` | sonnet | Purpose-built news-desk filter encoding Originality / Authority / Impact / Dedup rubric and two-step coverage fallback. Do NOT substitute `fact-checker` — fact-checker grades factual truth (Verified / Disputed), not editorial news value |
 | Writer | `sci-research:daily-news-writer` | opus | Purpose-built daily briefing writer. System prompt encodes the Localisation Table, Markdown Syntax Contract, APA 7th format, five-category ordering, Writing Standard, and self-check protocol. Do NOT substitute `news-analyst` — news-analyst runs its own dedup/impact analysis which is redundant with (and potentially contradicts) the Verifier's KEEP set. Do NOT substitute `writer` — writer's default output is a scientific popular-science article structure |
 

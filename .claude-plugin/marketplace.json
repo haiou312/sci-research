@@ -13,7 +13,7 @@
       "name": "sci-research",
       "source": "./",
       "description": "Six independent pipelines: (1) /sci-research — ≤5000-word comparative article from researcher → comparator → fact-checker → writer; (2) /news-scan — real-time news briefing with image extraction from news-scanner → news-imager → news-analyst; (3) /daily-news-intelligence — dated single-country daily news briefing in zh/en/ja from news-scanner → news-verifier → daily-news-writer with per-URL WebFetch date verification, T1-T4 source gating, editorial-desk filtering (originality + authority + impact + dedup), five-category coverage enforcement, and APA 7th references; (4) /daily-briefing — multi-country branded briefing rendered to docx; (5) /reputation-track — company reputation monitoring with adverse-media and social-listening; (6) /weekly-report — weekly macro & market report fusing prior-week daily briefings with live FRED / Bank of England / Bank of Japan / yfinance market data, three-stage aggregator → market-data-collector → writer pipeline in zh/en/ja with PostToolUse format-check hook",
-      "version": "1.8.0",
+      "version": "1.8.1",
       "author": {
         "name": "Peter Wang"
       },
