@@ -13,7 +13,7 @@ Each story must use this exact block structure (markers come from the Localisati
 
 {summary_marker}
 
-<Factual paragraph in the target language, 200-300 CJK characters or 150-220 English words. Must embed specific numbers, named officials with titles, direct quotes translated into the target language and wrapped with the target language's quote_marks, and explicit time references. No speculation.>
+<Factual content in the target language, 200-300 CJK characters or 150-220 English words total. **One or more paragraphs** — split when narrative shifts (e.g. results disclosure → market reaction). Must embed specific numbers, named officials with titles, direct quotes translated into the target language and wrapped with the target language's quote_marks, and explicit time references. No speculation.>
 
 {analysis_marker}
 
