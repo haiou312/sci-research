@@ -11,7 +11,7 @@ Generate a branded SPD Bank Word document containing 13-15 curated top stories f
 1. `--date` (optional, default: today): Target date in ISO `YYYY-MM-DD`.
 2. `--countries` (optional, default: `"中国,英国,美国,欧洲,日本,韩国"`): Comma-separated country/region list. Stories are distributed evenly across these countries.
 3. `--total` (optional, default: `14`): Target total number of stories (13-15 range).
-4. `--source-dir` (optional, default: `~/Desktop/daily-news-reports/`): Base directory containing `YYYY-MM-DD/` subdirectories with per-country Markdown files.
+4. `--source-dir` (optional, default: `~/Desktop/github/daily-news-reports/`): Base directory containing `YYYY-MM-DD/` subdirectories with per-country Markdown files. Default reads from the GitHub Pages publishing repo populated by `/daily-news-intelligence`.
 5. `--email` (optional): Comma-separated recipient email addresses. When set, the branded docx is emailed via Gmail SMTP.
 6. `--email-subject` (optional, default: `新闻简报 — {date_display}`): Email subject line.
 7. `--email-dry-run` (optional): Preview email without sending.

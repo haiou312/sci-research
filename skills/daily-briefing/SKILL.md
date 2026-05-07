@@ -17,7 +17,7 @@ Designed for both interactive and **scheduled/automated** execution.
 | `date` | No | today | Target date in ISO `YYYY-MM-DD` |
 | `countries` | No | `中国,英国,美国,欧洲,日本,韩国` | Comma-separated country/region list |
 | `total` | No | `14` | Target total number of stories (13-15) |
-| `source_dir` | No | `~/Desktop/daily-news-reports/` | Base directory containing `YYYY-MM-DD/` subdirs |
+| `source_dir` | No | `~/Desktop/github/daily-news-reports/` | Base directory containing `YYYY-MM-DD/` subdirs (defaults to the GitHub Pages publishing repo, populated by `/daily-news-intelligence`) |
 | `email` | No | empty | Comma-separated recipient email addresses |
 | `email_subject` | No | `新闻简报 — {date_display}` | Email subject line |
 | `email_dry_run` | No | `false` | Preview email without sending |
@@ -157,6 +157,16 @@ Derived fields:
    ls -la "$OUT_DOCX"
    ```
    Report file path, size, and story count.
+
+10. **Publish to GitHub Pages.** After the branded docx is saved (and emailed if requested), the source dir defaults to `~/Desktop/github/daily-news-reports/` — the working tree of the publishing repo. Hand off to the sanctioned publish script which stages, commits, and pushes:
+    ```bash
+    bash "${PLUGIN_ROOT}/scripts/publish-reports.sh"
+    ```
+    where `PLUGIN_ROOT` is the sci-research plugin root (typically `~/Desktop/sci-research`).
+
+    The script is idempotent — exit 0 with `nothing to publish` is fine. Push failures must be reported but **never** stop the run from being considered successful: the docx already exists on disk and the user can `git push` manually. The remote `update-index.yml` GitHub Actions workflow refreshes `index.json` server-side, so this skill never writes `index.json`.
+
+    **Skip this step** when `source_dir` was overridden to a path that is not a git working tree (best-effort detection: missing `${SOURCE_DIR}/.git`).
 
 ## References
 
