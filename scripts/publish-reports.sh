@@ -27,16 +27,25 @@ fi
 
 cd "$REPO"
 
-# 1. Stage everything except files matched by .gitignore
+# 1. Sync with remote BEFORE staging.
+#    The remote's GitHub Actions workflow auto-commits index.json after every
+#    push. If we skip the pull, local stays one commit behind, and the next
+#    push gets rejected with "fetch first". Doing the rebase up front avoids
+#    that and keeps the local clone's index.json in sync with what GitHub
+#    Pages serves. --autostash so any in-progress local edit is preserved.
+echo "publish-reports: syncing with origin/main..."
+git pull --rebase --autostash origin main
+
+# 2. Stage everything except files matched by .gitignore
 git add -A
 
-# 2. Bail out cleanly when no changes are pending
+# 3. Bail out cleanly when no changes are pending
 if git diff --cached --quiet; then
   echo "publish-reports: nothing to publish ($(date -u +%FT%TZ))"
   exit 0
 fi
 
-# 3. Build a commit message that lists touched dates.
+# 4. Build a commit message that lists touched dates.
 #    `core.quotepath=false` keeps non-ASCII filenames literal (no \344\270\255 octal
 #    escapes), so the date-prefix regex can match the YYYY-MM-DD/ leading segment.
 TOUCHED_DATES=$(git -c core.quotepath=false diff --cached --name-only \
@@ -56,10 +65,10 @@ if [[ "$DRY_RUN" == "--dry-run" ]]; then
   exit 0
 fi
 
-# 4. Commit
+# 5. Commit
 git commit -m "$MSG"
 
-# 5. Push, with one auto-rebase retry if the remote moved.
+# 6. Push, with one auto-rebase retry if the remote moved.
 #    The reports repo's GitHub Actions workflow auto-commits index.json after
 #    every push, so a second run can find origin ahead. Rebase + retry handles
 #    that case without bothering the user.
