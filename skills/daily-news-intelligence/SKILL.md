@@ -143,6 +143,16 @@ The orchestrator must not summarise, truncate, or reformat the upstream output �
 
 11. **Verify delivery.** Apply the checks in `references/verification.md` § End-to-End Verification.
 
+12. **Publish to GitHub Pages.** When the default `out_dir` is used, the report lands in `~/Desktop/github/daily-news-reports/{date}/` — the working tree of the publishing repo. Hand off to the sanctioned publish script which stages, commits, and pushes:
+    ```bash
+    bash "${PLUGIN_ROOT}/scripts/publish-reports.sh"
+    ```
+    where `PLUGIN_ROOT` is the sci-research plugin root (typically `~/Desktop/sci-research`).
+
+    The script is idempotent — `nothing to publish` (exit 0) is fine. Push failures must be reported but **never** stop the run from being considered successful: the docx already exists on disk and the user can `git push` manually. The remote `update-index.yml` GitHub Actions workflow refreshes `index.json` server-side, so this skill never writes `index.json`.
+
+    **Skip this step** when `out_dir` was overridden to a path that is not a git working tree (best-effort detection: missing `${OUT_DIR%/*}/.git` or its parent — climb up at most three levels looking for a `.git` directory before deciding to skip).
+
 ## Stage → Agent → Reference Map
 
 | Stage | Recommended Agent | Required References |
