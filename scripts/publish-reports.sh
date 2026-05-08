@@ -36,8 +36,10 @@ if git diff --cached --quiet; then
   exit 0
 fi
 
-# 3. Build a commit message that lists touched dates
-TOUCHED_DATES=$(git diff --cached --name-only \
+# 3. Build a commit message that lists touched dates.
+#    `core.quotepath=false` keeps non-ASCII filenames literal (no \344\270\255 octal
+#    escapes), so the date-prefix regex can match the YYYY-MM-DD/ leading segment.
+TOUCHED_DATES=$(git -c core.quotepath=false diff --cached --name-only \
   | awk -F/ '/^20[0-9]{2}-[0-9]{2}-[0-9]{2}\// {print $1}' \
   | sort -u \
   | paste -sd, -)
@@ -50,13 +52,26 @@ MSG="publish reports — $TOUCHED_DATES"
 if [[ "$DRY_RUN" == "--dry-run" ]]; then
   echo "would commit: $MSG"
   echo "staged files:"
-  git diff --cached --name-only | head -30
+  git -c core.quotepath=false diff --cached --name-only | head -30
   exit 0
 fi
 
-# 4. Commit and push
+# 4. Commit
 git commit -m "$MSG"
-git push origin main
+
+# 5. Push, with one auto-rebase retry if the remote moved.
+#    The reports repo's GitHub Actions workflow auto-commits index.json after
+#    every push, so a second run can find origin ahead. Rebase + retry handles
+#    that case without bothering the user.
+push_with_retry() {
+  if git push origin main 2>&1; then
+    return 0
+  fi
+  echo "publish-reports: push rejected, pulling --rebase and retrying once..."
+  git pull --rebase --autostash origin main
+  git push origin main
+}
+push_with_retry
 
 echo "publish-reports: pushed — $MSG"
 echo "GitHub Actions will refresh index.json shortly."
