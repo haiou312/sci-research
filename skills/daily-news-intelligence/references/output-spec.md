@@ -13,11 +13,11 @@ Each story must use this exact block structure (markers come from the Localisati
 
 {summary_marker}
 
-<Factual content in the target language, 200-300 CJK characters or 150-220 English words total. **One or more paragraphs** — split when narrative shifts (e.g. results disclosure → market reaction). Must embed specific numbers, named officials with titles, direct quotes translated into the target language and wrapped with the target language's quote_marks, and explicit time references. No speculation.>
+<Tell the story in the target language. Length follows the story — typically a short paragraph, sometimes two when narrative shifts (e.g. disclosure → market reaction). Numbers, named officials with titles, dates, and direct quotes must come from the source exactly; the prose around them is the Writer's own. Wrap any direct quote with the target language's quote_marks and preserve speaker attribution. No invented facts, no speculation about events the source doesn't support.>
 
 {analysis_marker}
 
-<Analysis paragraph in the target language, 100-200 CJK characters or 80-150 English words. Must be drawn verbatim from analyst / official / institutional commentary found in the source article. Omit this entire block when the source carries no commentary — never write "no commentary available".>
+<Optional. Include when the story has a "so what" worth surfacing — significance, signal, what to watch — either drawn from source commentary or written as the Writer's own short take grounded in source-supported facts. Keep it short. Omit the entire block when there's nothing to add or when the point is already obvious from the summary — never write "no commentary available".>
 
 {references_marker}
 

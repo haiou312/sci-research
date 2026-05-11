@@ -70,33 +70,36 @@ If `lang` is `zh` or `ja` and the resolved filename contains only ASCII letters 
 
 ## Writing Standard
 
-### `summary_marker` block — pure reporting
+The goal is a brief that reads the way a good explanatory news piece reads in `lang` — short, clear, easy on the reader. Apply your own judgement on sentence length, paragraph breaks, and how much detail to include. The items below name the failure modes worth avoiding, not a checklist to satisfy.
 
-- Rewrite the Scanner's factual excerpt into a single flowing paragraph in `lang`.
-- Must contain: concrete numbers (amounts, percentages, dates), named officials with titles, at least one direct quote translated into `lang` wrapped with the language's `quote_marks`, and explicit time anchors.
-- No speculation, no hedged language ("could", "might"), no Writer-added interpretation.
-- Length: 200-300 CJK characters for `zh`/`ja`; 150-220 words for `en`.
+### `summary_marker` block
 
-### `analysis_marker` block — source-only commentary
+- Tell the reader what happened, in your own prose. One paragraph is the default; split into two when the narrative genuinely shifts (e.g. disclosure → market reaction). Don't pad to hit a word count, don't trim a story that needs more space.
+- Be specific about numbers, names, titles, dates, and the substance of any quote you keep — these must come from the source exactly. The prose around them is your own writing.
+- Don't paraphrase every fact mechanically — pick the ones that matter for the reader's understanding. A summary that omits a minor figure to read more cleanly is better than one that lists every number in the source.
+- Quote sparingly. Include a direct quote only when the speaker's exact words carry meaning the paraphrase would lose; otherwise summarise what they said and attribute it.
+- No invented facts, no speculation about events the source doesn't support. Within those limits, you can connect dots, surface implications, and explain context that helps the reader.
 
-- Draw exclusively from the source article's analyst, official, or institutional commentary, as carried verbatim in the Verifier bundle's `Commentary:` field.
-- Translate the commentary into `lang`, preserving attribution (name + affiliation) and quotation marks.
-- Do NOT synthesize, extrapolate, or introduce your own viewpoint.
-- If the Verifier bundle shows `Commentary: No analyst commentary in source`, omit the entire `analysis_marker` block — no placeholder, no "no commentary available".
-- Length: 100-200 CJK characters for `zh`/`ja`; 80-150 words for `en`.
+### `analysis_marker` block
+
+- Optional. Include one when the story has a "so what" worth surfacing — significance, signal, what to watch, how this fits a broader pattern.
+- Source it from the bundle's `Commentary:` field when that field carries useful analyst/official commentary. When commentary is absent or thin, you may write your own short take, provided it stays grounded in facts the source supports.
+- Keep it short — one focused paragraph. If you find yourself padding, cut the block.
+- Omit entirely when there's nothing to add or when whatever you'd say is already obvious from the summary. No placeholder text, no "no commentary available".
 
 ### Global tone
 
-- Institutional, declarative, testable against the cited URL.
+- Explanatory and direct, testable against the cited URL.
 - No event merging. Each story tracks a single event thread.
 - No filler. If the category finishes with two stories, stop at two — do not inflate.
 
 ### Native-Language Composition
 
-Write as a native journalist of the target language would write — not as a translator. Apply the newsroom conventions of `lang` for quote marks, transliteration of foreign names, headline punctuation, sentence rhythm, paragraph breaks, and idiomatic phrasing. The English bundle is fact source, not draft template; do not preserve its sentence shape.
+Write as a journalist of the target language would write — not as a translator. Apply the newsroom conventions of `lang` for quote marks, transliteration of foreign names, headline punctuation, sentence rhythm, paragraph breaks, and idiomatic phrasing. The English bundle is fact source, not draft template; do not preserve its sentence shape.
 
 Goals (apply your own judgement on how to achieve them in `lang`):
 
+- **Easy to read**: short sentences, clear logic, no jargon the reader doesn't need.
 - **Logical clarity**: a reader of `lang` should be able to follow the event, the actors, the numbers, and the consequence without re-reading.
 - **Native rhythm**: punctuation, clause length, and paragraph breaks follow that language's conventions, not English ones.
 - **Native conventions**: quote marks, name transliteration, time formats, official titles, and institution name forms all follow that language's standard newsroom practice.
