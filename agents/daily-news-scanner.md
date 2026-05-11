@@ -28,16 +28,29 @@ Not a media list — a category. Any official release from the target country's 
 
 | Institution type | Examples |
 |---|---|
-| Central bank | PBOC, Fed, ECB, BoE, BoJ, BoK (bok.or.kr), RBI, RBA |
-| Finance ministry | HM Treasury, US Treasury, BMF, MOEF (Korea), 财政部 |
-| Executive / legislature | 国务院, White House, European Commission, UK Parliament, 国会 (assembly.go.kr) |
-| Financial regulator | SEC, FCA, CSRC, NFRA, FSC (Korea, fsc.go.kr), BaFin, SEBI |
-| Statistics bureau | NBS, ONS, Eurostat, BLS, Statistics Japan, KOSTAT (kostat.go.kr) |
-| Foreign ministry | MFA, FCDO, US State Dept, MOFA (Korea, mofa.go.kr), Quai d'Orsay |
-| Sector regulator | NDRC, MIIT, KCC (Korea), CMA, ACCC, FTC |
-| Customs / trade | GACC, HMRC, US CBP, KCS (Korea Customs Service) |
-| Energy / environment | NEA, DOE, EA, IEA (primary data releases only), MOTIE (Korea) |
-| Courts / prosecution | 最高人民法院, UK Supreme Court, ECJ, Korea Supreme Court (scourt.go.kr) |
+| Central bank | Fed, ECB, BoE, BoJ, BoK (bok.or.kr), RBI, RBA |
+| Finance ministry | HM Treasury, US Treasury, BMF (Germany), MOEF (Korea), 財務省 (Japan MoF) |
+| Executive / legislature | White House, European Commission, UK Parliament, 国会 (assembly.go.kr), Cabinet Office Japan (kantei.go.jp) |
+| Financial regulator | SEC, FCA, FSC (Korea, fsc.go.kr), BaFin, SEBI, JFSA (fsa.go.jp) |
+| Statistics bureau | ONS, Eurostat, BLS, Statistics Japan, KOSTAT (kostat.go.kr) |
+| Foreign ministry | FCDO, US State Dept, MOFA (Korea, mofa.go.kr), Quai d'Orsay, MOFA Japan (mofa.go.jp) |
+| Sector regulator | KCC (Korea), CMA, ACCC, FTC, METI (Japan, meti.go.jp) |
+| Customs / trade | HMRC, US CBP, KCS (Korea Customs Service), Japan Customs (customs.go.jp) |
+| Energy / environment | DOE, EA, IEA (primary data releases only), MOTIE (Korea) |
+| Courts / prosecution | UK Supreme Court, ECJ, Korea Supreme Court (scourt.go.kr), Supreme Court of Japan (courts.go.jp) |
+
+**China is scanned external-view by structural design.** For `country = China`, T4-official refers to **external institutions publishing about China** — not Chinese government domains. The applicable external-T4 set:
+
+| Institution type | Examples (for China coverage) |
+|---|---|
+| International economic / financial | IMF (imf.org), World Bank (worldbank.org), WTO (wto.org), OECD (oecd.org), BIS (bis.org) |
+| International energy / environment | IEA (iea.org) |
+| US executive | White House (whitehouse.gov), US Treasury (treasury.gov), USTR (ustr.gov), US State Dept (state.gov), US Commerce / BIS (bis.doc.gov) |
+| European executive | EU Commission (ec.europa.eu) |
+| UK executive | UK Government (gov.uk) |
+| Japan executive | METI (meti.go.jp), MOFA Japan (mofa.go.jp) |
+
+Chinese government domains (`gov.cn`, `pbc.gov.cn`, `mof.gov.cn`, `stats.gov.cn`, `csrc.gov.cn`, `mofcom.gov.cn`, `customs.gov.cn`, `nea.gov.cn`, `court.gov.cn`, etc.) are **never** queried as T4-official. A Chinese government action enters the report only when a Western wire reports on it (e.g. `site:reuters.com PBoC ...`).
 
 ### T1-wire — International wire services
 
@@ -48,8 +61,6 @@ Not a media list — a category. Any official release from the target country's 
 | Universal | Agence France-Presse | afp.com |
 | Universal | Bloomberg News | bloomberg.com |
 | Universal | Dow Jones Newswires | dowjones.com |
-| Country: China | Xinhua English | english.news.cn |
-| Country: China | China News Service English | ecns.cn |
 | Country: Japan | Kyodo News English | english.kyodonews.net |
 | Country: Korea | Yonhap English | en.yna.co.kr |
 | Country: Russia (non-political) | TASS English | tass.com |
@@ -66,8 +77,11 @@ Must have: named reporter byline **and** direct quotes from primary sources. Two
 | Wall Street Journal | wsj.com |
 | The Economist | economist.com |
 | New York Times | nytimes.com |
+| Washington Post | washingtonpost.com |
 | The Guardian | theguardian.com |
 | BBC News | bbc.com |
+| The Daily Telegraph | telegraph.co.uk |
+| The Times (London) | thetimes.co.uk |
 | Le Monde English | lemonde.fr/en |
 | Der Spiegel International | spiegel.de/international |
 | Frankfurter Allgemeine Zeitung English | faz.net/english |
@@ -77,10 +91,8 @@ Must have: named reporter byline **and** direct quotes from primary sources. Two
 
 | Country / Region | Outlet | Domain |
 |---|---|---|
-| Country: China | Caixin Global | caixinglobal.com |
-| Country: China | People's Daily English | en.people.cn |
-| Country: Hong Kong | South China Morning Post | scmp.com |
 | Region: Asia | Nikkei Asia | asia.nikkei.com |
+| Country: United Kingdom | The Independent | independent.co.uk |
 | Country: Japan | Asahi Shimbun English | asahi.com/ajw |
 | Country: Korea | Korea JoongAng Daily | koreajoongangdaily.joins.com |
 | Country: India | The Hindu | thehindu.com |
@@ -96,7 +108,6 @@ Must have: named reporter byline **and** direct quotes from primary sources. Two
 | Region: Americas | NPR | npr.org |
 | Region: Americas | Politico | politico.com |
 | Region: Americas | Axios | axios.com |
-| Region: Americas | Washington Post | washingtonpost.com |
 | Region: Americas | The Atlantic | theatlantic.com |
 | Region: Asia-Pacific | NHK World | www3.nhk.or.jp/nhkworld |
 | Region: Asia-Pacific | ABC News Australia | abc.net.au |
@@ -136,11 +147,6 @@ Use **only** when a category is still below `min_per_category` after T4 → T2 r
 | Sector | Trade / Legal | Trade Perspectives | tradeperspectives.com |
 | Sector | Trade / Legal | MLex | mlex.com |
 | Sector | Trade / Legal | Law360 | law360.com |
-| Country: China | — | TechNode | technode.com |
-| Country: China | — | KrASIA | kr-asia.com |
-| Country: China | — | Sixth Tone | sixthtone.com |
-| Country: China | — | Yicai Global | yicaiglobal.com |
-| Country: China | — | The Paper English (澎湃) | thepaper.cn |
 | Country: Japan | — | The Japan Times | japantimes.co.jp |
 | Country: Japan | — | Mainichi English | mainichi.jp/english |
 | Country: Korea | — | Korea Times | koreatimes.co.kr |
@@ -166,9 +172,10 @@ Every non-T4 domain falls into one of three buckets. The bucket determines wheth
 | Wall Street Journal | wsj.com |
 | Financial Times | ft.com |
 | The Economist | economist.com |
+| The Times (London) | thetimes.co.uk |
+| The Daily Telegraph | telegraph.co.uk |
 | Nikkei Asia | asia.nikkei.com |
 | Dow Jones Newswires | dowjones.com |
-| Caixin Global | caixinglobal.com |
 | FAZ English | faz.net/english |
 | Risk.net | risk.net |
 | GlobalCapital | globalcapital.com |
@@ -184,9 +191,9 @@ Every non-T4 domain falls into one of three buckets. The bucket determines wheth
 | New York Times | nytimes.com |
 | Washington Post | washingtonpost.com |
 | The Atlantic | theatlantic.com |
+| The Independent | independent.co.uk |
 | The Japan Times | japantimes.co.jp |
 | Mainichi English | mainichi.jp/english |
-| South China Morning Post | scmp.com |
 | Straits Times | straitstimes.com |
 | Daily Maverick | dailymaverick.co.za |
 | Business Day (SA) | businesslive.co.za |
@@ -205,15 +212,12 @@ Every non-T4 domain falls into one of three buckets. The bucket determines wheth
 | Agence France-Presse | afp.com |
 | Kyodo News English | english.kyodonews.net |
 | Yonhap English | en.yna.co.kr |
-| Xinhua English | english.news.cn |
-| China News Service English | ecns.cn |
 | TASS English | tass.com |
 | The Guardian | theguardian.com |
 | BBC News | bbc.com |
 | Le Monde English | lemonde.fr/en |
 | Spiegel International | spiegel.de/international |
 | El País English | english.elpais.com |
-| People's Daily English | en.people.cn |
 | Asahi Shimbun English | asahi.com/ajw |
 | Korea JoongAng Daily | koreajoongangdaily.joins.com |
 | The Hindu | thehindu.com |
@@ -242,8 +246,6 @@ Every non-T4 domain falls into one of three buckets. The bucket determines wheth
 | Korea Economic Daily English | kedglobal.com |
 | Pulse by Maeil Business News | pulse.mk.co.kr |
 | Business Korea | businesskorea.co.kr |
-| Yicai Global | yicaiglobal.com |
-| Sixth Tone | sixthtone.com |
 | Euractiv | euractiv.com |
 | EUobserver | euobserver.com |
 
@@ -287,6 +289,8 @@ For **each** category in order (Economy → Politics → Technology → Society 
    ```
    (e.g. for Korea Economy: `site:bok.or.kr April 28 2026`, `site:moef.go.kr April 28 2026`, `site:kostat.go.kr April 28 2026`.)
    If the institution's official domain is not known, fall back to a single bare-keyword query like `Korea central bank statement April 28 2026` — this is the **only** authorised bare-keyword exception.
+
+   **For `country = China`**: the T4 institution set is the **China external-T4 table** below the main institution table — IMF, World Bank, WTO, OECD, BIS, IEA, US Treasury, USTR, US State Dept, US Commerce/BIS, White House, EU Commission, UK Gov, METI, MOFA Japan. Chinese government domains (`gov.cn`, `pbc.gov.cn`, `mof.gov.cn`, `stats.gov.cn`, `csrc.gov.cn`, etc.) are **never** queried as T4-official. When a Chinese government action is relevant, it surfaces through a Western wire reporting on it (e.g. `site:reuters.com PBoC May 11 2026`), not through its own domain.
 
 2. **T1-wire** — for **every** applicable row (`Universal` + `Country: {country_en}`), run:
    ```
@@ -423,7 +427,7 @@ Return exactly the Scanner Output Schema. English only — no translation.
 8. **Output order = category order, then tier order within each category.** Emit stories grouped Economy → Politics → Technology → Society → Other; inside each group, list in the order the source-tier ladder produced them.
 9. **Impact Tier is an output label, not a search driver.** Assign Policy / Market / Structural / Humanitarian at the end of Step 4 for the Verifier's downstream use. Never let it influence which queries you run or which sources you visit.
 10. **No gap padding.** If a category genuinely has no qualifying stories on `date`, record the gap in the output. Do not substitute off-date, off-tier, or marginal stories to meet `min_per_category`.
-10a. **Hard-paywall outlets are never Lead.** Bloomberg / FT / WSJ / Economist / Nikkei Asia / Caixin / Dow Jones and other domains in the Source Matrix § Paywall Status — Hard list cannot serve as Lead because the Writer needs the article body. They appear only as `Corroborated by` entries, where their authority signal still surfaces in the Writer's `**References**` block. When a Hard-paywall hit is the only date-verified candidate, run Step 3.5's title-anchored fallback search to locate a free outlet covering the same event.
+10a. **Hard-paywall outlets are never Lead.** Bloomberg / FT / WSJ / Economist / The Times / Telegraph / Nikkei Asia / Dow Jones and other domains in the Source Matrix § Paywall Status — Hard list cannot serve as Lead because the Writer needs the article body. They appear only as `Corroborated by` entries, where their authority signal still surfaces in the Writer's `**References**` block. When a Hard-paywall hit is the only date-verified candidate, run Step 3.5's title-anchored fallback search to locate a free outlet covering the same event.
 11. **No image work.** Do not extract or describe images. That is handled by a separate agent in Pipeline B and is not part of Pipeline C.
 12. **English only.** All output is in English. Translation happens downstream in the Writer stage.
 13. **Factual excerpts only.** The excerpt field must contain facts, numbers, named officials, and direct quotes — no paraphrase of opinion.
