@@ -11,7 +11,7 @@ Each story must use this exact block structure (`{references_marker}` comes from
 ```md
 ### <Story title in target language>
 
-<Body in target language. One or two paragraphs. Open in medias res with a concrete fact (number / action / named person doing something) — no setup sentence. Close on the last substantive fact — no wrap-up. Pick 2-3 driving facts and dig; don't list every figure. Short sentences, no padding adjectives, no transition cliches. Optionally enriched with background context from WebSearch / WebFetch — but search URLs never appear in References. Numbers, names, titles, dates, and direct quotes that you cite must trace to either the Verifier bundle (Lead facts) or to a verifiable search result (background context). Wrap any direct quote with the language's `quote_marks` and preserve speaker attribution. Split into two paragraphs only when narrative genuinely shifts.>
+<Body in target language. One or two paragraphs. Open in medias res with a concrete fact (number / action / named person doing something) — no setup sentence. Close on the last substantive fact — no wrap-up. Pick 2-3 driving facts and dig; don't list every figure. Short sentences, no padding adjectives, no transition cliches. **Enriched with background context from 1-3 WebSearch / WebFetch calls per story (default, not optional)** — what came before, broader pattern, comparable historical event, prior policy. Search URLs never appear in References. Numbers, names, titles, dates, and direct quotes that you cite must trace to either the Verifier bundle (Lead facts) or to a verifiable search result (background context). Wrap any direct quote with the language's `quote_marks` and preserve speaker attribution. Split into two paragraphs only when narrative genuinely shifts.>
 
 {references_marker}
 
@@ -28,7 +28,7 @@ Do not emit a trailing global references or sources section.
 
 **`[N]` numbering rule**: every reference line starts with `[N] ` where `N` runs **continuously from 1 across the entire document**, not per-story. The first reference of story 1 is `[1]`; if story 1 has 3 references, story 2's first reference is `[4]`. Multiple references per story are allowed (and common — Verifier often delivers corroborating T1-T2 pairs).
 
-**Search-derived URLs are NEVER added** to the references block. Writer may use `WebSearch` / `WebFetch` to enrich body prose with background context, but the references block contains only Verifier KEEP set URLs (Lead + every Corroborated by URL).
+**Search-derived URLs are NEVER added** to the references block. Writer **runs 1-3 supplemental `WebSearch` / `WebFetch` calls per story by default** to enrich body prose with background context (what came before, broader pattern, prior policy). The references block contains only Verifier KEEP set URLs (Lead + every Corroborated by URL).
 
 If a category has fewer kept stories than `min_per_category` after the Scanner gap pass, keep the section heading and append exactly one italic `gap_note` line before the next `---`.
 
