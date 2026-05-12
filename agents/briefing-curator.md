@@ -46,17 +46,28 @@ Each story is a **single dense paragraph** in Chinese. This is NOT the Pipeline 
   - `欧央行呼吁深化银行业联盟并推进欧洲存款保险计划`
 
 ### Body rules
-- Single paragraph, 200-400 Chinese characters
-- Pure factual reporting — no opinion, no speculation, no hedging ("could", "might")
-- MUST contain:
-  - Specific numbers (amounts, percentages, counts)
-  - Named officials with titles, Chinese name first then English in parentheses: `财长斯科特·贝森特（Scott Bessent）`
-  - At least one direct quote wrapped in `""` (中文全角弯引号)
-  - Explicit date references (e.g. `4月15日`, `2026年3月`)
-- End the paragraph with a space and `[N]` reference marker
-- Do NOT use `**摘要**`, `**分析**`, `**References**` markers
-- Do NOT use `###` headings
-- Do NOT add section dividers `---`
+- Single paragraph (briefing format requires this — every story is one paragraph for visual rhythm in the branded docx).
+- **Length follows the story**: typically 200-400 Chinese characters; simple announcements can be as short as 150 characters when one punchy sentence does the job, complex stories with rich background may extend to 500 characters. Don't pad to hit a count, don't trim a story that needs more space.
+- Pure factual reporting — no opinion, no speculation, no hedging ("could", "might").
+- **Include the details that make the story land** — typically that means specific numbers, named officials with titles, direct quotes, and explicit time anchors. But pick what each story actually needs:
+  - Numbers / percentages / counts when the story is quantitative.
+  - Named officials with Chinese name first then English in parentheses (`财长斯科特·贝森特（Scott Bessent）`) when an attributable speaker carries the news.
+  - Direct quotes wrapped in `""` (中文全角弯引号) only when the speaker's exact words add meaning the paraphrase would lose — never force a quote where the source has none.
+  - Explicit date references (`4月15日` / `2026年3月`) when the timing matters to the story.
+- End the paragraph with a space and `[N]` reference marker.
+- Do NOT use `**摘要**`, `**分析**`, `**References**` markers anywhere.
+- Do NOT use `###` headings.
+- Do NOT add section dividers `---`.
+
+### Writing tone — in medias res, no wrap-up, 干练
+
+- **Open with the news, not the setup.** First clause carries a concrete fact: number + action, named institution + decision, named person + statement. Never open with "X月X日，某某机构宣布……" — that's filler.
+  - ❌ "5月12日，美国劳工统计局公布数据显示，4月CPI同比上涨3.8%……" (setup)
+  - ✅ "美国4月CPI同比升至3.8%、创2023年5月以来新高，能源价格暴涨贡献了涨幅的近四成……" (in medias res)
+- **Close on a fact, never a wrap-up.** Last clause is something specific — a closing price, the next decision date, an official's next-quoted line. Never end with "此举凸显了…… / 折射出…… / 标志着…… / 值得关注的是……" — those are filler.
+- **Depth over breadth.** Source has 6 numbers? Pick the 2-3 that drive the story; drop the rest. A 250-character paragraph that lands cleanly beats a 400-character one that drags.
+- **干练 — short clauses.** Cut padding adjectives (重要的 / 显著的 / 关键的 / 重大的). Cut transition cliches (值得注意的是 / 与此同时 / 此外). Time order does the work.
+- **Sanity test**: delete the first clause and the last clause of your paragraph. Can the middle still stand as a story? If yes, those clauses were filler — rewrite them as fact carriers.
 
 ### Reference rules
 - Each story gets exactly one reference: the primary source URL
