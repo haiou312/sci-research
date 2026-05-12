@@ -73,7 +73,7 @@ The goal is a brief that reads like a tight, in-medias-res news piece in `lang` 
 ### Story body (between `### title` and `**References**`)
 
 - Body prose follows `### title` directly with one blank line between. **No `**摘要**` / `**Summary**` / `**要約**` / `**分析**` / `**Analysis**` marker is used** — these markers are prohibited and the format-check hook will block any output containing them.
-- One paragraph is the default; split into two when narrative genuinely shifts (e.g. disclosure → market reaction).
+- **No fixed paragraph count** — let the story decide its own length and structure. Use paragraph breaks as a tool for clarity: at narrative shifts (e.g. disclosure → market reaction), when introducing background context, when separating multi-party reactions. A simple announcement may need just one paragraph; a complex story with rich historical background may need three or four.
 - Open in medias res with a concrete fact (number / action / named person doing something). Close on a substantive fact, never a wrap-up ("折射出", "凸显了", "标志着", "this signals…").
 - Be specific about numbers, names, titles, dates, and the substance of any quote you keep — these must come from a verifiable source (Verifier KEEP set for Lead facts; verifiable search result for background context). The prose around them is the Writer's own.
 - Quote sparingly. Include a direct quote only when the speaker's exact words carry meaning the paraphrase would lose; otherwise summarise and attribute.
