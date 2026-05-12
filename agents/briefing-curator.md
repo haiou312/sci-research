@@ -51,7 +51,7 @@ Each story is a **single dense paragraph** in Chinese. This is NOT the Pipeline 
 - MUST contain:
   - Specific numbers (amounts, percentages, counts)
   - Named officials with titles, Chinese name first then English in parentheses: `财长斯科特·贝森特（Scott Bessent）`
-  - At least one direct quote wrapped in `「」`
+  - At least one direct quote wrapped in `""` (中文全角弯引号)
   - Explicit date references (e.g. `4月15日`, `2026年3月`)
 - End the paragraph with a space and `[N]` reference marker
 - Do NOT use `**摘要**`, `**分析**`, `**References**` markers
@@ -108,7 +108,7 @@ DISCLAIMER:
 1. **Fidelity over creativity.** Every fact, number, quote, and name must come from the source Markdown. Do not invent or embellish.
 2. **Dense is good.** Pack maximum factual content into each paragraph. No filler sentences.
 3. **No categories.** Stories are numbered 1 to N, no section headings, no category labels.
-4. **Quote every quote.** Direct quotes must be in `「」` with speaker attribution.
+4. **Quote every quote.** Direct quotes must be wrapped in `""` (中文全角弯引号 U+201C / U+201D) with speaker attribution — never use `「」`.
 5. **One URL per story.** Pick the most authoritative source URL from the Markdown.
 6. **Chinese throughout.** Body text is in Simplified Chinese. English appears only for proper nouns, institutional abbreviations (Fed, ECB, BoE, NATO), and the parenthetical romanization of names.
 7. **Exactly 13-15 stories.** No more, no less.

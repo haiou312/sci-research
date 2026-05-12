@@ -15,11 +15,9 @@ Target-language tokens used by the Writer. Scanner and Verifier output stays Eng
 | `section_3` | `## 3. Technology & Industry` | `## 三、科技与产业` | `## 3. テクノロジーと産業` |
 | `section_4` | `## 4. Society & Livelihood` | `## 四、社会与民生` | `## 4. 社会と生活` |
 | `section_5` | `## 5. Other Notable Events` | `## 五、其他重要事件` | `## 5. その他の重要事項` |
-| `summary_marker` | `**Summary**` | `**摘要**` | `**要約**` |
-| `analysis_marker` | `**Analysis**` | `**分析**` | `**分析**` |
 | `references_marker` | `**References**` | `**References**` | `**References**` |
 | `gap_note` | `*Note: only N story/stories met T1-T4 standards for this category today.*` | `*注：本分类当日仅检索到 N 条符合 T1-T4 标准的新闻。*` | `*注：このカテゴリで本日 T1-T4 基準を満たした記事は N 件のみでした。*` |
-| `quote_marks` | `""` | `「」` | `「」` |
+| `quote_marks` | `""` | `""` | `""` |
 
 ## Derived Display Fields
 
@@ -66,26 +64,19 @@ If `lang` is `zh` or `ja` and the resolved filename contains only ASCII letters 
 - Story titles read as newsroom headlines:
   - `lang=zh` or `lang=ja`: 12-22 CJK characters, single line, no terminal punctuation.
   - `lang=en`: 8-16 words, single line, no terminal punctuation.
-- Do not compress the summary into the title. Detail lives in the `summary_marker` block.
+- Do not compress the body into the title. Detail lives in the body paragraph(s) that follow the `### title` line directly (no `**摘要**` / `**Summary**` / `**要約**` marker is used).
 
 ## Writing Standard
 
-The goal is a brief that reads the way a good explanatory news piece reads in `lang` — short, clear, easy on the reader. Apply your own judgement on sentence length, paragraph breaks, and how much detail to include. The items below name the failure modes worth avoiding, not a checklist to satisfy.
+The goal is a brief that reads like a tight, in-medias-res news piece in `lang` — short, fluid, opinion-free, packed with facts that matter. The full writing standard (in medias res / depth over breadth / 干练 / background context / quote handling) lives in `agents/daily-news-writer.md` § Writing Standard. The items below are the language-specific conventions only.
 
-### `summary_marker` block
+### Story body (between `### title` and `**References**`)
 
-- Tell the reader what happened, in your own prose. One paragraph is the default; split into two when the narrative genuinely shifts (e.g. disclosure → market reaction). Don't pad to hit a word count, don't trim a story that needs more space.
-- Be specific about numbers, names, titles, dates, and the substance of any quote you keep — these must come from the source exactly. The prose around them is your own writing.
-- Don't paraphrase every fact mechanically — pick the ones that matter for the reader's understanding. A summary that omits a minor figure to read more cleanly is better than one that lists every number in the source.
-- Quote sparingly. Include a direct quote only when the speaker's exact words carry meaning the paraphrase would lose; otherwise summarise what they said and attribute it.
-- No invented facts, no speculation about events the source doesn't support. Within those limits, you can connect dots, surface implications, and explain context that helps the reader.
-
-### `analysis_marker` block
-
-- Optional. Include one when the story has a "so what" worth surfacing — significance, signal, what to watch, how this fits a broader pattern.
-- Source it from the bundle's `Commentary:` field when that field carries useful analyst/official commentary. When commentary is absent or thin, you may write your own short take, provided it stays grounded in facts the source supports.
-- Keep it short — one focused paragraph. If you find yourself padding, cut the block.
-- Omit entirely when there's nothing to add or when whatever you'd say is already obvious from the summary. No placeholder text, no "no commentary available".
+- Body prose follows `### title` directly with one blank line between. **No `**摘要**` / `**Summary**` / `**要約**` / `**分析**` / `**Analysis**` marker is used** — these markers are prohibited and the format-check hook will block any output containing them.
+- One paragraph is the default; split into two when narrative genuinely shifts (e.g. disclosure → market reaction).
+- Open in medias res with a concrete fact (number / action / named person doing something). Close on a substantive fact, never a wrap-up ("折射出", "凸显了", "标志着", "this signals…").
+- Be specific about numbers, names, titles, dates, and the substance of any quote you keep — these must come from a verifiable source (Verifier KEEP set for Lead facts; verifiable search result for background context). The prose around them is the Writer's own.
+- Quote sparingly. Include a direct quote only when the speaker's exact words carry meaning the paraphrase would lose; otherwise summarise and attribute.
 
 ### Global tone
 

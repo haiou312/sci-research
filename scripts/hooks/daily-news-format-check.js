@@ -13,7 +13,10 @@
  *   - Per-story **References** block missing
  *   - References without [N] continuous numbering
  *   - References lines without a URL
- *   - Mismatched count between ### story titles, **摘要** markers, **References** blocks
+ *   - Mismatched count between ### story titles and **References** blocks
+ *   - Prohibited markers: **摘要** / **Summary** / **要約** / **分析** / **Analysis**
+ *     (1.9.x+ structure: body prose follows `### title` directly; no
+ *     summary/analysis markers anywhere)
  *
  * Trigger: PostToolUse:Write when the file path is under daily-news-reports/
  *          OR when the content's H1 matches the daily-news H1 pattern
@@ -53,9 +56,11 @@ function isPluginInternal(filePath) {
 
 // Section/marker variants across supported languages.
 // section_5 is the last H2 in the body; the pattern for lang=zh is "五、其他重要事件".
-const SUMMARY_MARKERS = /^\*\*(?:摘要|Summary|要約)\*\*$/gm;
+//
+// Prohibited markers (1.9.x+ structure): body prose follows `### title` directly.
+// No summary/analysis marker is permitted anywhere in the output.
+const PROHIBITED_MARKERS = /^\*\*(?:摘要|Summary|要約|分析|Analysis)\*\*$/gm;
 const REFERENCES_MARKER_LINE = "**References**"; // language-independent per spec
-const ANALYSIS_MARKERS = /^\*\*(?:分析|Analysis)\*\*$/gm;
 
 function countMatches(content, regex) {
   return (content.match(regex) || []).length;
@@ -112,20 +117,27 @@ function collectReferenceLines(content) {
 function validate(filePath, content) {
   const violations = [];
 
-  // 1. Count invariants: ### == 摘要 == **References**
+  // 1. Count invariant: ### == **References** (one of each per story)
   const h3Count = countMatches(content, /^### /gm);
-  const summaryCount = countMatches(content, SUMMARY_MARKERS);
   const refsBlockCount = countMatches(
     content,
     /^\*\*References\*\*$/gm
   );
-  if (
-    h3Count === 0 ||
-    h3Count !== summaryCount ||
-    h3Count !== refsBlockCount
-  ) {
+  if (h3Count === 0 || h3Count !== refsBlockCount) {
     violations.push(
-      `Count mismatch: ### headings=${h3Count}, 摘要/Summary/要約 markers=${summaryCount}, **References** blocks=${refsBlockCount}. Each story must have exactly one of each.`
+      `Count mismatch: ### headings=${h3Count}, **References** blocks=${refsBlockCount}. Each story must have exactly one ### and one **References** block.`
+    );
+  }
+
+  // 1b. Prohibited markers — 1.9.x+ structure forbids summary/analysis markers.
+  //     Body prose follows ### title directly; no marker line between.
+  const prohibitedHits = content.match(PROHIBITED_MARKERS);
+  if (prohibitedHits) {
+    const unique = [...new Set(prohibitedHits)];
+    violations.push(
+      `Prohibited marker(s) found (${prohibitedHits.length} instance[s]): ${unique.join(
+        ", "
+      )}. The 1.9.x+ structure requires body prose to follow \`### title\` directly — no \`**摘要**\` / \`**Summary**\` / \`**要約**\` / \`**分析**\` / \`**Analysis**\` markers anywhere.`
     );
   }
 

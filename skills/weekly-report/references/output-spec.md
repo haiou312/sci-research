@@ -11,7 +11,7 @@ The Writer produces **one Markdown file** under `out_md`. The file MUST conform 
 
 ## {Market event}
 ### {Country: CN}
-- [S1] {Story headline} — {YYYY-MM-DD}: one-paragraph factual summary, then optional analyst quote in 「」.
+- [S1] {Story headline} — {YYYY-MM-DD}: one-paragraph factual summary, then optional analyst quote wrapped in `""` (zh: 中文全角弯引号; en/ja: ASCII straight quotes — never `「」`).
 - [S2] ...
 ### {Country: US}
 - [S3] ...

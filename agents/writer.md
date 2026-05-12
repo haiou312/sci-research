@@ -176,7 +176,7 @@ Use the "zoom-in" technique: start broad, then narrow to the specific mechanism.
 
 **Chinese (zh):**
 - Use 中文学术写作风格, formal but accessible
-- Use 「」for term emphasis, not quotation marks for definitions
+- Use `""` (中文全角弯引号) for term emphasis and direct quotations — never use `「」`
 - Numbers: 使用阿拉伯数字 for data, 汉字 for approximate expressions (数十个、上百万)
 - Section titles: use Chinese primary, English secondary
 

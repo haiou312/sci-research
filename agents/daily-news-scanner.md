@@ -333,7 +333,7 @@ Keep only URLs that pass the date gate. Discard all others immediately — do no
 
 ### Step 3.5 — Paywall fallback (mandatory when paywall detected)
 
-After the date gate passes, evaluate body retrievability. A **paywalled** candidate cannot serve as `Lead` because the Writer needs ≥200 words of factual body for the `summary_marker` paragraph. But the paywalled outlet's authority signal is too valuable to discard — it stays as `Corroboration`.
+After the date gate passes, evaluate body retrievability. A **paywalled** candidate cannot serve as `Lead` because the Writer needs ≥200 words of factual body for the story's body paragraph(s). But the paywalled outlet's authority signal is too valuable to discard — it stays as `Corroboration`.
 
 **Paywall detection** (apply to every date-verified candidate):
 

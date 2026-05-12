@@ -27,7 +27,8 @@ Silently verify all of the following. If any check fails, fix before writing —
 6. No Markdown link syntax `[text](url)` appears anywhere in the document.
 7. No alternative reference formats: no `来源：` blocks, no `（来源：...）` inline citations, no bullet-list URLs, no global reference section at the end.
 8. Every category either has `min_per_category` stories or carries a single italic `gap_note` line.
-9. `analysis_marker` never appears with an empty body.
+9. **No `**摘要**` / `**Summary**` / `**要約**` / `**分析**` / `**Analysis**` markers anywhere** — body prose follows `### title` directly.
+10. Every URL in the references block traces to the Verifier KEEP set (Lead or Corroborated by). No search-derived URLs admitted.
 
 When `lang=zh`, additionally verify that the output complies with every rule in `references/language-spec.md` § Language-Specific Rules — `lang=zh` only. That document is the single source of truth for zh-specific writing rules (quote marks, official titles, country prefixes, time anchors, terminology, foreign media naming).
 

@@ -32,7 +32,7 @@ Before issuing the `Write` call, the Writer must mentally tick this checklist. T
 
 ## Localisation
 
-- [ ] zh body uses 「」 quotes; en uses `"…"`; ja uses 「」.
+- [ ] zh body uses `""` (中文全角弯引号 U+201C / U+201D); en uses ASCII `"…"`; ja uses ASCII `"…"`. **Never `「」`.**
 - [ ] Country H3 names match the language-spec table for the active `lang`.
 - [ ] Tickers / series IDs / URLs left in canonical English form.
 

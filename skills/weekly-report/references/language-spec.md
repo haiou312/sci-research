@@ -49,7 +49,7 @@ Country sub-sections inside `## Market event` and `## Fixed Income` use H3 with 
 
 ## Body text conventions
 
-- **Quotes**: zh uses 「」; en uses standard `"…"`; ja uses 「」.
+- **Quotes**: zh uses `""` (中文全角弯引号 U+201C / U+201D); en uses ASCII `"…"`; ja uses ASCII `"…"`. Never use `「」`.
 - **Numbers**: keep raw figures; localise units only in the unit column header (e.g. zh `单位: 百分点`, ja `単位: %`).
 - **Currency symbols**: keep `USD`, `EUR`, `GBP`, `JPY`, `CNY`, `KRW` as-is. Avoid `¥` for both yen and yuan to prevent ambiguity.
 - **Trend icons**: use ▲ for up, ▼ for down, → for flat. Same in all three languages.
