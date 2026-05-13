@@ -20,7 +20,7 @@ The Source Matrix is the **single source of truth** for which outlets you search
 - **T2**: the `Region: <X's region>` rows.
 - **T3**: the `Sector` rows matching the active category + the `Country: X` row + the `Region: <X's region>` row (if defined).
 
-You must run a `site:`-anchored query against **every applicable row at the active tier** before deciding the tier is exhausted. Bare-keyword queries (e.g. `Reuters Korea economy April 28 2026` without `site:reuters.com`) are forbidden — they fall to aggregators and waste tier authority.
+You must run a `site:`-anchored query against **every applicable row at the active tier** before deciding the tier is exhausted. Bare-keyword queries (e.g. `Reuters Korea economy April 28 2026` without `site:reuters.com`) are normally forbidden — they fall to aggregators and waste tier authority — **except as a fallback when the `site:`-anchored query returns 0 results** (see § Search Process > Step 1.5 — Search Query Fallback Rule). The fallback is bounded by domain filtering: only URLs whose domain matches the original `site:` target are kept; aggregator URLs (yahoo.com, msn.com, investing.com, etc.) are discarded.
 
 ### T4-official — Primary institutional releases
 
@@ -94,6 +94,8 @@ Must have: named reporter byline **and** direct quotes from primary sources. Two
 | Region: Asia | Nikkei Asia | asia.nikkei.com |
 | Country: United Kingdom | The Independent | independent.co.uk |
 | Country: Japan | Asahi Shimbun English | asahi.com/ajw |
+| Country: Japan | Nippon.com (Jiji Press English partner) | nippon.com |
+| Country: Japan | Japan News by Yomiuri | japannews.yomiuri.co.jp |
 | Country: Korea | Korea JoongAng Daily | koreajoongangdaily.joins.com |
 | Country: India | The Hindu | thehindu.com |
 | Country: India | Economic Times | economictimes.indiatimes.com |
@@ -149,6 +151,7 @@ Use **only** when a category is still below `min_per_category` after T4 → T2 r
 | Sector | Trade / Legal | Law360 | law360.com |
 | Country: Japan | — | The Japan Times | japantimes.co.jp |
 | Country: Japan | — | Mainichi English | mainichi.jp/english |
+| Country: Japan | — | Japan Today (Kyodo + GPlusMedia) | japantoday.com |
 | Country: Korea | — | Korea Times | koreatimes.co.kr |
 | Country: Korea | — | Korea Economic Daily English | kedglobal.com |
 | Country: Korea | — | Pulse by Maeil Business News | pulse.mk.co.kr |
@@ -219,6 +222,9 @@ Every non-T4 domain falls into one of three buckets. The bucket determines wheth
 | Spiegel International | spiegel.de/international |
 | El País English | english.elpais.com |
 | Asahi Shimbun English | asahi.com/ajw |
+| Nippon.com | nippon.com |
+| Japan News by Yomiuri | japannews.yomiuri.co.jp |
+| Japan Today | japantoday.com |
 | Korea JoongAng Daily | koreajoongangdaily.joins.com |
 | The Hindu | thehindu.com |
 | Economic Times | economictimes.indiatimes.com |
@@ -279,6 +285,28 @@ For the country, enumerate the applicable matrix rows per tier (Universal + Coun
 | Society | `society OR health OR education OR labour OR environment` |
 | Other | (no extra keyword — `{country_en} {date_en}` only) |
 
+### Step 1.5 — Search Query Fallback Rule
+
+`site:`-anchored queries fail silently against many large publisher domains: Reuters, FT, WSJ, BBC, NYT, Bloomberg, Telegraph, Times, FAZ — their content is often deindexed or rate-limited, and `site:reuters.com {country} {date}` style queries return zero results even when the outlet has clearly published the story.
+
+**For every non-T4 query (T1-wire, T1-flagship, T2, T3)**, follow this two-step procedure:
+
+1. **Primary**: run `site:{domain} {country_en} {category-keyword} {date_en}` as written in the Step 2 templates below.
+2. **Fallback** (run only when the primary query returns 0 results): run the same query **without the `site:` prefix**:
+   ```
+   {outlet-name} {country_en} {category-keyword} {date_en}
+   ```
+   For example: `Reuters Japan economy OR central bank OR markets OR trade May 12 2026`.
+
+**Domain filter on fallback results** (mandatory):
+- From the fallback search results, **only keep URLs whose domain matches the original `{domain}`** (e.g. for the Reuters fallback, only keep `reuters.com` URLs).
+- Discard aggregator URLs that wrap the original outlet's content: `yahoo.com`, `news.yahoo.com`, `finance.yahoo.com`, `msn.com`, `investing.com`, `marketscreener.com`, `seeking alpha.com`, `nasdaq.com` (article republish), Google News URLs, Apple News URLs, social media reposts.
+- The intent is to recover canonical articles when `site:` indexing fails — not to admit aggregator-wrapped content.
+
+**If the fallback also returns zero domain-matching URLs**, the outlet is exhausted for this category — move to the next outlet in the tier.
+
+This fallback is a workaround for search-engine indexing limits, not a license to bypass tier authority. The Verifier still validates each candidate by tier (T1-wire, T1-flagship, etc.) based on the URL's domain.
+
 ### Step 2 — Loop the five categories, walking the tier ladder inside each
 
 For **each** category in order (Economy → Politics → Technology → Society → Other):
@@ -305,12 +333,13 @@ For **each** category in order (Economy → Politics → Technology → Society 
    site:dowjones.com South Korea economy OR central bank OR markets OR trade April 28 2026
    site:en.yna.co.kr South Korea economy OR central bank OR markets OR trade April 28 2026
    ```
+   **Apply Step 1.5 fallback** for any row where the `site:` query returns 0 results — common for `site:reuters.com`, `site:bloomberg.com`, `site:dowjones.com` against most countries.
 
-3. **T1-flagship** — for every applicable row in `Global` + `Country: {country_en}` + `Region: {region}` (country-of-coverage table), run the same `site:`-anchored query template.
+3. **T1-flagship** — for every applicable row in `Global` + `Country: {country_en}` + `Region: {region}` (country-of-coverage table), run the same `site:`-anchored query template. **Apply Step 1.5 fallback** for any row where `site:` returns 0 — this is the most common failure mode against `site:ft.com`, `site:wsj.com`, `site:economist.com`, `site:nytimes.com`, `site:bbc.com`, `site:telegraph.co.uk`, `site:thetimes.co.uk`, `site:asia.nikkei.com`.
 
-4. **T2** — only if the category has not yet reached `min_per_category` after T1-flagship. Run `site:`-anchored queries against every `Region: {region}` row.
+4. **T2** — only if the category has not yet reached `min_per_category` after T1-flagship. Run `site:`-anchored queries against every `Region: {region}` row. **Apply Step 1.5 fallback** as above.
 
-5. **T3** — only if the category is still below `min_per_category` after T2. Run `site:`-anchored queries against the relevant `Sector` rows + `Country: {country_en}` rows + `Region: {region}` rows. Inside the Technology category, T3 sector rows (TechCrunch, MIT Technology Review, etc.) are first-class and may be entered as soon as T1-flagship is exhausted, without waiting for T2.
+5. **T3** — only if the category is still below `min_per_category` after T2. Run `site:`-anchored queries against the relevant `Sector` rows + `Country: {country_en}` rows + `Region: {region}` rows. Inside the Technology category, T3 sector rows (TechCrunch, MIT Technology Review, etc.) are first-class and may be entered as soon as T1-flagship is exhausted, without waiting for T2. **Apply Step 1.5 fallback** as above.
 
 **Stop the ladder for this category** as soon as you have at least `min_per_category` date-verified, unique-event stories. Do not keep walking down to lower tiers when the category is already covered by higher-tier sources.
 
