@@ -17,7 +17,7 @@ Target-language tokens used by the Writer. Scanner and Verifier output stays Eng
 | `section_5` | `## 5. Other Notable Events` | `## 五、其他重要事件` | `## 5. その他の重要事項` |
 | `references_marker` | `**References**` | `**References**` | `**References**` |
 | `gap_note` | `*Note: only N story/stories met T1-T4 standards for this category today.*` | `*注：本分类当日仅检索到 N 条符合 T1-T4 标准的新闻。*` | `*注：このカテゴリで本日 T1-T4 基準を満たした記事は N 件のみでした。*` |
-| `quote_marks` | `""` | `""` | `""` |
+| `quote_marks` | `""` (U+0022) | `""` (U+201C / U+201D) | `「」` (U+300C / U+300D) |
 
 ## Derived Display Fields
 
@@ -57,6 +57,20 @@ If `lang` is `zh` or `ja` and the resolved filename contains only ASCII letters 
   - Proper nouns without a widely used target-language form — keep the English form in parentheses after a target-language gloss on first mention.
   - APA 7th reference lines — see `references/output-spec.md`.
 - Direct quotations: translate into the target language and wrap with the `quote_marks` for that language; preserve speaker attribution (name + title translated where appropriate).
+
+## Canonical Quote Marks
+
+Body prose uses exactly one quote-mark style per `lang`. Mixed styles or wrong-language chars are blocked by `scripts/hooks/daily-news-format-check.js`.
+
+| lang | Open | Close | Codepoints |
+|---|---|---|---|
+| `zh` | `"` | `"` | U+201C / U+201D |
+| `en` | `"` | `"` | U+0022 / U+0022 |
+| `ja` | `「` | `」` | U+300C / U+300D |
+
+This table is authoritative. The `quote_marks` row in the Localisation Table above mirrors it; if they ever disagree, this table wins. APA reference lines, URLs, fenced code blocks, and inline code spans are exempt from the canonical-char rule.
+
+Rationale: `ja` uses corner brackets because Japanese newsroom convention treats `「」` as the default for direct quotation. Forcing ASCII `""` in Japanese prose reads as a foreign artifact. `zh` uses curly because standard Chinese newsroom practice; ASCII `""` in Chinese prose is a typographic error. `en` uses ASCII as the simplest interoperable form (avoids curly-quote substitution drift across editors and fonts).
 
 ## Title Length Rules
 

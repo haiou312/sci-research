@@ -15,10 +15,12 @@ Generate a professional dated daily report for institutional readers covering a 
 2. Launch Scanner agent → capture Scanner Output Schema
 3. IF zero candidates → STOP with message
 4. Launch Verifier agent (Scanner output in prompt) → capture Verifier Output Schema
-5. Launch Writer agent (Verifier output + params in prompt) → Writer calls Write tool
-6. mkdir -p → pandoc export (skip if pandoc missing)
-7. IF --email → send via Python script (dry-run or real)
-8. Verify: ls both files, grep H2/H3 counts
+5. Launch Fact-Extractor agent (Verifier output + params) → fact-manifest YAML written
+6. Launch Writer agent (Verifier output + manifest path + params) → Writer calls Write tool
+7. Launch Editor agent (writer_md + manifest + verifier_bundle + lang/date/country) → in-place Edit patches
+8. mkdir -p → pandoc export (skip if pandoc missing)
+9. IF --email → send via Python script (dry-run or real)
+10. Verify: ls both files, grep H2/H3 counts
 ```
 
 ## Operating Principle
@@ -65,7 +67,9 @@ Email delivery reads Gmail SMTP credentials from environment variables (`GOOGLE_
 Each stage runs as a subagent. The orchestrator passes data between stages via the subagent **prompt text** — not files, not environment variables. Specifically:
 
 - **Scanner → Verifier**: The orchestrator includes the Scanner's full output (Scanner Output Schema from `references/schemas.md`) verbatim in the Verifier agent's prompt.
-- **Verifier → Writer**: The orchestrator includes the Verifier's full output (Verifier Output Schema) plus runtime parameters (`country`, `date`, `lang`, `out_md`, `min_per_category`) in the Writer agent's prompt.
+- **Verifier → Fact-Extractor**: The orchestrator includes the Verifier's full output verbatim plus runtime parameters (`country`, `date`, `lang`) and `out_manifest` (target YAML path, e.g. `${OUT_DIR}/fact-manifest-{country_slug}-{date}.yaml`) in the Fact-Extractor agent's prompt. The Fact-Extractor writes the manifest to `out_manifest` and returns confirmation.
+- **Verifier + Fact-Extractor → Writer**: The orchestrator includes the Verifier's full output, the Fact Manifest content (read from `out_manifest`) or its absolute path, plus runtime parameters (`country`, `date`, `lang`, `out_md`, `min_per_category`) in the Writer agent's prompt.
+- **Writer + Fact-Extractor + Verifier → Editor**: The orchestrator includes `writer_md_path` (the path Writer just wrote to), `manifest_path` (from Step 7.5), `verifier_bundle` (the same Verifier output passed verbatim, inline), plus runtime parameters (`lang`, `date`, `country`) in the Editor agent's prompt. The Editor makes in-place `Edit` calls on `writer_md_path` and prints a structured stdout report. The format-check hook fires on every Edit and on the final state.
 
 The orchestrator must not summarise, truncate, or reformat the upstream output — pass it verbatim so downstream agents can parse the expected schema.
 
@@ -110,13 +114,17 @@ The orchestrator must not summarise, truncate, or reformat the upstream output �
 
 6. **Compose the Scanner output.** The Scanner agent returns a single English data bundle matching `references/schemas.md` § Scanner Output Schema. The orchestrator captures this output for the next step.
 
-7. **Second-pass filter** (Verifier stage). Launch a Verifier agent with the Scanner's full output included verbatim in its prompt. The Verifier applies the four-check rubric in `references/rubric.md` § Authority & Impact Rubric (originality, authority, impact, dedup). Applies the two-step fallback if any category drops below `min_per_category`. Emits the Verifier Output Schema from `references/schemas.md`. The orchestrator captures this output for the Writer.
+7. **Second-pass filter** (Verifier stage). Launch a Verifier agent with the Scanner's full output included verbatim in its prompt. The Verifier applies the four-check rubric in `references/rubric.md` § Authority & Impact Rubric (originality, authority, impact, dedup). Applies the two-step fallback if any category drops below `min_per_category`. Emits the Verifier Output Schema from `references/schemas.md`. The orchestrator captures this output for the next two stages (Fact-Extractor and Writer).
+
+7.5. **Extract Fact Manifest** (Fact-Extractor stage). Launch a `daily-fact-extractor` agent (sonnet) with the Verifier's full output included verbatim in its prompt plus `country`, `date`, `lang`, and `out_manifest`. Resolve `out_manifest` to `${OUT_DIR}/fact-manifest-{country_slug}-{date}.yaml` where `{country_slug}` is the lowercase ASCII slug of `country` (e.g. `japan`, `united-kingdom`, `china`). The agent emits a YAML Fact Manifest — one entry per KEPT story listing every number, date, named person, institution, product, and direct quote in the Verifier's `factual_excerpt`, each anchored to its source URL with a verbatim excerpt (see `agents/daily-fact-extractor.md` for the full schema). The Fact-Extractor calls `Write` once and returns confirmation. The orchestrator captures the manifest path for downstream stages (Writer in Step 8; Editor in the future Step 8.5).
 
 8. **Translate and write the report** (Writer stage). Ensure the output directory exists:
    ```bash
    mkdir -p "$OUT_DIR"
    ```
-   If `mkdir -p` fails (permissions, read-only filesystem), stop and report the error — do not silently write to a fallback location. The Verifier's KEEP set is the **spine of which stories run and which URLs go into References**. Writer **runs 1-3 supplemental `WebSearch` / `WebFetch` calls per story by default** to enrich body prose with background context — what came before, broader pattern, prior policy. **Search-derived URLs never enter the References block** — that stays Verifier-only (Lead + every Corroborated by URL). Compose narrative in `lang` per `references/language-spec.md`. Structure is `### title → body → **References**` per story — **no `**摘要**` / `**Summary**` / `**要約**` / `**分析**` / `**Analysis**` markers anywhere**. **When `lang=zh`, the Writer must also comply with `references/language-spec.md` § Language-Specific Rules (quote marks `""` for zh / `""` for ja / ASCII `""` for en — never `「」`; official titles, country prefixes, time anchors, terminology, foreign media naming).** Produce Markdown obeying `references/output-spec.md`. Use the `Write` tool to overwrite `out_md`.
+   If `mkdir -p` fails (permissions, read-only filesystem), stop and report the error — do not silently write to a fallback location. The Verifier's KEEP set is the **spine of which stories run**. The Fact Manifest (Step 7.5) is the **locked-fact contract** — Verifier-sourced numbers / names / dates / quotes that Writer must not drift on. Writer **runs 1-3 supplemental `WebSearch` / `WebFetch` calls per story by default** to enrich body prose with background context — what came before, broader pattern, prior policy. **References = Verifier KEEP URLs ∪ {search URLs that supplied a fact in body}** — every search URL whose content backed a body fact MUST be cited with proper APA and continuous `[N]` (see `references/output-spec.md` § Cited Search URLs). Compose narrative in `lang` per `references/language-spec.md`. Structure is `### title → body → **References**` per story — **no `**摘要**` / `**Summary**` / `**要約**` / `**分析**` / `**Analysis**` markers anywhere**. **Quote marks follow `references/language-spec.md` § Canonical Quote Marks** (en ASCII `""` / zh curly `""` / ja corner `「」` — the format-check hook blocks Write on any non-canonical char). When `lang=zh`, also comply with `references/language-spec.md` § Language-Specific Rules (official titles, country prefixes, time anchors, terminology, foreign media naming). Produce Markdown obeying `references/output-spec.md`. Use the `Write` tool to overwrite `out_md`.
+
+8.5. **Fact-check editor pass** (Editor stage). Launch a `daily-editor` agent (opus) with `writer_md_path` (= `out_md`), `manifest_path` (from Step 7.5), `verifier_bundle` (the same Verifier output, inline), and runtime params `lang` / `date` / `country` in its prompt. The Editor runs four sequential passes — Verifier-locked fact verification, Writer-search fact backing (may add new search URLs to References + renumber `[N]`), quote verbatim check, quote-mark normalization — and patches the MD in place using `Edit` (never `Write`). Budget: max 2 WebSearch + 4 WebFetch per story. The Editor prints a structured stdout report (drift counts, refs added, claims cut / weakened, quote-mark fixes); the orchestrator logs it but does not gate on it. The format-check hook fires on every `Edit` and validates the post-edit state — if any Edit produces a malformed file, the hook blocks and the orchestrator surfaces the violation.
 
 9. **Export to Word.** First verify pandoc is available:
    ```bash
@@ -159,7 +167,9 @@ The orchestrator must not summarise, truncate, or reformat the upstream output �
 |-------|-------------------|---------------------|
 | Scanner | `sci-research:daily-news-scanner` (sonnet) | `references/rubric.md`, `references/schemas.md` |
 | Verifier | `sci-research:news-verifier` (sonnet) | `references/rubric.md`, `references/schemas.md` |
-| Writer | `sci-research:daily-news-writer` (opus) | `references/language-spec.md`, `references/output-spec.md`, `references/verification.md` |
+| Fact-Extractor (Step 7.5) | `sci-research:daily-fact-extractor` (sonnet) | (Verifier output only — agent prompt has full schema) |
+| Writer | `sci-research:daily-news-writer` (opus) | `references/language-spec.md`, `references/output-spec.md`, `references/verification.md`, Fact Manifest from Step 7.5 |
+| Editor (Step 8.5) | `sci-research:daily-editor` (opus) | Writer's MD, Fact Manifest, Verifier bundle (verbatim), `references/language-spec.md` § Canonical Quote Marks |
 | Email sender (Step 10) | — (Bash + `scripts/send-report-email.py`) | `references/email-spec.md` |
 | Orchestrator delivery check | — | `references/verification.md` |
 

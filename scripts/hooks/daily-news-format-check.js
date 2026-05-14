@@ -112,6 +112,126 @@ function collectReferenceLines(content) {
   return blocks;
 }
 
+// ---------- lang detection & quote-mark validation (PR #1) ----------
+
+function detectLang(content) {
+  const m = content.match(
+    /^# .+?(每日热点新闻|Daily News Intelligence|デイリーニュース)/m
+  );
+  if (!m) return null;
+  if (m[1] === "每日热点新闻") return "zh";
+  if (m[1] === "Daily News Intelligence") return "en";
+  if (m[1] === "デイリーニュース") return "ja";
+  return null;
+}
+
+// Canonical quote chars per lang (mirrors language-spec.md § Canonical Quote Marks).
+// Body prose must use only the lang's canonical open/close pair. APA ref lines,
+// URLs, fenced code blocks, and inline code spans are exempt.
+function validateQuoteMarks(content, lang) {
+  const violations = [];
+
+  const stripped = content
+    .replace(/^```[\s\S]*?^```$/gm, "")
+    .replace(/^\[\d+\].*$/gm, "")
+    .replace(/https?:\/\/\S+/g, "")
+    .replace(/`[^`]+`/g, "");
+
+  const forbiddenByLang = {
+    zh: /["「」]/g,
+    en: /[“”「」]/g,
+    ja: /["“”]/g,
+  };
+  const allowedDesc = {
+    zh: "U+201C / U+201D",
+    en: "U+0022",
+    ja: "U+300C / U+300D",
+  };
+
+  const hits = stripped.match(forbiddenByLang[lang]);
+  if (hits) {
+    const unique = [...new Set(hits)];
+    const codepoints = unique
+      .map(
+        (c) =>
+          `U+${c.codePointAt(0).toString(16).toUpperCase().padStart(4, "0")}`
+      )
+      .join(", ");
+    violations.push(
+      `${hits.length} non-canonical quote char(s) for lang=${lang}: ${codepoints}. Allowed: ${allowedDesc[lang]}.`
+    );
+  }
+
+  if (lang === "zh") {
+    const opens = (stripped.match(/“/g) || []).length;
+    const closes = (stripped.match(/”/g) || []).length;
+    if (opens !== closes) {
+      violations.push(
+        `Quote pair imbalance (zh): ${opens} U+201C vs ${closes} U+201D.`
+      );
+    }
+  }
+  if (lang === "ja") {
+    const opens = (stripped.match(/「/g) || []).length;
+    const closes = (stripped.match(/」/g) || []).length;
+    if (opens !== closes) {
+      violations.push(
+        `Quote pair imbalance (ja): ${opens} U+300C vs ${closes} U+300D.`
+      );
+    }
+  }
+
+  return violations;
+}
+
+// Reference-coverage heuristic backstop (PR #5).
+//
+// Per-story sanity check: if a story has direct quotes (between canonical
+// quote marks for `lang`), it must have ≥1 URL in its References block.
+// If a story carries many specific numeric claims (with units) but only
+// 0-1 URLs, it's likely missing search-URL citations.
+//
+// This is HEURISTIC — won't catch every reference gap, won't false-positive
+// at sensible thresholds. The Editor (Step 8.5) catches missing citations
+// authoritatively; this hook is the belt-and-braces backstop.
+function checkReferenceCoverage(content, lang) {
+  const violations = [];
+  const storyBlocks = content.split(/^---\s*$/m).filter((b) => b.includes("###"));
+
+  for (const block of storyBlocks) {
+    const m = block.match(
+      /^###\s+([^\n]+)\n+([\s\S]*?)\n+\*\*References\*\*\n+([\s\S]*)$/m
+    );
+    if (!m) continue;
+    const [, title, body, refs] = m;
+
+    const quoteRegex =
+      lang === "zh"
+        ? /“[^”]+”/g
+        : lang === "ja"
+        ? /「[^」]+」/g
+        : /"[^"]+"/g;
+    const quoteCount = (body.match(quoteRegex) || []).length;
+    const urlCount = (refs.match(/https?:\/\/\S+/g) || []).length;
+
+    if (quoteCount > 0 && urlCount === 0) {
+      violations.push(
+        `Story "${title.trim()}" has ${quoteCount} direct quote(s) but 0 URLs in References. Every quote must trace to a cited URL.`
+      );
+    }
+
+    const numericRegex =
+      /\d+(?:[.,]\d+)?\s?(?:%|bps|百分点|个基点|million|billion|trillion|亿|万|百万|十亿|億)/g;
+    const specificNumbers = (body.match(numericRegex) || []).length;
+    if (specificNumbers >= 5 && urlCount <= 1) {
+      violations.push(
+        `Story "${title.trim()}" has ${specificNumbers} specific numeric claim(s) with units but only ${urlCount} URL(s) in References. Likely missing search-URL citations — Writer should cite every search URL that supplied a body fact.`
+      );
+    }
+  }
+  return violations;
+}
+
 // ---------- main validation ----------
 
 function validate(filePath, content) {
@@ -218,6 +338,14 @@ function validate(filePath, content) {
     );
   }
 
+  // 7. Quote-mark canonical char enforcement (per language-spec.md § Canonical Quote Marks)
+  // 8. Reference-coverage heuristic backstop (PR #5).
+  const lang = detectLang(content);
+  if (lang) {
+    violations.push(...validateQuoteMarks(content, lang));
+    violations.push(...checkReferenceCoverage(content, lang));
+  }
+
   return violations;
 }
 
@@ -231,9 +359,25 @@ function main() {
     try {
       const data = JSON.parse(input);
       const filePath = data?.tool_input?.file_path || "";
-      const content = data?.tool_input?.content || "";
+      let content = data?.tool_input?.content || "";
 
-      if (!filePath || !content) {
+      if (!filePath) {
+        process.exit(0);
+      }
+
+      // For Edit / MultiEdit events, tool_input.content is absent — read from disk.
+      // PostToolUse fires after the edit has been applied, so the file reflects
+      // the post-edit state.
+      if (!content) {
+        try {
+          content = fs.readFileSync(filePath, "utf8");
+        } catch (e) {
+          // File unreadable (race, missing) — don't block on a transient error.
+          process.exit(0);
+        }
+      }
+
+      if (!content) {
         process.exit(0);
       }
       if (isPluginInternal(filePath)) {

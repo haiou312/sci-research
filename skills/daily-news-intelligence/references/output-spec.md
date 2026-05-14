@@ -11,7 +11,7 @@ Each story must use this exact block structure (`{references_marker}` comes from
 ```md
 ### <Story title in target language>
 
-<Body in target language. **The shape and length follow from one goal: leave the reader fully informed about the story** — what happened, why it matters, what came before, who's affected, what to watch next. No fixed paragraph count, no fixed length; use paragraph breaks freely when they help the reader follow the logic (narrative shifts, background segments, multi-party reactions). Open in medias res with a concrete fact (number / action / named person doing something) — no setup sentence. Close on the last substantive fact — no wrap-up. **Dig deeply into the few facts that drive the story** — explain mechanics, name affected parties, surface historical comparison, fold in the context the source assumes the reader knows. Short sentences carry weight, but the story is complete; don't sacrifice depth for brevity. **Enriched with background context from 1-3 WebSearch / WebFetch calls per story (default, not optional)** — what came before, broader pattern, comparable historical event, prior policy. What you find through search should land as substantive context for the reader, not as flavoring. Search URLs never appear in References. Numbers, names, titles, dates, and direct quotes that you cite must trace to either the Verifier bundle (Lead facts) or to a verifiable search result (background context). Wrap any direct quote with the language's `quote_marks` and preserve speaker attribution.>
+<Body in target language. **The shape and length follow from one goal: leave the reader fully informed about the story** — what happened, why it matters, what came before, who's affected, what to watch next. No fixed paragraph count, no fixed length; use paragraph breaks freely when they help the reader follow the logic (narrative shifts, background segments, multi-party reactions). Open in medias res with a concrete fact (number / action / named person doing something) — no setup sentence. Close on the last substantive fact — no wrap-up. **Dig deeply into the few facts that drive the story** — explain mechanics, name affected parties, surface historical comparison, fold in the context the source assumes the reader knows. Short sentences carry weight, but the story is complete; don't sacrifice depth for brevity. **Enriched with background context from 1-3 WebSearch / WebFetch calls per story (default, not optional)** — what came before, broader pattern, comparable historical event, prior policy. What you find through search should land as substantive context for the reader, not as flavoring. Every search URL whose content supplied a fact in body MUST appear in References (proper APA, continuous `[N]`). Numbers, names, titles, dates, and direct quotes that you cite must trace to either the Verifier bundle (Lead facts) or to a verifiable search result (background context). Wrap any direct quote with the language's `quote_marks` and preserve speaker attribution.>
 
 {references_marker}
 
@@ -28,7 +28,7 @@ Do not emit a trailing global references or sources section.
 
 **`[N]` numbering rule**: every reference line starts with `[N] ` where `N` runs **continuously from 1 across the entire document**, not per-story. The first reference of story 1 is `[1]`; if story 1 has 3 references, story 2's first reference is `[4]`. Multiple references per story are allowed (and common — Verifier often delivers corroborating T1-T2 pairs).
 
-**Search-derived URLs are NEVER added** to the references block. Writer **runs 1-3 supplemental `WebSearch` / `WebFetch` calls per story by default** to enrich body prose with background context (what came before, broader pattern, prior policy). The references block contains only Verifier KEEP set URLs (Lead + every Corroborated by URL).
+**Search URLs that supplied a fact in body MUST appear** in the references block. Writer **runs 1-3 supplemental `WebSearch` / `WebFetch` calls per story by default** to enrich body prose with background context (what came before, broader pattern, prior policy). The references block contains: Verifier KEEP URLs (Lead + every Corroborated by URL) ∪ {search URLs whose content backed a body fact}.
 
 If a category has fewer kept stories than `min_per_category` after the Scanner gap pass, keep the section heading and append exactly one italic `gap_note` line before the next `---`.
 
@@ -75,7 +75,6 @@ Every story MUST end with the `{references_marker}` block containing **one or mo
 | `*来源：Author (Year); Author (Year)*` italic in-text | Shortened in-text citation with a separate global URL list — reader cannot find URL without scrolling |
 | Reference line without `[N]` prefix | Mandatory numbering missing — breaks continuous-counter contract |
 | Reference line without a bare `https://` URL | Every reference must carry a verifiable URL |
-| Search-derived URL in references | References = Verifier KEEP set URLs only (Lead + Corroborated by) |
 
 The ONLY acceptable format is the numbered APA 7th reference(s) colocated with each story:
 
@@ -145,6 +144,21 @@ The Bank of Japan held its policy rate at 0.5% for the third consecutive meeting
 
 (Note: `[3]`/`[4]` in the `lang=zh` example assumes the previous `lang=en` story consumed `[1]`/`[2]`. `[N]` is a **document-wide** continuous counter, never reset per story or per language. Body prose carries the news directly with no `**摘要**` / `**分析**` marker — opens in medias res with a concrete fact, closes on a substantive fact.)
 
+## Cited Search URLs
+
+Writer runs supplemental `WebSearch` / `WebFetch` per story for background context. **Any URL that supplied a fact written in body prose is a first-class citation** and appears in the story's `**References**` block alongside Verifier KEEP URLs:
+
+- One APA reference line per cited search URL, with the next continuous `[N]` counter.
+- Outlet name = the URL's actual publisher.
+- Title = the source page's `<title>` or H1, preserved in original English.
+- Date = the source publication date.
+
+This is **mandatory**. Citing background facts in body without listing the supporting URL in References creates a reference gap visible to readers checking sources. Writer is responsible at write time; Editor verifies at edit time.
+
+Verifier-delivered URLs (Lead + every Corroborated by URL) always appear in References regardless of whether Writer cites them in body — they carry the report's authority signal.
+
+The ONLY URLs that may be fetched and NOT cited are ones that returned irrelevant content or whose facts duplicate something already cited. When in doubt, cite.
+
 ## APA 7th Reference Format
 
 - Pattern: `[N] <Author surname>, <Given-name initials>. (<Year>, <Month> <Day>). <Original English title>. <Outlet>. <URL>`
@@ -155,7 +169,7 @@ The Bank of Japan held its policy rate at 0.5% for the third consecutive meeting
 - URLs are bare — never wrap in `[text](url)`.
 - One or more references per story, colocated in the story's references block. Do NOT emit a global sources list.
 - `[N]` prefix is mandatory, counter runs continuously from `[1]` at the document's first reference through `[total]` at the last, regardless of story boundaries.
-- **Search-derived URLs are NEVER added.** References = Verifier KEEP set URLs (Lead + every Corroborated by URL) only.
+- **References = Verifier KEEP URLs ∪ {search URLs that supplied a fact in body}**. Every Verifier URL (Lead + every Corroborated by URL) MUST appear. Every search URL whose content backed a body fact MUST appear with proper APA and continuous `[N]`. URLs fetched but unused are NOT added.
 
 ## Self-Check Checksum (Writer must verify before emitting)
 
@@ -168,6 +182,6 @@ Before calling `Write`, count your own output:
 5. No `^## 参考文献$` / `^## References$` / `^## Sources$` H2 heading anywhere.
 6. No `^> **来源**` / `^> **Source**` blockquote patterns.
 7. No `^*\s*来源[:：]` / `^*\s*Sources?[:：]` italic in-text citation patterns.
-8. Every URL in the references block traces to the Verifier KEEP set (Lead or Corroborated by) — no search-derived URLs admitted.
+8. Every URL in the references block is either a Verifier KEEP URL (Lead or Corroborated by) OR a search URL that supplied a fact in body. URLs that were fetched but whose content wasn't used MUST NOT appear; URLs whose content was used MUST appear.
 
 If any check fails, regenerate. A PostToolUse hook (`scripts/hooks/daily-news-format-check.js`) enforces items 1, 2, 3, 4, 5, 6, and 7 mechanically — it will block the `Write` if any is violated.
