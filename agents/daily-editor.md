@@ -24,6 +24,12 @@ From the caller, in a single prompt:
 
 Read `writer_md_path` and `manifest_path` once at start. Re-read `writer_md_path` between passes (Edit shifts line offsets).
 
+## Quote Language Invariant (overrides any literal pass reading)
+
+**Every direct quote in the body is ALWAYS rendered in the target language `lang`.** The Manifest `verbatim_en` and any English source page are *meaning-accuracy references only* — they are NEVER pasted into the body as-is. "Verifying" a quote means confirming the `lang` translation faithfully conveys the English source's meaning and attribution; it does **NOT** mean making the body text equal the English source.
+
+If you find a direct quote left in English (or any language ≠ `lang`) inside a `lang=zh` / `lang=ja` report, that is itself a defect: translate it into `lang` now, keep the canonical quote marks, preserve speaker name + title. A correctly translated quote must never be reverted toward the source language. Whenever a pass step below, read literally, would place source-language text into the body, this invariant wins — translate instead.
+
 ## Workflow — four sequential passes
 
 Run passes in order. After each pass, re-read the MD file before the next pass.
@@ -42,8 +48,9 @@ For each story in the Manifest:
    - If body simply omits the fact: Writer's editorial choice — do NOT insert.
 3. For each `quotes[]` entry that Writer kept as a direct quote in body:
    - Locate the quoted span (between canonical quote marks for `lang`).
-   - Reverse-check substance against `verbatim_en`. The translation must preserve meaning, not just topic.
-   - If meaning altered: `Edit` to restore (re-translate `verbatim_en` into `lang`).
+   - The body quote is in `lang`. Mentally translate it back to English and compare meaning against `verbatim_en` — it must preserve meaning, not just topic. `verbatim_en` is the meaning reference, NOT the replacement text.
+   - If meaning is altered: `Edit` to fix by **writing a fresh `lang` translation of `verbatim_en`** into the quote span. Never paste `verbatim_en` (English) into the body — the body quote stays in `lang`.
+   - If the body quote is in English (or any language ≠ `lang`): that is a defect — `Edit` to replace it with a faithful `lang` translation of `verbatim_en`, keeping canonical quote marks and attribution.
    - If attribution missing or wrong: `Edit` to align speaker name / title with `speaker_name` / `speaker_title`.
 4. Log: `[Pass 1] story=<story_id> claim=<short> body_was=<X> manifest=<Y> → edited`.
 
@@ -76,19 +83,20 @@ For each story:
 
 ### Pass 3 — Quote verbatim check (for direct quotes not already verified in Pass 1)
 
-Goal: every direct quote in body matches the verbatim source.
+Goal: every direct quote in body faithfully conveys the meaning of the verbatim source **while remaining in `lang`**. Verification confirms the accuracy of the `lang` translation — it never converts the body quote into the source's language.
 
 For each direct quote in body (between canonical quote marks):
 
 1. Skip if Pass 1 already verified it (quote was in Manifest `quotes[]`).
 2. Otherwise, identify the most likely source URL from References (closest outlet match, closest semantic proximity).
 3. WebFetch that URL.
-4. Grep for distinctive keywords from the quote (3-5 unusual content words).
-5. If found: leave alone, log as verified.
-6. If not found:
-   - Try ONE WebSearch with the quote's distinctive phrase + speaker name. WebFetch top T1-T3 result.
-   - If verified: leave the quote; if URL is not already in References, add it (renumber `[N]`).
-   - If not verified: `Edit` to downgrade — remove the quote marks, restructure as indirect speech, preserve attribution.
+4. Translate the `lang` quote back to English mentally, then grep the source for 3-5 distinctive content words to confirm the meaning matches.
+5. If the meaning matches: leave the quote **as the existing `lang` translation**, log as verified. Do NOT replace it with the English source sentence.
+6. If no match:
+   - Try ONE WebSearch with the quote's distinctive phrase (in English) + speaker name. WebFetch top T1-T3 result.
+   - If verified: keep the quote **in `lang`**; if URL is not already in References, add it (renumber `[N]`).
+   - If not verified: `Edit` to downgrade — remove the quote marks, restructure as indirect speech in `lang`, preserve attribution.
+   - **Language guard (every branch): if the body quote is in English or any language ≠ `lang`, translate it into `lang` now — a verified-but-untranslated quote is still a defect.**
 7. Log: `[Pass 3] story=<story_id> quote=<short> action=<verified|downgraded>`.
 
 ### Pass 4 — Quote-mark normalization
@@ -132,7 +140,7 @@ Use multiple `Edit` calls — one per substitution — to keep changes auditable
 
 - Pass 1: every Manifest `hard_facts[].value` that appears in body matches verbatim or in equivalent rephrase.
 - Pass 2: every fact-bearing token in body not in Manifest is either backed by a URL in this story's References block, or has been cut / weakened to a verifiable form.
-- Pass 3: every direct quote in body is verbatim-verified against a cited URL.
+- Pass 3: every direct quote in body is in `lang` (never English / source language) AND its meaning is verified against a cited URL.
 - Pass 4: zero non-canonical quote chars in body; pair balance holds for zh and ja.
 - `[N]` counter is continuous from 1 with no gaps.
 - You used `Edit` only; no `Write` was called.
