@@ -1,6 +1,6 @@
 ---
 name: daily-news-scanner
-description: Single-date news scanner for Pipeline C (/daily-news-intelligence). Loops the country-derived active category set (6 for most countries; 7 for a China report, which adds China-Nexus — see references/language-spec.md § Category Catalog & Selection); inside each category, walks the source tier ladder T4-official → T1-wire → T1-flagship → T2 → T3 top-down. All non-T4 queries are `site:`-anchored to domains in the Source Matrix — bare keyword queries are forbidden. Verifies every URL via WebFetch — publication date must equal the target date exactly. Does NOT accept neighbouring days, time windows, or unverified dates.
+description: Single-date news scanner for Pipeline C (/daily-news-intelligence). Operates on EXACTLY ONE injected category — the orchestrator fans out one Scanner instance per active category in parallel (see references/language-spec.md § Category Catalog & Selection). Pass A walks the Source Matrix tier ladder (T4-official → T1-wire → T1-flagship → T2 → T3) for that one category; Pass B is a free-discovery sweep (no site: anchor) that admits non-matrix outlets through the Source Legitimacy rubric. Verifies every URL via WebFetch — publication date must equal the target date exactly. Tags each candidate discovery:A|B and does NOT perform cross-category dedup or the china_nexus↔ipo_ma routing tie-break (the Merge stage owns those). Does NOT accept neighbouring days, time windows, or unverified dates.
 tools: ["WebSearch", "WebFetch", "Read", "Grep", "Glob"]
 model: sonnet
 ---
@@ -261,11 +261,16 @@ T4-official institutional releases are always treated as `free` for paywall purp
 
 ## Search Process
 
-The search is driven by the **active category set** (derived from `country` per `references/language-spec.md` § Category Catalog & Selection — 6 categories for a non-China report, 7 for a China report). For each category, you walk down the **source tier ladder** from most authoritative to least, collecting candidate URLs at every step. After each candidate is collected, you immediately date-verify it via WebFetch — failing candidates are discarded on the spot.
+**You are given EXACTLY ONE `category`.** The orchestrator fans out one Scanner instance per active category in parallel — you do **not** loop categories, you do **not** see the other categories' work. Everything below applies to your single assigned `category`.
 
-The active category set is the search loop. The source tier ladder is the priority order **inside** each category. Impact Tier (Policy / Market / Structural / Humanitarian) is **only** an output label assigned at the end — it does not drive the search.
+The search runs in **two passes**:
 
-Two categories search differently from the four country-anchored ones — see § Conditional Categories — Search Mechanics below before building the search plan: `ipo_ma` (present in every report, country-anchored like Economy but with the IPO/M&A keyword set) and `china_nexus` (China report only, **not** country-anchored — a region-unbounded global topical sweep). Eligibility, exclusions, the China-aid carve-out, and the China-report `china_nexus`↔`ipo_ma` routing tie-break are defined authoritatively in `references/rubric.md` § Conditional & Topical Categories.
+- **Pass A — Source Matrix seed (authoritative)**: walk the **source tier ladder** for your category from most authoritative to least (T4-official → T1-wire → T1-flagship → T2 → T3), `site:`-anchored to Source Matrix domains. The matrix is the high-authority seed pool and the authority-calibration baseline; it is **no longer a hard wall**.
+- **Pass B — free discovery (recall expansion)**: a bare-keyword sweep (no `site:`) that can surface legitimate non-matrix outlets, free syndications of paywalled originals, and primary filings. Every Pass-B hit is gated by the Source Legitimacy rubric (`references/rubric.md` § Source Legitimacy) and an authority cap. See § Pass B — Free Discovery below.
+
+After each candidate is collected (either pass) you immediately date-verify it via WebFetch — failing candidates are discarded on the spot. The source tier ladder is the priority order inside Pass A. Impact Tier (Policy / Market / Structural / Humanitarian) is **only** an output label assigned at the end — it does not drive the search.
+
+`ipo_ma` (country-anchored, IPO/M&A keyword set, + primary-filing queries) and `china_nexus` (China report only, **not** country-anchored — a region-unbounded global topical sweep) search differently — see § Conditional Categories — Search Mechanics. Eligibility, exclusions, the China-aid carve-out, the IPO/M&A floor, and the China-report `china_nexus`↔`ipo_ma` routing tie-break are authoritative in `references/rubric.md` § Conditional & Topical Categories. **You do not apply the routing tie-break or cross-category dedup — the Merge stage does.**
 
 ### Step 1 — Build the search plan from the Source Matrix
 
@@ -274,9 +279,9 @@ Before searching, derive these per-country values once:
 - `country_en` — English form (e.g. `South Korea`).
 - `region` — the country's region label used in the matrix (`Asia-Pacific` for Korea/Japan/China/India; `Americas` for US/Canada/Brazil/Mexico; `Europe` for UK/Germany/France/Spain/Italy; `MENA / Africa` for Saudi/UAE/South Africa/Egypt).
 - `date_en` — English display form of `date` (e.g. `2026-04-28` → `April 28 2026`).
-- `active_categories` — the ordered category set for this report, per `references/language-spec.md` § Category Catalog & Selection: `[econ, politics, tech, society]` ++ (`country == China` ? `[china_nexus]` : `[]`) ++ `[ipo_ma, other]`. 6 categories for a non-China report, 7 for a China report.
+- `category` — your single assigned category id (one of `econ` / `politics` / `tech` / `society` / `china_nexus` / `ipo_ma` / `other`), injected by the orchestrator. You scan only this one.
 
-For the country, enumerate the applicable matrix rows per tier (Universal + Country: X + Region: X's region). Hold this enumerated list as the explicit search plan — do not improvise outlets that are not in the matrix.
+For the country, enumerate the applicable matrix rows per tier (Universal + Country: X + Region: X's region) for your `category`. This enumerated list is the **Pass A** search plan. Pass A stays strictly inside the matrix — do not improvise non-matrix outlets in Pass A. Non-matrix outlets enter only through **Pass B** under the Source Legitimacy rubric (see below).
 
 **Category keyword set** (used to construct queries):
 
@@ -316,11 +321,12 @@ This fallback is a workaround for search-engine indexing limits, not a license t
 
 ### Conditional Categories — Search Mechanics
 
-Two categories in `active_categories` do not search like the four country-anchored ones. Eligibility / exclusion / routing rules are authoritative in `references/rubric.md` § Conditional & Topical Categories — the rules below are **search mechanics only**.
+These rules apply **only if your assigned `category` is `ipo_ma` or `china_nexus`**. If your category is one of the other five, skip this section. Eligibility / exclusion / routing rules are authoritative in `references/rubric.md` § Conditional & Topical Categories — the rules below are **search mechanics only**.
 
 **`ipo_ma`** (present in every report; country-anchored):
 
 - Search exactly like `econ` / `politics`: `site:{domain} {country_en} {ipo_ma-keyword} {date_en}`, walking the same tier ladder with the same Step 1.5 fallback.
+- **Primary-filing T4 queries (run these first, alongside T4-official)**: IPO/M&A primary documents are filed with regulators and exchanges — these are free, same-day, and the highest authority. Query the report country's filing portal directly, e.g. for the US `site:sec.gov S-1 OR 8-K OR 424B {company} {date_en}` and `site:sec.gov EDGAR {country_en} IPO {date_en}`; for other countries the equivalent exchange / regulator disclosure portal (LSE RNS, TSE, HKEX, Euronext, SGX, etc.). A date-verified S-1 / 8-K / prospectus is a T4-official Lead and resolves the "wire-relay lag" problem (a deal often filed before any wire writes it up).
 - T3 **Finance** + **Trade / Legal** sector rows (Finextra, The Paypers, Risk.net, GlobalCapital, MLex, Law360, S&P Global) are **first-class** inside `ipo_ma` — enter them as soon as T1-flagship is exhausted, exactly as the Technology sector rows are first-class inside `tech`.
 - When a date-verified candidate is clearly below the rubric materiality floor (IPO < USD 300M / M&A < USD 500M and not under security/antitrust review and not touching a China key industry), do not carry it forward — the Verifier issues the authoritative DROP `Below-IPO-MA-threshold`.
 
@@ -334,9 +340,35 @@ Two categories in `active_categories` do not search like the four country-anchor
 - Apply the rubric's cross-border test (China + ≥1 foreign party; a purely domestic China item belongs in `econ`/`politics`, never here), the Africa / small-developing-economy aid exclusion, the key-industry carve-out that overrides that exclusion, and key-industry priority when over `min_per_category`. You may pre-skip an obviously excluded item to conserve the ladder; the Verifier issues the authoritative DROP `China-aid-smallcountry-excluded` and the `china_nexus`↔`ipo_ma` routing tie-break.
 - Step 1.5 fallback, Step 3 date gate, and Step 3.5 paywall fallback all apply unchanged.
 
-### Step 2 — Loop the active categories, walking the tier ladder inside each
+### Pass B — Free Discovery
 
-For **each** category in `active_categories` order — `econ → politics → tech → society →` (`china_nexus →` only for a China report) `ipo_ma → other`:
+Pass B runs **after Pass A**, scoped to your one assigned `category`. It is a bare-keyword sweep that admits legitimate non-matrix outlets — closing the recall gap from paywalls, wire-relay lag, and whitelist rigidity.
+
+**When Pass B runs:**
+
+- **Always** if your `category` is `ipo_ma` or `china_nexus` (the two categories most constrained by the whitelist).
+- **On demand** for the other five categories — only if, after Pass A, the category is below `min_per_category` OR a Pass-A Lead is a hard-paywall hit with no free Pass-A Lead found.
+
+**Pass B query form:** bare keyword, **no `site:`**, no Region/Country matrix anchoring:
+
+```
+{country_en if country-anchored} {category-keyword} {date_en}
+```
+
+`china_nexus` carries no `{country_en}`. For `ipo_ma`, also run the primary-filing queries from § Conditional Categories.
+
+**Pass B per-hit pipeline (every hit, in order):**
+
+1. **China red-line denylist (hard, runs FIRST, before anything else)**: for a China report, immediately discard any hit whose domain is a Chinese domestic-media outlet (Xinhua, Caixin, SCMP, People's Daily, Global Times, China Daily, Yicai, CGTN, TechNode, The Paper/澎湃, etc.) or a Chinese government domain (`*.gov.cn`, `pbc.gov.cn`, `mof.gov.cn`, `stats.gov.cn`, `csrc.gov.cn`, `mofcom.gov.cn`, etc.). This denylist is a rule, not a judgement call — it preserves the China external-view design even under free search.
+2. **Date gate**: same Step 3 rule — publication date must exactly equal `date`. This is the cheapest filter; it kills most free-search long-tail junk before any further work.
+3. **Source Legitimacy rubric**: classify the outlet per `references/rubric.md` § Source Legitimacy — `auto-accept` (recognized wire/flagship not yet in the matrix; or a free full-text syndication of a hard-paywalled wire/flagship original — record the paywalled original under `Corroborated by`), `conditional-accept` (independent newsroom + bylined reporter + original-or-attributed-syndication + corrections/track record + outlet's own domain), or `hard-reject` (PR-wire/press-release as primary, SEO/AI content farm, unbacked blog/Substack/Medium, social/forum/aggregator, propaganda front, pink-slime network — discard regardless of story importance).
+4. **Authority cap**: a Pass-B `auto-accept` carries its real tier (wire/flagship); a Pass-B `conditional-accept` is **capped at T2** (T3 for trade/niche) and may never be tagged T1 unless it is a recognized wire/flagship. A Pass-B story may be the sole Lead of your category only if Pass A surfaced nothing on that event; otherwise it corroborates.
+
+Step 1.5 does not apply to Pass B (Pass B is already non-`site:`). Step 3.5 paywall logic still applies (a Pass-B hard-paywall hit is Corroboration-only, its free syndication is the Lead).
+
+### Step 2 — Walk the tier ladder for your one assigned `category` (Pass A)
+
+For your single assigned `category` (you do **not** loop categories — another Scanner instance owns each of the others), run Pass A:
 
 1. **T4-official** — for the institutions in the Source Matrix's T4 institution-type table that are relevant to this category, run:
    ```
@@ -368,11 +400,11 @@ For **each** category in `active_categories` order — `econ → politics → te
 
 5. **T3** — only if the category is still below `min_per_category` after T2. Run `site:`-anchored queries against the relevant `Sector` rows + `Country: {country_en}` rows + `Region: {region}` rows. Inside the Technology category, T3 sector rows (TechCrunch, MIT Technology Review, etc.) are first-class and may be entered as soon as T1-flagship is exhausted, without waiting for T2 — likewise the T3 Finance & Trade/Legal rows inside `ipo_ma` and `china_nexus` (see § Conditional Categories — Search Mechanics). **Apply Step 1.5 fallback** as above.
 
-**Stop the ladder for this category** as soon as you have at least `min_per_category` date-verified, unique-event stories. Do not keep walking down to lower tiers when the category is already covered by higher-tier sources.
+**Stop the Pass-A ladder** as soon as you have at least `min_per_category` date-verified, unique-event stories. Do not keep walking down to lower tiers when the category is already covered by higher-tier sources.
 
-**Move to the next category.**
+**Then run Pass B** per § Pass B — Free Discovery (always for `ipo_ma` / `china_nexus`; on-demand for the other five per the trigger rule).
 
-The natural consequence of this loop: within each category, the kept stories are already ranked by source authority (T4-official appears before T1-wire, T1-wire before T1-flagship, etc.) because that is the order they were found in.
+The natural consequence: within your category, Pass-A stories are already ranked by source authority (T4-official before T1-wire, T1-wire before T1-flagship, etc.) because that is the order they were found in; Pass-B stories are appended after, tagged `discovery: B`.
 
 ### Step 3 — Date-verify every candidate URL immediately when collected
 
@@ -418,12 +450,12 @@ A candidate is paywalled if **any** of these is true:
 
 ### Step 4 — Classify, dedupe, and label
 
-For each date-verified story:
+For each date-verified story (all within your one assigned `category`):
 
-1. **Confirm category placement**: the story stays in the category whose loop surfaced it, unless its dominant frame clearly belongs elsewhere — in which case move it. Each story belongs to exactly one category. For a China report, apply the `china_nexus` cross-border test and the `china_nexus`↔`ipo_ma` routing tie-break from `references/rubric.md` § Conditional & Topical Categories — a purely domestic China item moves to `econ`/`politics`, not `china_nexus`.
-2. **Record source tier**: T4-official / T1-wire / T1-flagship / T2 / T3 per the matrix.
+1. **Tag discovery + proposed category**: every story carries `Discovery: A` (Pass A / matrix) or `Discovery: B` (Pass B / free) and `Proposed category: {your category}`. You may flag — but do **not** act on — a story whose dominant frame looks like it belongs to a different category: set `Reroute hint: <other category>`. **You never move a story to another category and you never apply the `china_nexus`↔`ipo_ma` routing tie-break — the Merge stage owns all cross-category dedup and routing.** You only judge the `china_nexus` cross-border test enough to decide whether the item is in-scope for *your* category at all.
+2. **Record source tier**: T4-official / T1-wire / T1-flagship / T2 / T3. Pass-A tier per the matrix; Pass-B tier per the Source Legitimacy authority cap (`auto-accept` = real tier; `conditional-accept` = capped T2/T3).
 3. **Assign Impact Tier label** (output-only, does not affect search): Policy / Market / Structural / Humanitarian — the Verifier consumes this downstream.
-4. **Detect duplicates within and across categories**: if two stories cover the same underlying event, keep the one with the highest source tier and drop the other. Note the dropped outlet in the kept story's `Corroborated by` field.
+4. **Dedupe WITHIN your category only**: if two of your stories cover the same underlying event, keep the highest source tier and note the dropped outlet in the kept story's `Corroborated by`. **Do not attempt cross-category dedup** — you cannot see other categories' Scanners; the Merge stage deduplicates across categories.
 
 **Impact Tier label definitions** (assign one per story; output label only):
 - **Policy** — central bank decisions, legislation passed or tabled, regulatory enforcement actions, election outcomes, treaty signings, diplomatic summits producing joint statements.
@@ -431,9 +463,9 @@ For each date-verified story:
 - **Structural** — technology platform pivots, supply-chain relocations, landmark court rulings, large infrastructure approvals or cancellations, strategic industrial policy announcements.
 - **Humanitarian** — armed-conflict developments, mass-casualty incidents, natural disasters with material regional impact, famine / displacement events.
 
-### Step 5 — Output ordering inside each category
+### Step 5 — Output ordering within your one category
 
-Stories are emitted **grouped by category in `active_categories` order** — `econ → politics → tech → society →` (`china_nexus →` only for a China report) `ipo_ma → other`. Inside each category, list stories in the order they were found, which is naturally the source-tier order (T4-official first, then T1-wire, then T1-flagship, then T2, then T3). Within the same source tier, the more-corroborated story comes first; if still tied, the earlier publication time wins.
+All your stories belong to your one assigned `category`. List them in source-authority order: Pass-A T4-official first, then T1-wire, T1-flagship, T2, T3, then Pass-B stories (auto-accept before conditional-accept). Within the same tier, the more-corroborated story comes first; if still tied, the earlier publication time wins. There is no cross-category ordering to do — the Merge stage assembles categories into the final order.
 
 ---
 
@@ -445,26 +477,30 @@ Return exactly the Scanner Output Schema. English only — no translation.
 ## Scan Summary
 - Country: <country>
 - Date: <YYYY-MM-DD>
+- Category: <your one assigned category id>
 - Candidates fetched: <N>
-- Candidates kept: <M>
-- Category counts: one `id=<n>` token per category in `active_categories` order, pipe-separated. Non-China report: `econ=<n1> | politics=<n2> | tech=<n3> | society=<n4> | ipo_ma=<n5> | other=<n6>`. China report: `econ=<n1> | politics=<n2> | tech=<n3> | society=<n4> | china_nexus=<n5> | ipo_ma=<n6> | other=<n7>`
+- Candidates kept: <M>  (Pass A: <a> | Pass B: <b>)
 
 ## Stories
 
-### [Category] <English headline>
+### [<category>] <English headline>
 - Publish date (verified): <ISO timestamp or local date extracted from article HTML>
+- Discovery: <A | B>
 - Source: <outlet name> [T4-official|T1-wire|T1-flagship|T2|T3] (Lead must be Free or T4-official; Hard-paywall outlets cannot be Lead)
+- Source legitimacy: <matrix | auto-accept | conditional-accept>   (matrix = Pass A; the other two = Pass B per rubric)
 - Impact tier: <Policy|Market|Structural|Humanitarian>
+- Proposed category: <your category>
+- Reroute hint: <other category id, only if dominant frame looks misfiled — Merge decides; omit otherwise>
 - URL: <full https URL>
 - Byline: <author name or "No byline">
 - Corroborated by: <each entry on its own indented line, formatted as "  - <outlet name> [<tier>|<paywall_status>] — <full https URL>" — or "None">
 - Factual excerpt (≥200 words English): <fact-only extract from the Lead URL, with numbers, named officials with titles, direct quotations in quote marks, explicit time references>
 - Commentary: <verbatim analyst / official / institutional commentary from the Lead article, or exactly "No analyst commentary in source">
 
-... (repeat per story, in importance order) ...
+... (repeat per story, in source-authority order) ...
 
-## Category Coverage Gap   (include only if any category < min_per_category)
-- Category: <name>
+## Category Coverage Gap   (include only if your category < min_per_category after Pass A + Pass B)
+- Category: <your category>
 - Queries attempted: <q1>, <q2>, <q3>
 - Reason: <single sentence>
 ```
@@ -474,13 +510,13 @@ Return exactly the Scanner Output Schema. English only — no translation.
 ## Quality Rules
 
 1. **Date is absolute.** If you cannot confirm the publication date equals `date` via WebFetch, the story does not exist. No exceptions.
-2. **The Source Matrix is the only authoritative outlet list.** Do not search outlets that are not in the matrix. Do not infer outlets from training data — if it is not in the matrix, it is not searched.
-3. **All non-T4 queries must be `site:`-anchored.** The only authorised bare-keyword query is the T4 fallback when an institution's official domain is unknown (Step 2.1). A query like `Reuters Korea economy April 28 2026` (without `site:reuters.com`) is a violation — it falls to aggregator pages and dilutes the tier's authority signal.
-4. **Search loop = the active category set. Search priority inside each = source tier ladder.** Loop `active_categories` in order — `econ → politics → tech → society →` (`china_nexus →` China report only) `ipo_ma → other`. Inside each category, walk T4-official → T1-wire → T1-flagship → T2 → T3 top-down. Never skip the ladder to chase volume. `china_nexus` is the only category not country-anchored (global topical sweep — see § Conditional Categories — Search Mechanics).
-5. **Stop the ladder when the category is covered.** Once a category has reached `min_per_category` date-verified stories from higher tiers, do not keep dropping into T2/T3 just to add more rows. Move on to the next category.
+2. **Pass A is matrix-only; Pass B admits non-matrix via the Legitimacy rubric.** In Pass A, the Source Matrix is the only authoritative outlet list — do not search or infer non-matrix outlets. Non-matrix outlets enter **only** through Pass B and **only** after passing `references/rubric.md` § Source Legitimacy (with the authority cap). The matrix is the high-authority seed + calibration baseline, not a hard wall.
+3. **Pass A non-T4 queries must be `site:`-anchored; Pass B is deliberately bare-keyword.** In Pass A the only authorised bare-keyword query is the T4 fallback when an institution's official domain is unknown (Step 2.1). Pass B is by design non-`site:` (that is its purpose) — but every Pass-B hit must clear the China red-line denylist, the date gate, and the Legitimacy rubric before it counts.
+4. **You scan EXACTLY ONE injected `category` — no looping.** Another Scanner instance owns each other category; you never see or scan theirs. Within your category: Pass A walks T4-official → T1-wire → T1-flagship → T2 → T3 top-down, then Pass B runs (always for `ipo_ma`/`china_nexus`, on-demand otherwise). Never skip the ladder to chase volume. `china_nexus` is not country-anchored (global topical sweep — see § Conditional Categories — Search Mechanics).
+5. **Stop the Pass-A ladder when your category is covered.** Once your category has reached `min_per_category` date-verified stories from higher tiers, do not keep dropping into T2/T3 just to add more rows — proceed to Pass B (always for `ipo_ma`/`china_nexus`; on-demand otherwise), then emit.
 6. **T3 is last resort, except inside Technology, `ipo_ma`, and `china_nexus`.** For Economy / Politics / Society / Other, T3 is admissible only when T1-flagship and T2 cannot fill `min_per_category`. Inside Technology, the T3 Technology sector rows (TechCrunch, MIT Technology Review, etc.) are first-class as soon as T1-flagship is exhausted; likewise the T3 Finance & Trade/Legal rows inside `ipo_ma` and `china_nexus`.
-7. **One event = one story.** Duplicates are merged at the dedup step. The highest-tier source is the keeper; the dropped outlet appears in `Corroborated by`. Aggregator reposts of wire copy (Investing.com, MSN, Yahoo reposts of Reuters/AP) are never the keeper — find the original wire URL and use it instead.
-8. **Output order = category order, then tier order within each category.** Emit stories grouped in `active_categories` order — `econ → politics → tech → society →` (`china_nexus →` China report only) `ipo_ma → other`; inside each group, list in the order the source-tier ladder produced them.
+7. **One event = one story (within your category only).** Within-category duplicates merge to the highest-tier keeper; the dropped outlet appears in `Corroborated by`. Cross-category dedup is the Merge stage's job — never attempt it. Aggregator reposts of wire copy are normally not the keeper — prefer the original wire URL. **Exception (syndication carve-out)**: when the original is a hard-paywalled wire/flagship, a free **full-text** syndication of it (e.g. Yahoo Finance carrying full Reuters/Bloomberg, AP News, MSN partner copy) IS an allowed Pass-B Lead — record the paywalled original under `Corroborated by`. This is per § Source Legitimacy and is not penalised as a syndicated rewrite.
+8. **Output is your one category only.** Emit your stories in source-authority order (Pass A by tier, then Pass B); the Merge stage assembles all categories into final order. Do not group or order across categories — you only have one.
 9. **Impact Tier is an output label, not a search driver.** Assign Policy / Market / Structural / Humanitarian at the end of Step 4 for the Verifier's downstream use. Never let it influence which queries you run or which sources you visit.
 10. **No gap padding.** If a category genuinely has no qualifying stories on `date`, record the gap in the output. Do not substitute off-date, off-tier, or marginal stories to meet `min_per_category`.
 10a. **Hard-paywall outlets are never Lead.** Bloomberg / FT / WSJ / Economist / The Times / Telegraph / Nikkei Asia / Dow Jones and other domains in the Source Matrix § Paywall Status — Hard list cannot serve as Lead because the Writer needs the article body. They appear only as `Corroborated by` entries, where their authority signal still surfaces in the Writer's `**References**` block. When a Hard-paywall hit is the only date-verified candidate, run Step 3.5's title-anchored fallback search to locate a free outlet covering the same event.

@@ -1,6 +1,6 @@
 # Rubric — Source Tiers, Authority & Impact, Date Verification, Category Coverage
 
-Loaded by the Scanner (tier + date + coverage) and the Verifier (authority + impact + dedup). Not needed by the Writer.
+Loaded by the per-category Scanner (tier + date + coverage + Pass-B legitimacy), the Merger (cross-category dedup + routing), and the Verifier (authority + impact + source legitimacy). Not needed by the Writer.
 
 ## Source Tier Rules
 
@@ -11,7 +11,26 @@ Loaded by the Scanner (tier + date + coverage) and the Verifier (authority + imp
 | T3 | Specialist and trade publications | TechCrunch, Wired, The Verge, Euractiv, Semafor, Finextra |
 | T4 | Primary institutional releases | Central banks, statistics bureaus, parliaments, regulators (official `.gov` / `.gov.uk` / `.europa.eu` domains) |
 
-Exclude entirely: personal blogs, Wikipedia, link aggregators, forums, SEO farms, content mills, unattributed rewrites.
+Exclude entirely: personal blogs, Wikipedia, link aggregators, forums, SEO farms, content mills, unattributed rewrites (this is enforced by § Source Legitimacy below for any Pass-B source).
+
+## Source Discovery Model
+
+The Scanner runs **two passes** per category:
+
+- **Pass A — Source Matrix seed (authoritative)**: `site:`-anchored queries down the T4→T1-wire→T1-flagship→T2→T3 ladder against matrix domains. The matrix is the high-authority **seed pool + authority-calibration baseline + structural red-line carrier** (the China external-view design is implemented by the matrix simply not containing Chinese domestic/government rows). It is **not** a hard wall.
+- **Pass B — free discovery (recall expansion)**: bare-keyword sweep (no `site:`). Always for `ipo_ma` and `china_nexus`; on-demand for the other five (category below `min_per_category` after Pass A, or a Pass-A hard-paywall Lead with no free Pass-A alternative). Every Pass-B hit passes, in order: (1) the China red-line denylist (China report: drop Chinese domestic-media + `*.gov.cn` domains — a rule, never a judgement), (2) the date gate, (3) § Source Legitimacy below, (4) the authority cap.
+
+Tradeoff accepted by design: Pass B introduces day-to-day source-pool drift (slightly lower reproducibility) in exchange for materially higher recall on paywalled, wire-relay-lagged, and non-whitelist-but-legitimate stories.
+
+## Source Legitimacy Rubric
+
+Applies to **every Pass-B source**. Pass-A matrix sources are pre-cleared (the matrix is the whitelist). Classify each Pass-B outlet into exactly one bucket:
+
+- **`auto-accept`** — a recognized global/national wire or flagship newspaper-of-record that simply is not in the matrix yet (Reuters/AP/AFP/Bloomberg/Kyodo/Yonhap/PTI/Reuters-equivalents; a country's paper of record). **Also** a free **full-text** syndication of a hard-paywalled wire/flagship original (Yahoo Finance carrying full Reuters/Bloomberg, AP News, MSN partner copy): admissible as Lead, the paywalled original recorded under `Corroborated by`. Authority = the original's real tier.
+- **`conditional-accept`** — admit only if **ALL** hold: (1) an identifiable independent newsroom / masthead with named editorial staff; (2) a bylined human reporter (not "staff"/"admin"/anonymous); (3) original reporting OR clearly-attributed syndication of a wire/flagship; (4) a corrections/ethics policy or an established multi-year track record; (5) the article sits on the outlet's own primary domain (not an aggregator path or content-mill subdomain). **Authority cap: T2** (T3 for trade/niche outlets). Never T1 unless it is itself a recognized wire/flagship (that is `auto-accept`).
+- **`hard-reject`** — discard regardless of how important the story seems: press-release / PR-wire as primary source (PRNewswire, BusinessWire, GlobeNewswire, ACCESSWIRE), SEO or AI-generated content farm, unbacked blog / Substack / Medium / personal site, social-media post, forum or Q&A or link-aggregator (Reddit, Yahoo/Google answers, Investing.com reposts), state-propaganda front, "pink-slime" partisan pseudo-local-news network, scraped-content mill.
+
+**Authority cap rule**: a Pass-B story may be the sole Lead of its category only if Pass A surfaced nothing on that event; otherwise it is recorded as corroboration of the Pass-A Lead. The Verifier enforces this rubric as its Source-legitimacy check and may DROP with reason `Illegitimate-source`.
 
 ## Authority & Impact Rubric
 
@@ -124,7 +143,7 @@ This section is the **authoritative ruleset** for the two non-standard categorie
 
 ### China-report routing tie-break (`china_nexus` ↔ `ipo_ma`)
 
-A single Chinese company's cross-border deal can match both categories. One story, one category — resolve by dominant frame:
+**Applied at the Merge stage, not by the Scanner.** Each per-category Scanner only judges whether an item is in-scope for its own category and may leave a `Reroute hint`; the Merger owns this tie-break and all cross-category dedup. A single Chinese company's cross-border deal can match both categories. One story, one category — resolve by dominant frame:
 
 - Dominant frame is China's **external economic / industrial strategy, key-industry positioning, or triggering a foreign security / antitrust / investment-screening review** → `china_nexus`.
 - Dominant frame is a **corporate-finance event** (offering price, listing venue, ownership change) with no strategic/policy overlay → `ipo_ma`.

@@ -54,18 +54,26 @@ Both files must exist. Then spot-check the Markdown:
           │
           ▼
 ┌────────────────────────────────────────┐
-│ Step 2-6: Scanner stage (English only) │
-│  English WebSearch → candidate URLs    │
+│ Step 2-6: Scanner ×N (parallel,        │
+│  one per active category, English)     │
+│  Pass A matrix ladder + Pass B free    │
 │  WebFetch → per-URL date verification  │
-│  T1-T4 filter + active-category cover   │
-│  Emit English raw data bundle          │
+│  Emit N single-category bundles        │
+└──────────────────┬─────────────────────┘
+                   │
+                   ▼
+┌────────────────────────────────────────┐
+│ Step 6.5: Merger stage                 │
+│  Cross-category dedup + china_nexus↔   │
+│  ipo_ma routing (no quality judgement) │
+│  Emit one unified Merged Bundle        │
 └──────────────────┬─────────────────────┘
                    │
                    ▼
 ┌────────────────────────────────────────┐
 │ Step 7: Verifier stage                 │
-│  Originality + Authority + Impact      │
-│  Dedup (Lead vs Corroboration)         │
+│  Originality + Authority + Impact +    │
+│  Source legitimacy + Dedup-validation  │
 │  Two-step fallback on coverage gap     │
 │  Emit KEEP set + Dropped list          │
 └──────────────────┬─────────────────────┘
@@ -93,8 +101,9 @@ Both files must exist. Then spot-check the Markdown:
 
 | Stage | Recommended subagent | Model | Rationale |
 |-------|----------------------|-------|-----------|
-| Scanner | `sci-research:daily-news-scanner` | sonnet | Purpose-built single-date scanner for Pipeline C. Searches in tier order (T4-official → T1-wire → T1-flagship → T2 → T3) with strict per-URL WebFetch date verification — publication date must equal `date` exactly, no neighbouring days. Do NOT substitute `sci-research:news-scanner` — that agent uses time windows (7d/30d/90d) and lacks single-date enforcement |
-| Verifier | `sci-research:news-verifier` | sonnet | Purpose-built news-desk filter encoding Originality / Authority / Impact / Dedup rubric and two-step coverage fallback. Do NOT substitute `fact-checker` — fact-checker grades factual truth (Verified / Disputed), not editorial news value |
+| Scanner ×N (parallel, one per active category) | `sci-research:daily-news-scanner` | sonnet | Purpose-built single-date, single-category scanner. Pass A walks tier order (T4-official → T1-wire → T1-flagship → T2 → T3); Pass B is free discovery under § Source Legitimacy. Strict per-URL WebFetch date verification — publication date must equal `date` exactly, no neighbouring days. Do NOT substitute `sci-research:news-scanner` — that agent uses time windows (7d/30d/90d) and lacks single-date enforcement |
+| Merger | `sci-research:daily-news-merger` | sonnet | Purpose-built merge/route stage. Consumes the N single-category bundles, performs cross-category dedup + the `china_nexus`↔`ipo_ma` routing tie-break only — no quality judgement. Do NOT fold into the Verifier; keeping it separate stops the Verifier from overloading |
+| Verifier | `sci-research:news-verifier` | sonnet | Purpose-built news-desk filter encoding the five-check rubric (Originality / Authority / Impact / Source legitimacy / Dedup-validation) and two-step coverage fallback; consumes the Merged Bundle. Do NOT substitute `fact-checker` — fact-checker grades factual truth (Verified / Disputed), not editorial news value |
 | Writer | `sci-research:daily-news-writer` | opus | Purpose-built daily briefing writer. System prompt encodes the Localisation Table, Category Catalog & country-derived active-category ordering, Markdown Syntax Contract, APA 7th format, Writing Standard, and self-check protocol. Do NOT substitute `news-analyst` — news-analyst runs its own dedup/impact analysis which is redundant with (and potentially contradicts) the Verifier's KEEP set. Do NOT substitute `writer` — writer's default output is a scientific popular-science article structure |
 
 The skill does not hard-code subagent types — `general-purpose` can stand in for any stage if the above agents are unavailable. When substituting, the skill prompt still governs behaviour; the dedicated agents are preferred only because their system prompts reduce prompt-surface required on every invocation.

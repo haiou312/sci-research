@@ -55,16 +55,17 @@ Proceed? (Y/n)
 
 ### Step 2: Delegate to Skill
 
-Invoke the `daily-news-intelligence` skill and pass through all parsed arguments, including `lang`. The skill owns the two-stage Scanner → Writer pipeline and the `pandoc` export step.
+Invoke the `daily-news-intelligence` skill and pass through all parsed arguments, including `lang`. The skill owns the multi-stage pipeline — parallel per-category Scanner ×N → Merger → Verifier → Fact-Extractor → Writer → Editor — and the `pandoc` export step.
 
 The skill will:
 
-1. Run the Scanner stage in English — generate 20-30 candidates across the active category set (6 for a non-China report, 7 for a China report), verify each via WebFetch against `date`, filter to T1-T4 tiers.
-2. Run the Verifier stage — apply originality, authority, impact, and dedup filters to the Scanner bundle.
-3. Run the Writer stage — consume the Verifier's KEEP set only, translate the narrative into `lang`, and emit Markdown obeying the skill's Markdown Syntax Contract. APA 7th references stay in English.
-4. Write the Markdown to `out_md`.
-5. Export via `pandoc --extract-media=./media "{out_md}" -o "{out_docx}"`.
-6. (Only if `--email` is non-empty) Send the report via Gmail SMTP per `skills/daily-news-intelligence/references/email-spec.md`.
+1. Run the Scanner stage in English — **one Scanner per active category, all in parallel** (6 for a non-China report, 7 for a China report). Each runs Pass A (Source Matrix tier ladder) + Pass B (free discovery under the Source Legitimacy rubric), verifies each URL via WebFetch against `date`.
+2. Run the Merger stage — cross-category dedup + the `china_nexus`↔`ipo_ma` routing tie-break, producing one unified bundle (no quality judgement).
+3. Run the Verifier stage — originality, authority, impact, source legitimacy, and dedup-validation on the Merged bundle.
+4. Run the Fact-Extractor, Writer, and Editor stages — Writer consumes the Verifier's KEEP set only, translates the narrative into `lang`, and emits Markdown obeying the skill's Markdown Syntax Contract. APA 7th references stay in English.
+5. Write the Markdown to `out_md`.
+6. Export via `pandoc --extract-media=./media "{out_md}" -o "{out_docx}"`.
+7. (Only if `--email` is non-empty) Send the report via Gmail SMTP per `skills/daily-news-intelligence/references/email-spec.md`.
 
 ### Step 3: Deliver
 

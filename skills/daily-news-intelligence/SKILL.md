@@ -11,16 +11,17 @@ Generate a professional dated daily report for institutional readers covering a 
 ## Quick Reference (Orchestrator Checklist)
 
 ```
-1. Validate params → compute derived fields → expand ~
-2. Launch Scanner agent → capture Scanner Output Schema
-3. IF zero candidates → STOP with message
-4. Launch Verifier agent (Scanner output in prompt) → capture Verifier Output Schema
-5. Launch Fact-Extractor agent (Verifier output + params) → fact-manifest YAML written
-6. Launch Writer agent (Verifier output + manifest path + params) → Writer calls Write tool
-7. Launch Editor agent (writer_md + manifest + verifier_bundle + lang/date/country) → in-place Edit patches
-8. mkdir -p → pandoc export (skip if pandoc missing)
-9. IF --email → send via Python script (dry-run or real)
-10. Verify: ls both files, grep H2/H3 counts
+1. Validate params → compute derived fields (incl. active_categories) → expand ~
+2. Fan out ONE Scanner agent per active category IN PARALLEL (6 or 7) → capture each single-category bundle
+3. IF every category bundle is empty → STOP with message
+4. Launch Merger agent (all N single-category bundles + active_categories) → capture Merged Bundle
+5. Launch Verifier agent (Merged Bundle in prompt) → capture Verifier Output Schema
+6. Launch Fact-Extractor agent (Verifier output + params) → fact-manifest YAML written
+7. Launch Writer agent (Verifier output + manifest path + params) → Writer calls Write tool
+8. Launch Editor agent (writer_md + manifest + verifier_bundle + lang/date/country) → in-place Edit patches
+9. mkdir -p → pandoc export (skip if pandoc missing)
+10. IF --email → send via Python script (dry-run or real)
+11. Verify: ls both files, grep H2/H3 counts
 ```
 
 ## Operating Principle
@@ -31,17 +32,19 @@ Evidence priority order:
 2. `web_search` is only used to surface candidate URLs — never standalone evidence.
 3. Model inference is permitted only when directly supported by the fetched article text.
 
-Apply a two-pass filter before anything reaches the Writer:
+Apply a three-stage filter before anything reaches the Writer:
 
-- **Pass 1 (Scanner)**: date verification + T1-T4 tier filter + active-category coverage (6 categories for a non-China report, 7 for a China report — see `references/language-spec.md` § Category Catalog & Selection).
-- **Pass 2 (Verifier)**: originality + authority + impact + dedup, per the Authority & Impact Rubric.
+- **Stage 1 (Scanner ×N, parallel)**: one Scanner per active category. Pass A (Source Matrix tier ladder) + Pass B (free discovery under § Source Legitimacy) + per-URL date verification. Each emits a single-category bundle tagged `Discovery: A|B` and `Source legitimacy:`. Active set = 6 categories for a non-China report, 7 for a China report (see `references/language-spec.md` § Category Catalog & Selection).
+- **Stage 2 (Merger)**: cross-category dedup + `china_nexus`↔`ipo_ma` routing tie-break → one unified Merged Bundle. No quality judgement here.
+- **Stage 3 (Verifier)**: originality + authority + impact + **source legitimacy** + dedup-validation, per the Authority & Impact Rubric and § Source Legitimacy.
 
 Hard rules:
 
 - Do not admit a candidate without passing the date-verification gate.
 - Do not pad a category with low-tier sources to meet the minimum.
 - Do not merge unrelated events into one synthetic story.
-- The Writer must read the Verifier's KEEP set, never the Scanner bundle directly.
+- Each Scanner sees only its one category; cross-category dedup and routing happen at the Merger, never at the Scanner.
+- The Writer must read the Verifier's KEEP set, never the Scanner or Merged bundle directly.
 
 ## Input Parameters
 
@@ -66,7 +69,9 @@ Email delivery reads Gmail SMTP credentials from environment variables (`GOOGLE_
 
 Each stage runs as a subagent. The orchestrator passes data between stages via the subagent **prompt text** — not files, not environment variables. Specifically:
 
-- **Scanner → Verifier**: The orchestrator includes the Scanner's full output (Scanner Output Schema from `references/schemas.md`) verbatim in the Verifier agent's prompt.
+- **Orchestrator → Scanner ×N (fan-out, parallel)**: the orchestrator launches one Scanner subagent per active category in a single batch (parallel). Each Scanner prompt carries the **one** assigned `category` plus `country`, `date`, `min_per_category`. Each returns a single-category bundle (Scanner Output Schema from `references/schemas.md`).
+- **Scanner ×N → Merger**: the orchestrator includes **all N single-category bundles verbatim** plus `country`, `date`, `lang`, and `active_categories` (the ordered list) in the Merger agent's prompt. The Merger returns one unified Merged Bundle (`references/schemas.md` § Merged Bundle).
+- **Merger → Verifier**: the orchestrator includes the Merger's full Merged Bundle verbatim in the Verifier agent's prompt.
 - **Verifier → Fact-Extractor**: The orchestrator includes the Verifier's full output verbatim plus runtime parameters (`country`, `date`, `lang`) and `out_manifest` (target YAML path, e.g. `${OUT_DIR}/fact-manifest-{country_slug}-{date}.yaml`) in the Fact-Extractor agent's prompt. The Fact-Extractor writes the manifest to `out_manifest` and returns confirmation.
 - **Verifier + Fact-Extractor → Writer**: The orchestrator includes the Verifier's full output, the Fact Manifest content (read from `out_manifest`) or its absolute path, plus runtime parameters (`country`, `date`, `lang`, `out_md`, `min_per_category`) in the Writer agent's prompt.
 - **Writer + Fact-Extractor + Verifier → Editor**: The orchestrator includes `writer_md_path` (the path Writer just wrote to), `manifest_path` (from Step 7.5), `verifier_bundle` (the same Verifier output passed verbatim, inline), plus runtime parameters (`lang`, `date`, `country`) in the Editor agent's prompt. The Editor makes in-place `Edit` calls on `writer_md_path` and prints a structured stdout report. The format-check hook fires on every Edit and on the final state.
@@ -95,7 +100,7 @@ The orchestrator must not summarise, truncate, or reformat the upstream output �
    ```
    Use `OUT_DIR` (expanded) in all subsequent bash commands. The default resolves to e.g. `~/Desktop/github/daily-news-reports/2026-04-16/`.
 
-2. **Scan candidates** (Scanner stage, English only). Generate at least three distinct query patterns per category using this template structure:
+2. **Scan candidates** (Scanner stage, English only — FAN-OUT). Launch **one Scanner subagent per active category, all in parallel in a single batch** (6 for a non-China report, 7 for a China report). Each Scanner prompt carries exactly **one** `category` plus `country`, `date`, `min_per_category`; it runs Pass A (Source Matrix ladder) + Pass B (free discovery per `references/rubric.md` § Source Legitimacy) and returns a single-category bundle. Per-category query templates (each Scanner uses only its own row):
 
    | Category | Example queries (substitute `{country}` and `{date_en}`) |
    |----------|----------------------------------------------------------|
@@ -109,7 +114,7 @@ The orchestrator must not summarise, truncate, or reformat the upstream output �
 
    Rows are listed in `active_categories` order. **Corporate IPO & M&A** runs in every report (country-anchored, report-country companies as listing entity / acquirer / target). **China-Nexus** runs **only in a China report** and is **not** `{country}`-anchored — it is a region-unbounded global topical sweep. Eligibility, the China-aid exclusion + key-industry carve-out, the materiality floor, and the China-report `china_nexus`↔`ipo_ma` routing are authoritative in `references/rubric.md` § Conditional & Topical Categories.
 
-   Collect 20-30 candidate URLs across the active category set (6 categories for a non-China report, 7 for a China report). Prioritise breadth over depth. If Scanner returns zero candidates across all categories, stop and report: "No news candidates found for {country} on {date}. The date may be a future date, a holiday, or WebSearch may be temporarily unavailable." Do not proceed to the Verifier.
+Collectively the Scanners gather 20-30 candidate URLs across the active category set (each owns its one category; breadth over depth). If **every** category bundle is empty, stop and report: "No news candidates found for {country} on {date}. The date may be a future date, a holiday, or WebSearch may be temporarily unavailable." Do not proceed to the Merger.
 
 3. **Verify each candidate.** For every candidate URL, call `web_fetch` and extract the publication date. Apply the rules in `references/rubric.md` § Date Verification Rules — keep only stories where publication date equals `date` (local or UTC match).
 
@@ -117,9 +122,11 @@ The orchestrator must not summarise, truncate, or reformat the upstream output �
 
 5. **Enforce category coverage.** If any category has fewer than `min_per_category`, run a second search pass scoped to that category. If still insufficient, record the gap — do not substitute low-tier sources.
 
-6. **Compose the Scanner output.** The Scanner agent returns a single English data bundle matching `references/schemas.md` § Scanner Output Schema. The orchestrator captures this output for the next step.
+6. **Compose the per-category Scanner outputs.** Each Scanner agent returns one single-category English bundle matching `references/schemas.md` § Scanner Output Schema (single category), tagged `Discovery: A|B` and `Source legitimacy:`. The orchestrator captures all N bundles.
 
-7. **Second-pass filter** (Verifier stage). Launch a Verifier agent with the Scanner's full output included verbatim in its prompt. The Verifier applies the four-check rubric in `references/rubric.md` § Authority & Impact Rubric (originality, authority, impact, dedup). Applies the two-step fallback if any category drops below `min_per_category`. Emits the Verifier Output Schema from `references/schemas.md`. The orchestrator captures this output for the next two stages (Fact-Extractor and Writer).
+6.5. **Merge & route** (Merger stage). Launch a `daily-news-merger` agent (sonnet) with all N single-category bundles verbatim plus `country`, `date`, `lang`, `active_categories`. It performs cross-category deduplication and the `china_nexus`↔`ipo_ma` routing tie-break ONLY (no quality judgement), emitting one unified Merged Bundle (`references/schemas.md` § Merged Bundle). The orchestrator captures it for the Verifier.
+
+7. **Quality filter** (Verifier stage). Launch a Verifier agent with the **Merged Bundle** included verbatim in its prompt. The Verifier applies the five-check rubric in `references/rubric.md` (originality, authority, impact, **source legitimacy**, dedup-validation) plus § Source Legitimacy for Pass-B sources. Applies the two-step fallback if any category drops below `min_per_category`. Emits the Verifier Output Schema from `references/schemas.md`. The orchestrator captures this output for the next two stages (Fact-Extractor and Writer).
 
 7.5. **Extract Fact Manifest** (Fact-Extractor stage). Launch a `daily-fact-extractor` agent (sonnet) with the Verifier's full output included verbatim in its prompt plus `country`, `date`, `lang`, and `out_manifest`. Resolve `out_manifest` to `${OUT_DIR}/fact-manifest-{country_slug}-{date}.yaml` where `{country_slug}` is the lowercase ASCII slug of `country` (e.g. `japan`, `united-kingdom`, `china`). The agent emits a YAML Fact Manifest — one entry per KEPT story listing every number, date, named person, institution, product, and direct quote in the Verifier's `factual_excerpt`, each anchored to its source URL with a verbatim excerpt (see `agents/daily-fact-extractor.md` for the full schema). The Fact-Extractor calls `Write` once and returns confirmation. The orchestrator captures the manifest path for downstream stages (Writer in Step 8; Editor in the future Step 8.5).
 
@@ -170,8 +177,9 @@ The orchestrator must not summarise, truncate, or reformat the upstream output �
 
 | Stage | Recommended Agent | Required References |
 |-------|-------------------|---------------------|
-| Scanner | `sci-research:daily-news-scanner` (sonnet) | `references/rubric.md`, `references/schemas.md` |
-| Verifier | `sci-research:news-verifier` (sonnet) | `references/rubric.md`, `references/schemas.md` |
+| Scanner ×N (Step 2, parallel — one per active category) | `sci-research:daily-news-scanner` (sonnet) | `references/rubric.md`, `references/schemas.md` |
+| Merger (Step 6.5) | `sci-research:daily-news-merger` (sonnet) | `references/rubric.md` § Conditional & Topical Categories, `references/schemas.md` § Merged Bundle |
+| Verifier (Step 7) | `sci-research:news-verifier` (sonnet) | `references/rubric.md`, `references/schemas.md` |
 | Fact-Extractor (Step 7.5) | `sci-research:daily-fact-extractor` (sonnet) | (Verifier output only — agent prompt has full schema) |
 | Writer | `sci-research:daily-news-writer` (opus) | `references/language-spec.md`, `references/output-spec.md`, `references/verification.md`, Fact Manifest from Step 7.5 |
 | Editor (Step 8.5) | `sci-research:daily-editor` (opus) | Writer's MD, Fact Manifest, Verifier bundle (verbatim), `references/language-spec.md` § Canonical Quote Marks |
@@ -184,8 +192,8 @@ See `references/verification.md` § Recommended Agent Assignment for substitutio
 
 | File | Contents | Consumed by |
 |------|----------|-------------|
-| `references/schemas.md` | Scanner Output Schema, Verifier Output Schema | Scanner, Verifier |
-| `references/rubric.md` | Source Tier Rules, Authority & Impact Rubric, Two-Step Fallback, Date Verification Rules, Category Coverage Rules | Scanner, Verifier |
+| `references/schemas.md` | Scanner Output Schema (single category), Merged Bundle Schema, Verifier Output Schema | Scanner ×N, Merger, Verifier |
+| `references/rubric.md` | Source Tier Rules, Source Discovery Model, Source Legitimacy Rubric, Authority & Impact Rubric, Two-Step Fallback, Date Verification Rules, Category Coverage Rules, Conditional & Topical Categories | Scanner ×N, Merger, Verifier |
 | `references/output-spec.md` | Required Markdown Output, Markdown Syntax Contract, Invalid + Valid examples (`lang=en`, `lang=zh`), APA 7th Reference Format | Writer |
 | `references/language-spec.md` | Localisation Table, Derived Display Fields, Filename Pattern, Language Rules, Title Length Rules, Writing Standard, **Language-Specific Rules — `lang=zh` only** (quote marks, official titles, country prefixes, time anchors, terminology precision, foreign media naming) | Writer |
 | `references/verification.md` | Output Rules, Writer Self-Check, End-to-End Verification, Flow Diagram, Recommended Agent Assignment, Invocation Examples | Writer (self-check), Orchestrator (delivery check) |

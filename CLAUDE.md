@@ -6,21 +6,22 @@
 
 ## 项目定位
 
-这是一个 **Claude Code 插件**（`sci-research`，当前版本 1.12.1），通过多 Agent 编排，将"主题 + 比较实体 + 输出语言"转化为高质量研究/新闻产出。插件包含六条**完全独立**的流水线，互不共享 Agent：
+这是一个 **Claude Code 插件**（`sci-research`，当前版本 1.13.0），通过多 Agent 编排，将"主题 + 比较实体 + 输出语言"转化为高质量研究/新闻产出。插件包含六条**完全独立**的流水线，互不共享 Agent：
 
 | 特性 | `/sci-research` | `/news-scan` | `/daily-news-intelligence` | `/daily-briefing` | `/reputation-track` | `/weekly-report` |
 |---|---|---|---|---|---|---|
 | **目标** | 多实体对比的科普研究文章 | 指定时间窗内的新闻简报 | 单国每日新闻简报 | 多国品牌新闻简报（SPD Bank） | 公司声誉风险监控 | 周度宏观与市场报告 |
 | **时间焦点** | 历史 + 当前 | 近 7/30/90 天 | 单日（指定日期） | 单日（读取已有报告） | 单日（指定日期） | 前 7 日滚动 |
 | **来源** | 学术论文、官方报告、权威媒体 | 通讯社、财经媒体、行业媒体 | T1-T4 分级媒体（逐 URL 日期核验） | Pipeline C 产出的各国 Markdown | News (T1-T4) + Reddit + X | Pipeline C 报告 + FRED/BOE/BOJ/yfinance 行情 |
-| **Agent 链** | researcher → comparator → fact-checker → writer | news-scanner → news-imager → news-analyst | daily-news-scanner → news-verifier → daily-fact-extractor → daily-news-writer → daily-editor | briefing-curator → docx 脚本 → 邮件脚本 | reputation-resolver → reputation-scanner×3 → reputation-classifier → reputation-writer | weekly-news-aggregator ‖ market-data-collector → weekly-report-writer |
+| **Agent 链** | researcher → comparator → fact-checker → writer | news-scanner → news-imager → news-analyst | daily-news-scanner×N ‖ → daily-news-merger → news-verifier → daily-fact-extractor → daily-news-writer → daily-editor | briefing-curator → docx 脚本 → 邮件脚本 | reputation-resolver → reputation-scanner×3 → reputation-classifier → reputation-writer | weekly-news-aggregator ‖ market-data-collector → weekly-report-writer |
 | **产出** | ≤5000 字结构化文章（含 APA 引用） | 1000-3000 字简报（含事件时间线 + 图片） | 条件化 6/7 栏简报（中国 7 栏含涉华，其余 6 栏；Markdown + docx，可邮件投递） | 13-15 条品牌 Word 文档（含邮件投递） | 仅当命中负面时发送 HTML 邮件（inline body，无附件） | 多分节 Markdown + docx（市场事件 + Money Market + Fixed Income + FX + Commodity，可邮件投递） |
 
-**Pipeline C 四个结构性设计**（容易被忽视）：
+**Pipeline C 五个结构性设计**（容易被忽视）：
 1. **China 外部视角**：`--country "China"` 时 Source Matrix 本身就是外部视角 — 不查询中国本土媒体（Xinhua / Caixin / SCMP / People's Daily / TechNode / 澎湃 等），不查询中国政府域名（`gov.cn` / `pbc.gov.cn` / `stats.gov.cn` 等）。T4 改用外部机构清单（IMF / World Bank / WTO / OECD / BIS / IEA / Treasury / USTR / State Dept / Commerce-BIS / White House / EU Commission / UK Gov / METI / MOFA Japan）。
 2. **Writer 自由文笔**（1.9.0+）：Writer 不再机械翻译 Verifier 包，按目标语言以解释性新闻文笔重写 — 数字/姓名/日期/直接引语必须忠于源，其余措辞自由组织。
 3. **Fact-Manifest + Editor 双层防线**（1.11.0+）：Verifier 之后插入 `daily-fact-extractor`（sonnet）抽取每条 story 的 hard_facts / quotes 的 verbatim YAML manifest；Writer 之后插入 `daily-editor`（opus）跑四道核查（Verifier-locked 事实 / Writer-search 事实回填 / 引语逐字 / 引号字符规范化），用 `Edit` 在原文件改。**Writer 引用规则反转**：search URL 必须进 References（References = Verifier KEEP URLs ∪ {支撑了正文事实的 search URLs}）。**引号 canonical 钉死**：en `""` U+0022 / zh `""` U+201C/U+201D / ja `「」` U+300C/U+300D，hook 字符级阻断。
 4. **条件化类目（1.12.0+）**：栏目集**按 `country` 派生**，不是写死 5 栏。非中国日报 6 栏（econ / politics / tech / society / **ipo_ma** / other）；中国日报 7 栏（第 5 位插入 **china_nexus**）。`china_nexus`（海外涉华财经，**仅财经口径**——投资/FDI/商业与产业政策/关税/出口管制/制裁/投资审查；纯外交归第 2 栏政治与外交）仅中国日报出现、强制跨境（中国×境外方，经济渠道）、排除中国对非洲/小型发展中经济体援助与基建贷款（关键产业例外）、关键产业优先；`ipo_ma`（企业IPO与并购）所有日报都有、聚焦本报告国公司（买方/卖方/上市主体）、有重要性门槛（IPO≥5亿/并购≥5亿美元或受审或触及中国关键产业）。真源 = `references/language-spec.md` § Category Catalog & Selection（身份/命名/排序/编号）+ `references/rubric.md` § Conditional & Topical Categories（资格/排除/Cat5↔Cat6 路由）。H2 编号随类目位置变（`ipo_ma` 非中国是第 5、中国是第 6）。格式钩子与类目数无关，不需改。
+5. **并行 Scanner + Merge + 双-Pass 源模型（1.13.0+）**：Scanner **每分类一个实例并行**（非单 agent 扛全部），只扫注入的单类、不跨类去重不路由。每个 Scanner 跑 **Pass A**（矩阵 tier 阶梯，矩阵=种子+权威标定+China 红线，非硬墙）+ **Pass B**（无 site: 自由发现，按 `references/rubric.md` § Source Legitimacy 分级：auto-accept / conditional-accept 封顶 T2 / hard-reject；付费墙原文的免费全文转载豁免为合法 Lead；ipo_ma 加 SEC EDGAR 一手申报；China 报告 Pass B 套中国本土媒体/gov denylist）。新增 **daily-news-merger**（sonnet）做跨类去重 + Cat5↔Cat6 路由（不判质），产出统一 Merged Bundle 交 Verifier。Verifier 升为**五检查**（+ 正版性，新 DROP `Illegitimate-source`；输入 Merged Bundle，去重/路由仅验证不重做）。代价：每日源池漂移（牺牲部分可复现性换召回），token 成本上升。
 
 ---
 
@@ -31,7 +32,7 @@ sci-research/
 ├── .claude-plugin/
 │   ├── plugin.json              # 插件元数据（name, version, author）
 │   └── marketplace.json         # 市场清单
-├── agents/                      # 20 个专业 Agent（六条流水线共用目录）
+├── agents/                      # 21 个专业 Agent（六条流水线共用目录）
 │   ├── researcher.md            # [A] 每实体多源检索
 │   ├── comparator.md            # [A] 跨实体维度对比分析
 │   ├── fact-checker.md          # [A] 关键论断核验
@@ -39,8 +40,9 @@ sci-research/
 │   ├── news-scanner.md          # [B] 每实体实时新闻抓取（时间窗 7d/30d/90d，不取图）
 │   ├── news-imager.md           # [B] 热点事件图片提取与校验
 │   ├── news-analyst.md          # [B] 去重、时间线、影响分析
-│   ├── daily-news-scanner.md    # [C] 单日精确新闻扫描（严格日期核验，按 tier 顺序搜索；China=外部视角）
-│   ├── news-verifier.md         # [C] 编辑台二次筛选（原创性/权威性/影响力/去重）
+│   ├── daily-news-scanner.md    # [C] 单分类扫描×N 并行（Pass A 矩阵 + Pass B 自由发现，严格日期核验；China=外部视角）
+│   ├── daily-news-merger.md     # [C] 跨类去重 + Cat5↔Cat6 路由 → 统一 Merged Bundle（sonnet，不判质，不上网）
+│   ├── news-verifier.md         # [C] 编辑台五检查（原创性/权威性/影响力/正版性/去重验证，输入 Merged Bundle）
 │   ├── daily-fact-extractor.md  # [C] Verifier KEEP → YAML Fact Manifest（hard_facts / quotes / locked_urls，sonnet，不上网）
 │   ├── daily-news-writer.md     # [C] 多语言每日简报合成（吃 Verifier + Manifest，自由文笔 + search URL 强制进 References）
 │   ├── daily-editor.md          # [C] Writer 之后四道核查（Verifier-locked 事实 / Writer-search 事实回填 / 引语逐字 / 引号规范化），用 Edit 在原文件改
@@ -201,18 +203,20 @@ User Input (topic, entities, period, lang)
 ```
 User Input (country, date, lang)
   │
-  └─→ Daily-News-Scanner ─→ News-Verifier ─→ Daily-Fact-Extractor ─→ Daily-News-Writer ─→ Daily-Editor ─→ pandoc → 邮件（可选）
-      (sonnet)               (sonnet)         (sonnet, 不上网)        (opus, 带 search)    (opus, 仅 Edit)
-      英文检索 +              原创性/权威性/   抽取 hard_facts /       消费 Verifier +     四道核查：
-      逐 URL 日期核验         影响力/去重     quotes → YAML manifest  Manifest，search    Verifier-locked 事实 /
-                              筛选            (作为 Writer/Editor     URL 强制进          Writer-search 事实回填 /
-                                              的事实锚点表)            References          引语逐字 / 引号规范化
+  ├─→ Daily-News-Scanner[econ] ─┐
+  ├─→ Daily-News-Scanner[politics] ─┤
+  ├─→ Daily-News-Scanner[...] ─┼─→ Daily-News-Merger ─→ News-Verifier ─→ Daily-Fact-Extractor ─→ Daily-News-Writer ─→ Daily-Editor ─→ pandoc → 邮件（可选）
+  └─→ Daily-News-Scanner[other] ─┘   (sonnet)              (sonnet)         (sonnet, 不上网)        (opus, 带 search)    (opus, 仅 Edit)
+      (sonnet ×N, 每分类一个, 并行)   跨类去重 + Cat5↔   原创性/权威性/   抽取 hard_facts /       消费 Verifier +     四道核查
+      Pass A 矩阵 + Pass B 自由发现   Cat6 路由（不判质） 影响力/正版/去重  quotes → YAML manifest  Manifest，search    （含引号规范化）
+      逐 URL 日期核验 + 正版分级       → 统一 bundle      验证（输入合并包）  (事实锚点表)            URL 强制进 References
 ```
 
 | Agent | 模型 | 工具 | 职责 |
 |---|---|---|---|
-| daily-news-scanner | sonnet | WebSearch, WebFetch, Read, Grep, Glob | 按 tier 顺序搜索（T4-official→T1-wire→T1-flagship→T2→T3），逐 URL WebFetch 严格日期核验（必须等于 date，不接受邻近日）。**付费墙补救（Step 3.5）**：硬付费墙域名（Bloomberg/FT/WSJ/Economist/Telegraph/Times/Nikkei Asia 等）不能当 Lead，但保留为 `Corroborated by`；用 title 关键词反搜免费媒体（Reuters/AP/AFP/BBC/Guardian/Kyodo）找替代 Lead。Verifier 透传 `Corroborated by`，Writer 给每个 URL 单独发一条 APA `[N]`。**`country = China` 时**：T1-wire 只 Universal（无 Xinhua / China News Service），T1-flagship Country-of-coverage 为空（无 Caixin / People's Daily / SCMP），T3 无 Country: China 行，T4 改用外部机构清单（IMF / World Bank / WTO / OECD / BIS / IEA / Treasury / USTR / State Dept / Commerce-BIS / White House / EU Commission / UK Gov / METI / MOFA Japan）。中国政府域名永不查询。 |
-| news-verifier | sonnet | Read, Grep, Glob, WebFetch | 编辑台二次筛选：原创性、权威性、影响力、去重，输出 KEEP/DROP 集 |
+| daily-news-scanner ×N | sonnet | WebSearch, WebFetch, Read, Grep, Glob | **每分类一个实例并行（1.13.0）**，只扫注入的单个 category，不跨类去重/不路由。**Pass A**：矩阵 tier 顺序搜索（T4-official→T1-wire→T1-flagship→T2→T3）；**Pass B**：无 site: 自由发现，按 rubric § Source Legitimacy 分级（auto/conditional 封顶 T2/hard-reject），ipo_ma 加 SEC EDGAR 一手申报，China 报告对 Pass B 套中国本土媒体/gov 域名 denylist。逐 URL WebFetch 严格日期核验（必须等于 date，不接受邻近日）。**付费墙补救（Step 3.5）**：硬付费墙域名（Bloomberg/FT/WSJ/Economist/Telegraph/Times/Nikkei Asia 等）不能当 Lead，但保留为 `Corroborated by`；用 title 关键词反搜免费媒体（Reuters/AP/AFP/BBC/Guardian/Kyodo）找替代 Lead。Verifier 透传 `Corroborated by`，Writer 给每个 URL 单独发一条 APA `[N]`。**`country = China` 时**：T1-wire 只 Universal（无 Xinhua / China News Service），T1-flagship Country-of-coverage 为空（无 Caixin / People's Daily / SCMP），T3 无 Country: China 行，T4 改用外部机构清单（IMF / World Bank / WTO / OECD / BIS / IEA / Treasury / USTR / State Dept / Commerce-BIS / White House / EU Commission / UK Gov / METI / MOFA Japan）。中国政府域名永不查询。 |
+| daily-news-merger | sonnet | Read, Grep, Glob, WebFetch | **新增（1.13.0）**：消费 N 份单分类 Scanner 包，做**跨类去重 + Cat5↔Cat6 路由裁决**（不判质量），输出统一 Merged Bundle。不上网（仅消歧时极少 WebFetch）、不翻译。 |
+| news-verifier | sonnet | Read, Grep, Glob, WebFetch | 编辑台五检查（原创性 / 权威性 / 影响力 / **正版性** / 去重验证），输入 **Merged Bundle**；Pass-A 源预清，Pass-B 套 rubric § Source Legitimacy（不合格 DROP `Illegitimate-source`）；去重/路由已在 Merger 完成，仅验证。输出 KEEP/DROP 集 |
 | daily-fact-extractor | sonnet | Read, Write, Grep | **新增（1.11.0）**：读 Verifier KEEP bundle，对每条 story 抽取 hard_facts（数字 / 命名 / 日期 / 机构 / 产品的 verbatim value + source_url + factual_excerpt 子串）+ quotes（speaker + verbatim_en + source_url），输出 YAML Fact Manifest 到 `${OUT_DIR}/fact-manifest-{country_slug}-{date}.yaml`。**不上网、不写叙事、不翻译**。Manifest 是 Writer 的"locked values"硬约束 + Editor 的事实核查 ground truth。 |
 | daily-news-writer | opus | Read, Write, Edit, Grep, WebSearch, WebFetch | 消费 Verifier KEEP + Fact Manifest，按目标语言**自由文笔**重写。Manifest 锁定的数字 / 命名 / 日期 / 引语**不可漂移**（值必须匹配 manifest）。**默认每 story 跑 1-3 次 WebSearch / WebFetch 拉背景**。**引用契约**：References = Verifier KEEP URLs ∪ {支撑了正文事实的 search URLs}——search URL 必须进 References（APA + 连续 `[N]`）。引号按 canonical 表（en `""` / zh `""` / ja `「」`）。 |
 | daily-editor | opus | Read, Edit, Grep, WebFetch, WebSearch | **新增（1.11.0）**：Writer 之后跑四道核查 — **Pass 1** Verifier-locked 事实是否与 Manifest 一致（漂移即改回）；**Pass 2** Writer-search 事实是否在 References 有 URL（缺则 search 补 ref / 砍句 / 弱化）；**Pass 3** 直接引语逐字 WebFetch 对源（不一致则降级为间接引语）；**Pass 4** 引号字符规范化。**只用 Edit，不 Write**；预算 2 WebSearch + 4 WebFetch / story；产出 stdout 报告供日志。 |
@@ -400,6 +404,8 @@ End Date (default: today) → 计算前 7 日窗口
 | 调整 C 引号 canonical 字符表 | `skills/daily-news-intelligence/references/language-spec.md` § Canonical Quote Marks + `agents/daily-news-writer.md`（多处引用）+ `scripts/hooks/daily-news-format-check.js`（`forbiddenByLang` map） |
 | 调整 C Writer 引用契约（search URL 是否进 References） | `agents/daily-news-writer.md`（多处明文 + Quality Rules 第 4 条）+ `skills/daily-news-intelligence/references/output-spec.md` § Cited Search URLs |
 | 调整 C 编排顺序（插入/移除 agent） | `skills/daily-news-intelligence/SKILL.md`（Quick Reference Checklist + Data Handoff Between Stages + Workflow Steps + Stage → Agent → Reference Map 四处同步） |
+| 调整 C 并行 Scanner / Merge 拓扑（fan-out、Merger 职责） | `skills/daily-news-intelligence/SKILL.md`（fan-out + Step 6.5）+ `agents/daily-news-scanner.md`（单分类）+ `agents/daily-news-merger.md`（跨类去重/路由）+ `references/schemas.md`（§ Merged Bundle） |
+| 调整 C 源发现模型 / Pass B / 正版性 rubric | `references/rubric.md` § Source Discovery Model + § Source Legitimacy（真源）；镜像机制在 `agents/daily-news-scanner.md` § Pass B — Free Discovery；Verifier 第 4 检查在 `agents/news-verifier.md` |
 | 调整 C China 外部视角矩阵 | `agents/daily-news-scanner.md` § Source Matrix（T4 China 子表、T1-wire / T1-flagship / T3 行的增删、Paywall Status 三表） |
 | 调整 C 邮件投递 | `skills/daily-news-intelligence/references/email-spec.md` + `scripts/send-report-email.py` |
 | 调整 C 栏目目录 / 命名 / 排序 / 编号 / 本地化 | `skills/daily-news-intelligence/references/language-spec.md` § Category Catalog & Selection（真源）；镜像在 `agents/daily-news-writer.md` § Category Catalog & Selection |
