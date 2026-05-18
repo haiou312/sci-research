@@ -10,14 +10,60 @@ Target-language tokens used by the Writer. Scanner and Verifier output stays Eng
 |-------|-----------|-----------|-----------|
 | `title_label` | `Daily News Intelligence` | `每日热点新闻` | `デイリーニュース` |
 | `h1_pattern` | `# {country_display} Daily News Intelligence — {date_display}` | `# {country_display}每日热点新闻 — {date_display}` | `# {country_display}デイリーニュース — {date_display}` |
-| `section_1` | `## 1. Economy & Markets` | `## 一、经济与市场` | `## 1. 経済と市場` |
-| `section_2` | `## 2. Politics & Diplomacy` | `## 二、政治与外交` | `## 2. 政治と外交` |
-| `section_3` | `## 3. Technology & Industry` | `## 三、科技与产业` | `## 3. テクノロジーと産業` |
-| `section_4` | `## 4. Society & Livelihood` | `## 四、社会与民生` | `## 4. 社会と生活` |
-| `section_5` | `## 5. Other Notable Events` | `## 五、其他重要事件` | `## 5. その他の重要事項` |
 | `references_marker` | `**References**` | `**References**` | `**References**` |
 | `gap_note` | `*Note: only N story/stories met T1-T4 standards for this category today.*` | `*注：本分类当日仅检索到 N 条符合 T1-T4 标准的新闻。*` | `*注：このカテゴリで本日 T1-T4 基準を満たした記事は N 件のみでした。*` |
 | `quote_marks` | `""` (U+0022) | `""` (U+201C / U+201D) | `「」` (U+300C / U+300D) |
+
+Section H2 headings are **not** Localisation tokens — they are composed at render time from the **Category Catalog** below, because the active category set and its numbering depend on `country`.
+
+## Category Catalog & Selection
+
+The report's H2 sections are **not** a fixed list. They are derived from `country` at render time. This section is the **single source of truth** for category identity, naming, ordering, and numbering. Scanner, Verifier, Writer, and the email body all resolve categories through this catalog.
+
+### Catalog (stable IDs + target-language names)
+
+Names below are **bare** — they carry no leading number. The number is positional and assigned by the selection rule, not stored here.
+
+| `id` | `lang=en` | `lang=zh` | `lang=ja` |
+|---|---|---|---|
+| `econ` | Economy & Markets | 经济与市场 | 経済と市場 |
+| `politics` | Politics & Diplomacy | 政治与外交 | 政治と外交 |
+| `tech` | Technology & Industry | 科技与产业 | テクノロジーと産業 |
+| `society` | Society & Livelihood | 社会与民生 | 社会と生活 |
+| `china_nexus` | China-Nexus Finance & Diplomacy | 海外涉华财经与外交 | 海外の対中経済・外交 |
+| `ipo_ma` | Corporate IPO & M&A | 企业IPO与并购 | 企業のIPO・M&A |
+| `other` | Other Notable Events | 其他重要事件 | その他の重要事項 |
+
+### Selection rule (depends on `country`)
+
+```
+active(country) = [econ, politics, tech, society]
+                  ++ (country == China ? [china_nexus] : [])
+                  ++ [ipo_ma, other]
+```
+
+- **Non-China report** → 6 categories: `econ, politics, tech, society, ipo_ma, other`.
+- **China report** → 7 categories: `econ, politics, tech, society, china_nexus, ipo_ma, other`.
+
+`china_nexus` appears **only** in a `--country China` report. `ipo_ma` appears in **every** report (always, regardless of country). `other` is always the final catch-all. Eligibility, scope, exclusions, and the China-report `china_nexus`↔`ipo_ma` routing tie-break are defined in `references/rubric.md` § Conditional & Topical Categories — this file owns only identity, naming, order, and numbering.
+
+### H2 numbering convention
+
+The H2 line is composed as `## ` + position number + separator + bare name, where the position number is the 1-based index of the category in `active(country)`:
+
+| `lang` | Number form | Separator | Example (position 5) |
+|---|---|---|---|
+| `zh` | CJK numerals `一 二 三 四 五 六 七` | `、` (no space) | `## 五、海外涉华财经与外交` |
+| `en` | Arabic `1`–`7` | `. ` (period + ASCII space) | `## 5. China-Nexus Finance & Diplomacy` |
+| `ja` | Arabic `1`–`7` | `. ` (period + ASCII space) | `## 5. 海外の対中経済・外交` |
+
+Resulting H2 sequence:
+
+- **China, `lang=zh`**: `## 一、经济与市场` · `## 二、政治与外交` · `## 三、科技与产业` · `## 四、社会与民生` · `## 五、海外涉华财经与外交` · `## 六、企业IPO与并购` · `## 七、其他重要事件`
+- **Japan (or any non-China), `lang=zh`**: `## 一、经济与市场` · `## 二、政治与外交` · `## 三、科技与产业` · `## 四、社会与民生` · `## 五、企业IPO与并购` · `## 六、其他重要事件`
+- **China, `lang=en`**: `## 1. Economy & Markets` … `## 5. China-Nexus Finance & Diplomacy` · `## 6. Corporate IPO & M&A` · `## 7. Other Notable Events`
+
+The same category may carry a different number across countries (`ipo_ma` is `## 5.` for Japan but `## 6.` for China). This is expected — number follows position, not identity.
 
 ## Derived Display Fields
 

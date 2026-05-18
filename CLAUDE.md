@@ -6,7 +6,7 @@
 
 ## 项目定位
 
-这是一个 **Claude Code 插件**（`sci-research`，当前版本 1.11.1），通过多 Agent 编排，将"主题 + 比较实体 + 输出语言"转化为高质量研究/新闻产出。插件包含六条**完全独立**的流水线，互不共享 Agent：
+这是一个 **Claude Code 插件**（`sci-research`，当前版本 1.12.0），通过多 Agent 编排，将"主题 + 比较实体 + 输出语言"转化为高质量研究/新闻产出。插件包含六条**完全独立**的流水线，互不共享 Agent：
 
 | 特性 | `/sci-research` | `/news-scan` | `/daily-news-intelligence` | `/daily-briefing` | `/reputation-track` | `/weekly-report` |
 |---|---|---|---|---|---|---|
@@ -14,12 +14,13 @@
 | **时间焦点** | 历史 + 当前 | 近 7/30/90 天 | 单日（指定日期） | 单日（读取已有报告） | 单日（指定日期） | 前 7 日滚动 |
 | **来源** | 学术论文、官方报告、权威媒体 | 通讯社、财经媒体、行业媒体 | T1-T4 分级媒体（逐 URL 日期核验） | Pipeline C 产出的各国 Markdown | News (T1-T4) + Reddit + X | Pipeline C 报告 + FRED/BOE/BOJ/yfinance 行情 |
 | **Agent 链** | researcher → comparator → fact-checker → writer | news-scanner → news-imager → news-analyst | daily-news-scanner → news-verifier → daily-fact-extractor → daily-news-writer → daily-editor | briefing-curator → docx 脚本 → 邮件脚本 | reputation-resolver → reputation-scanner×3 → reputation-classifier → reputation-writer | weekly-news-aggregator ‖ market-data-collector → weekly-report-writer |
-| **产出** | ≤5000 字结构化文章（含 APA 引用） | 1000-3000 字简报（含事件时间线 + 图片） | 五类固定栏目简报（Markdown + docx，可邮件投递） | 13-15 条品牌 Word 文档（含邮件投递） | 仅当命中负面时发送 HTML 邮件（inline body，无附件） | 多分节 Markdown + docx（市场事件 + Money Market + Fixed Income + FX + Commodity，可邮件投递） |
+| **产出** | ≤5000 字结构化文章（含 APA 引用） | 1000-3000 字简报（含事件时间线 + 图片） | 条件化 6/7 栏简报（中国 7 栏含涉华，其余 6 栏；Markdown + docx，可邮件投递） | 13-15 条品牌 Word 文档（含邮件投递） | 仅当命中负面时发送 HTML 邮件（inline body，无附件） | 多分节 Markdown + docx（市场事件 + Money Market + Fixed Income + FX + Commodity，可邮件投递） |
 
-**Pipeline C 三个结构性设计**（容易被忽视）：
+**Pipeline C 四个结构性设计**（容易被忽视）：
 1. **China 外部视角**：`--country "China"` 时 Source Matrix 本身就是外部视角 — 不查询中国本土媒体（Xinhua / Caixin / SCMP / People's Daily / TechNode / 澎湃 等），不查询中国政府域名（`gov.cn` / `pbc.gov.cn` / `stats.gov.cn` 等）。T4 改用外部机构清单（IMF / World Bank / WTO / OECD / BIS / IEA / Treasury / USTR / State Dept / Commerce-BIS / White House / EU Commission / UK Gov / METI / MOFA Japan）。
 2. **Writer 自由文笔**（1.9.0+）：Writer 不再机械翻译 Verifier 包，按目标语言以解释性新闻文笔重写 — 数字/姓名/日期/直接引语必须忠于源，其余措辞自由组织。
 3. **Fact-Manifest + Editor 双层防线**（1.11.0+）：Verifier 之后插入 `daily-fact-extractor`（sonnet）抽取每条 story 的 hard_facts / quotes 的 verbatim YAML manifest；Writer 之后插入 `daily-editor`（opus）跑四道核查（Verifier-locked 事实 / Writer-search 事实回填 / 引语逐字 / 引号字符规范化），用 `Edit` 在原文件改。**Writer 引用规则反转**：search URL 必须进 References（References = Verifier KEEP URLs ∪ {支撑了正文事实的 search URLs}）。**引号 canonical 钉死**：en `""` U+0022 / zh `""` U+201C/U+201D / ja `「」` U+300C/U+300D，hook 字符级阻断。
+4. **条件化类目（1.12.0+）**：栏目集**按 `country` 派生**，不是写死 5 栏。非中国日报 6 栏（econ / politics / tech / society / **ipo_ma** / other）；中国日报 7 栏（第 5 位插入 **china_nexus**）。`china_nexus`（海外涉华财经与外交）仅中国日报出现、强制跨境（中国×境外方）、排除中国对非洲/小型发展中经济体援助与基建贷款（关键产业例外）、关键产业优先；`ipo_ma`（企业IPO与并购）所有日报都有、聚焦本报告国公司（买方/卖方/上市主体）、有重要性门槛（IPO≥5亿/并购≥5亿美元或受审或触及中国关键产业）。真源 = `references/language-spec.md` § Category Catalog & Selection（身份/命名/排序/编号）+ `references/rubric.md` § Conditional & Topical Categories（资格/排除/Cat5↔Cat6 路由）。H2 编号随类目位置变（`ipo_ma` 非中国是第 5、中国是第 6）。格式钩子与类目数无关，不需改。
 
 ---
 
@@ -216,7 +217,9 @@ User Input (country, date, lang)
 | daily-news-writer | opus | Read, Write, Edit, Grep, WebSearch, WebFetch | 消费 Verifier KEEP + Fact Manifest，按目标语言**自由文笔**重写。Manifest 锁定的数字 / 命名 / 日期 / 引语**不可漂移**（值必须匹配 manifest）。**默认每 story 跑 1-3 次 WebSearch / WebFetch 拉背景**。**引用契约**：References = Verifier KEEP URLs ∪ {支撑了正文事实的 search URLs}——search URL 必须进 References（APA + 连续 `[N]`）。引号按 canonical 表（en `""` / zh `""` / ja `「」`）。 |
 | daily-editor | opus | Read, Edit, Grep, WebFetch, WebSearch | **新增（1.11.0）**：Writer 之后跑四道核查 — **Pass 1** Verifier-locked 事实是否与 Manifest 一致（漂移即改回）；**Pass 2** Writer-search 事实是否在 References 有 URL（缺则 search 补 ref / 砍句 / 弱化）；**Pass 3** 直接引语逐字 WebFetch 对源（不一致则降级为间接引语）；**Pass 4** 引号字符规范化。**只用 Edit，不 Write**；预算 2 WebSearch + 4 WebFetch / story；产出 stdout 报告供日志。 |
 
-**固定五栏**：经济与市场 → 政治与外交 → 科技与产业 → 社会与民生 → 其他要闻
+**条件化栏目（按 `country` 派生，真源见 `references/language-spec.md` § Category Catalog & Selection）**：
+- 非中国日报（6 栏）：经济与市场 → 政治与外交 → 科技与产业 → 社会与民生 → 企业IPO与并购 → 其他重要事件
+- 中国日报（7 栏，第 5 位插入涉华）：经济与市场 → 政治与外交 → 科技与产业 → 社会与民生 → 海外涉华财经与外交 → 企业IPO与并购 → 其他重要事件
 
 **输出**：Markdown 文件 + pandoc 导出 docx，可选 Gmail SMTP 邮件投递（支持 `--email-dry-run` 预览）
 
@@ -399,7 +402,9 @@ End Date (default: today) → 计算前 7 日窗口
 | 调整 C 编排顺序（插入/移除 agent） | `skills/daily-news-intelligence/SKILL.md`（Quick Reference Checklist + Data Handoff Between Stages + Workflow Steps + Stage → Agent → Reference Map 四处同步） |
 | 调整 C China 外部视角矩阵 | `agents/daily-news-scanner.md` § Source Matrix（T4 China 子表、T1-wire / T1-flagship / T3 行的增删、Paywall Status 三表） |
 | 调整 C 邮件投递 | `skills/daily-news-intelligence/references/email-spec.md` + `scripts/send-report-email.py` |
-| 调整 C 栏目分类 / 本地化 | `skills/daily-news-intelligence/references/language-spec.md` |
+| 调整 C 栏目目录 / 命名 / 排序 / 编号 / 本地化 | `skills/daily-news-intelligence/references/language-spec.md` § Category Catalog & Selection（真源）；镜像在 `agents/daily-news-writer.md` § Category Catalog & Selection |
+| 调整 C 条件化类目规则（china_nexus 资格/排除/关键产业、ipo_ma 门槛、Cat5↔Cat6 路由） | `skills/daily-news-intelligence/references/rubric.md` § Conditional & Topical Categories（真源，Scanner/Verifier 引用）；搜索机制在 `agents/daily-news-scanner.md` § Conditional Categories — Search Mechanics |
+| 调整 C 类目集（增/删栏目、改国家派生规则） | `references/language-spec.md` § Category Catalog（active 规则）+ 同步 `daily-news-scanner.md` / `news-verifier.md` / `schemas.md` / `daily-news-writer.md` / `output-spec.md` / `verification.md` / `email-spec.md` / `SKILL.md` / `commands/daily-news-intelligence.md` / `daily-fact-extractor.md`（enum） |
 | 调整 C Reference 格式校验规则 | `scripts/hooks/daily-news-format-check.js` + `skills/daily-news-intelligence/references/output-spec.md` § Self-Check Checksum |
 | 调整邮件发送守卫（禁止 inline SMTP） | `scripts/hooks/email-send-guard.js` + 四份 SKILL.md（C/D/E/F）的 email Step 里的 "Hard rule" 段 |
 | 修改 A 文章格式 | `rules/research/output-format.md` |

@@ -33,7 +33,7 @@ Evidence priority order:
 
 Apply a two-pass filter before anything reaches the Writer:
 
-- **Pass 1 (Scanner)**: date verification + T1-T4 tier filter + five-category coverage.
+- **Pass 1 (Scanner)**: date verification + T1-T4 tier filter + active-category coverage (6 categories for a non-China report, 7 for a China report — see `references/language-spec.md` § Category Catalog & Selection).
 - **Pass 2 (Verifier)**: originality + authority + impact + dedup, per the Authority & Impact Rubric.
 
 Hard rules:
@@ -79,6 +79,7 @@ The orchestrator must not summarise, truncate, or reformat the upstream output �
    - `date_en` — e.g. `April 16, 2026`
    - `date_display` — per `lang` (e.g. `2026年4月16日` for zh/ja)
    - `country_display` — country name in `lang` (e.g. `China`→`中国`/`中国`, `South Korea`→`韩国`/`韓国`, `Germany`→`德国`/`ドイツ`)
+   - `active_categories` — the ordered category set for this report, per `references/language-spec.md` § Category Catalog & Selection: `[econ, politics, tech, society]` ++ (`country == China` ? `[china_nexus]` : `[]`) ++ `[ipo_ma, other]`. 6 categories for a non-China report, 7 for a China report. The H2 number is the 1-based position in this list.
    - `out_md` / `out_docx` — per filename pattern in `references/language-spec.md`
 
    **Print the resolved values before Step 2.** Emit one visible line so the translation step cannot be silently skipped:
@@ -102,9 +103,13 @@ The orchestrator must not summarise, truncate, or reformat the upstream output �
    | Politics | `{country} politics legislation parliament {date_en}`, `{country} diplomacy foreign policy {date_en}`, `{country} election regulation {date_en}` |
    | Technology | `{country} technology AI semiconductor {date_en}`, `{country} tech industry startup {date_en}`, `{country} digital infrastructure {date_en}` |
    | Society | `{country} society health education {date_en}`, `{country} demographics labor {date_en}`, `{country} environment climate {date_en}` |
+   | China-Nexus *(China report only — NOT `{country}`-anchored)* | `China outbound investment acquisition {date_en}`, `China inbound FDI foreign firm {date_en}`, `China trade policy tariff sanctions {date_en}`, `China diplomacy summit {date_en}` |
+   | Corporate IPO & M&A | `{country} company IPO listing {date_en}`, `{country} merger acquisition takeover {date_en}`, `{country} buyout deal {date_en}` |
    | Other | `{country} news today {date_en}`, `{country} major events {date_en}`, `{country} breaking news {date_en}` |
 
-   Collect 20-30 candidate URLs across the five fixed categories. Prioritise breadth over depth. If Scanner returns zero candidates across all categories, stop and report: "No news candidates found for {country} on {date}. The date may be a future date, a holiday, or WebSearch may be temporarily unavailable." Do not proceed to the Verifier.
+   Rows are listed in `active_categories` order. **Corporate IPO & M&A** runs in every report (country-anchored, report-country companies as listing entity / acquirer / target). **China-Nexus** runs **only in a China report** and is **not** `{country}`-anchored — it is a region-unbounded global topical sweep. Eligibility, the China-aid exclusion + key-industry carve-out, the materiality floor, and the China-report `china_nexus`↔`ipo_ma` routing are authoritative in `references/rubric.md` § Conditional & Topical Categories.
+
+   Collect 20-30 candidate URLs across the active category set (6 categories for a non-China report, 7 for a China report). Prioritise breadth over depth. If Scanner returns zero candidates across all categories, stop and report: "No news candidates found for {country} on {date}. The date may be a future date, a holiday, or WebSearch may be temporarily unavailable." Do not proceed to the Verifier.
 
 3. **Verify each candidate.** For every candidate URL, call `web_fetch` and extract the publication date. Apply the rules in `references/rubric.md` § Date Verification Rules — keep only stories where publication date equals `date` (local or UTC match).
 

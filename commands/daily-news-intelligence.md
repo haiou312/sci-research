@@ -4,7 +4,7 @@ description: Generate a dated single-country daily news briefing in the target l
 
 # Daily News Intelligence (Single Country)
 
-Produce a dated daily news briefing for one country in the target language, using English WebSearch with per-URL WebFetch date verification, five fixed categories, and APA 7th references. Scanner always operates in English; the final report is translated into `lang` at the Writer stage.
+Produce a dated daily news briefing for one country in the target language, using English WebSearch with per-URL WebFetch date verification, a country-derived active category set (6 categories for most countries; 7 for a China report), and APA 7th references. Scanner always operates in English; the final report is translated into `lang` at the Writer stage.
 
 ## Parameter Parsing
 
@@ -59,7 +59,7 @@ Invoke the `daily-news-intelligence` skill and pass through all parsed arguments
 
 The skill will:
 
-1. Run the Scanner stage in English — generate 20-30 candidates across five fixed categories, verify each via WebFetch against `date`, filter to T1-T4 tiers.
+1. Run the Scanner stage in English — generate 20-30 candidates across the active category set (6 for a non-China report, 7 for a China report), verify each via WebFetch against `date`, filter to T1-T4 tiers.
 2. Run the Verifier stage — apply originality, authority, impact, and dedup filters to the Scanner bundle.
 3. Run the Writer stage — consume the Verifier's KEEP set only, translate the narrative into `lang`, and emit Markdown obeying the skill's Markdown Syntax Contract. APA 7th references stay in English.
 4. Write the Markdown to `out_md`.
@@ -74,13 +74,19 @@ The skill will:
 
 ## Fixed Categories
 
-The skill enforces five H2 sections in fixed order. The actual H2 text is language-dependent; see the `Localisation Table` in `skills/daily-news-intelligence/SKILL.md` for the exact strings per `lang`. Category semantics:
+The skill enforces a **country-derived active category set** as H2 sections in fixed order — **6 categories for a non-China report, 7 for a China report**. The actual H2 text (number + name) is language-dependent and composed per `references/language-spec.md` § Category Catalog & Selection (authoritative for identity, naming, order, numbering). Selection rule: `[econ, politics, tech, society]` ++ (`country == China` ? `[china_nexus]` : `[]`) ++ `[ipo_ma, other]`.
+
+Category semantics:
 
 1. Economy & Markets — macro data, central banks, equities, earnings, trade.
 2. Politics & Diplomacy — government, legislation, elections, foreign policy, geopolitics.
 3. Technology & Industry — AI, semiconductors, clean energy, platform economy, biotech.
 4. Society & Livelihood — education, healthcare, employment, housing, immigration, labour.
-5. Other Notable Events — environment, sports, culture, judiciary, accidents.
+5. China-Nexus Finance & Diplomacy — **China report only**. China's cross-border investment / commercial policy / diplomacy (China + a foreign party). Excludes Chinese aid / infra-loans to Africa & small developing economies unless the deal is itself a China key-industry play; prioritises key industries (semiconductors, AI, EV & batteries, rare earths, biotech, aerospace, clean energy, telecom, advanced manufacturing). Region-unbounded.
+6. Corporate IPO & M&A — **every report**. IPOs and M&A where a company of the report's country is a principal (listing entity / acquirer / target). Materiality floor: IPO ≥ USD 300M, M&A ≥ USD 500M, or any deal under security/antitrust review or touching a China key industry.
+7. Other Notable Events — environment, sports, culture, judiciary, accidents.
+
+The catch-all *Other* is always last; *China-Nexus* (when present) sits at position 5, so *Corporate IPO & M&A* is position 5 in a non-China report but position 6 in a China report, and *Other* is position 6 / 7 respectively. See `references/rubric.md` § Conditional & Topical Categories for the full eligibility and routing rules.
 
 ## Examples
 

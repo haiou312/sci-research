@@ -30,7 +30,7 @@ date: <YYYY-MM-DD>
 total_stories: <count>
 stories:
   - story_id: <kebab-case slug derived from headline_en>
-    category: economy_markets | politics_diplomacy | tech_industry | society_livelihood | other
+    category: economy_markets | politics_diplomacy | tech_industry | society_livelihood | china_nexus | ipo_ma | other
     headline_en: <Verifier-approved English headline>
     lead_url: <Verifier Lead URL>
     corroborated_by: [<URL>, ...]   # empty list if none

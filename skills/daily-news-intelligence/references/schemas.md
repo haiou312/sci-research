@@ -12,7 +12,7 @@ Scanner must return exactly this shape (English raw data — no translation):
 - Date: <YYYY-MM-DD>
 - Candidates fetched: <N>
 - Candidates kept: <M>
-- Category counts: Economy=<n1> | Politics=<n2> | Technology=<n3> | Society=<n4> | Other=<n5>
+- Category counts: one `id=<n>` token per category in active-category order (per `references/language-spec.md` § Category Catalog & Selection), pipe-separated. Non-China report: `econ=<n1> | politics=<n2> | tech=<n3> | society=<n4> | ipo_ma=<n5> | other=<n6>`. China report: `econ=<n1> | politics=<n2> | tech=<n3> | society=<n4> | china_nexus=<n5> | ipo_ma=<n6> | other=<n7>`
 
 ## Stories
 
@@ -41,7 +41,7 @@ Verifier must consume the Scanner bundle and emit exactly this shape (still Engl
 ## Verification Report
 - Input count (from Scanner): <N>
 - Kept count: <M>
-- Category counts after verification: Economy=<n1> | Politics=<n2> | Technology=<n3> | Society=<n4> | Other=<n5>
+- Category counts after verification: one `id=<n>` token per category in active-category order, pipe-separated. Non-China report: `econ=<n1> | politics=<n2> | tech=<n3> | society=<n4> | ipo_ma=<n5> | other=<n6>`. China report: `econ=<n1> | politics=<n2> | tech=<n3> | society=<n4> | china_nexus=<n5> | ipo_ma=<n6> | other=<n7>`
 - Fallback used: <none | fallback_1 | fallback_1+gap>
 
 ## Kept Stories
@@ -70,11 +70,14 @@ Verifier must consume the Scanner bundle and emit exactly this shape (still Engl
 ... (repeat per dropped story) ...
 
 ## Post-Verification Coverage
-- Economy: <n>/<min_per_category>
-- Politics: <n>/<min_per_category>
-- Technology: <n>/<min_per_category>
-- Society: <n>/<min_per_category>
-- Other: <n>/<min_per_category>
+(one line per category in active-category order; include the `china_nexus` line only for a China report)
+- econ: <n>/<min_per_category>
+- politics: <n>/<min_per_category>
+- tech: <n>/<min_per_category>
+- society: <n>/<min_per_category>
+- china_nexus: <n>/<min_per_category>   (China report only — omit this line otherwise)
+- ipo_ma: <n>/<min_per_category>
+- other: <n>/<min_per_category>
 
 ## Post-Verification Coverage Gap   (include only if any category still < min_per_category after fallback_1)
 - Category: <name>

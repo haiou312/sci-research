@@ -55,7 +55,12 @@ function isPluginInternal(filePath) {
 }
 
 // Section/marker variants across supported languages.
-// section_5 is the last H2 in the body; the pattern for lang=zh is "五、其他重要事件".
+// The category set is country-derived (6 H2 for a non-China report, 7 for a China
+// report which adds 海外涉华财经与外交 at position 5) — see
+// skills/daily-news-intelligence/references/language-spec.md § Category Catalog &
+// Selection. This hook is intentionally category-count agnostic: it validates
+// ###↔**References** parity, [N] continuity, prohibited markers, and quote chars,
+// never the number or names of H2 sections.
 //
 // Prohibited markers (1.9.x+ structure): body prose follows `### title` directly.
 // No summary/analysis marker is permitted anywhere in the output.

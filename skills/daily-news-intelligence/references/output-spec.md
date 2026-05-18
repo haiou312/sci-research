@@ -4,7 +4,7 @@ Loaded by the Writer. Not needed by Scanner or Verifier.
 
 ## Required Output (Markdown)
 
-Return only the final Markdown report. Use the `h1_pattern` for the target language and the five `section_*` H2 headings in the exact order `1 → 5` (see `references/language-spec.md` for the Localisation Table).
+Return only the final Markdown report. Use the `h1_pattern` for the target language and the **country-derived active-category H2 headings** in order — 6 for a non-China report, 7 for a China report (which adds `china_nexus` at position 5). Each H2 line is composed (position number + separator + bare name) per `references/language-spec.md` § Category Catalog & Selection — that file is authoritative for category identity, naming, order, and numbering.
 
 Each story must use this exact block structure (`{references_marker}` comes from the Localisation Table; narrative content is in the target language):
 
@@ -39,7 +39,7 @@ Markdown heading markers are syntax tokens, not natural language.
 - The tokens `#`, `##`, `###`, and emphasis markers `**` are never translated, removed, merged, or restyled.
 - Every heading token must be followed by exactly one ASCII space.
 - The H1 line must match `h1_pattern` exactly for the chosen language — single ASCII space after `#`, single em-spaced ` — ` between label and date.
-- Every section heading line must match the chosen language's `section_n` string exactly — numbering and punctuation are part of the heading text.
+- Every section heading line must match its composed value from `references/language-spec.md` § Category Catalog & Selection exactly for the chosen language — the position number, separator, and bare name are all part of the heading text.
 - Every story heading line must be exactly `### <story title>`.
 - No prose, emphasis, URL, or citation may appear on the same line as any heading.
 - **Body paragraph(s) start on the line immediately after `### title`** (with one blank line between — no marker line in between). The `references_marker` (`**References**`) line precedes the references block.
