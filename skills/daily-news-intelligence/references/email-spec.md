@@ -52,7 +52,7 @@ The body is generated in the target language `lang`, drawing counts from the Ver
 · 覆盖地区: {country_display}
 · 语言: 中文 (zh)
 · 总新闻数: {total_count} 条
-· 分类覆盖（按该国 active 类目逐行，序号随类目位置；海外涉华财经与外交仅中国日报出现）:
+· 分类覆盖（按该国 active 类目逐行，序号随类目位置；海外涉华财经仅中国日报出现）:
   非中国日报（6 行）:
   - 一、经济与市场: {n1} 条
   - 二、政治与外交: {n2} 条
@@ -65,7 +65,7 @@ The body is generated in the target language `lang`, drawing counts from the Ver
   - 二、政治与外交: {n2} 条
   - 三、科技与产业: {n3} 条
   - 四、社会与民生: {n4} 条
-  - 五、海外涉华财经与外交: {n5} 条
+  - 五、海外涉华财经: {n5} 条
   - 六、企业IPO与并购: {n6} 条
   - 七、其他重要事件: {n7} 条
 · 附件: {attachment_names}
@@ -97,7 +97,7 @@ Attached is today's {country_display} Daily News Intelligence briefing, auto-gen
   - 2. Politics & Diplomacy: {n2}
   - 3. Technology & Industry: {n3}
   - 4. Society & Livelihood: {n4}
-  - 5. China-Nexus Finance & Diplomacy: {n5}
+  - 5. China-Nexus Finance & Investment: {n5}
   - 6. Corporate IPO & M&A: {n6}
   - 7. Other Notable Events: {n7}
 · Attachments: {attachment_names}
@@ -116,7 +116,7 @@ Attached is today's {country_display} Daily News Intelligence briefing, auto-gen
 · 対象地域: {country_display}
 · 言語: 日本語 (ja)
 · 総記事数: {total_count} 件
-· カテゴリ別内訳（アクティブなカテゴリを順に1行ずつ、番号は位置に従う。海外の対中経済・外交は中国レポートのみ）:
+· カテゴリ別内訳（アクティブなカテゴリを順に1行ずつ、番号は位置に従う。海外の対中経済・投資は中国レポートのみ）:
   中国以外のレポート（6行）:
   - 1. 経済と市場: {n1} 件
   - 2. 政治と外交: {n2} 件
@@ -124,12 +124,12 @@ Attached is today's {country_display} Daily News Intelligence briefing, auto-gen
   - 4. 社会と生活: {n4} 件
   - 5. 企業のIPO・M&A: {n5} 件
   - 6. その他の重要事項: {n6} 件
-  中国レポート（7行、5番目に海外の対中経済・外交を挿入し以降繰り下げ）:
+  中国レポート（7行、5番目に海外の対中経済・投資を挿入し以降繰り下げ）:
   - 1. 経済と市場: {n1} 件
   - 2. 政治と外交: {n2} 件
   - 3. テクノロジーと産業: {n3} 件
   - 4. 社会と生活: {n4} 件
-  - 5. 海外の対中経済・外交: {n5} 件
+  - 5. 海外の対中経済・投資: {n5} 件
   - 6. 企業のIPO・M&A: {n6} 件
   - 7. その他の重要事項: {n7} 件
 · 添付ファイル: {attachment_names}

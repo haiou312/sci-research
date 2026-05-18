@@ -75,7 +75,7 @@ Bare category names (the H2 number is positional, not part of the name):
 | `politics` | Politics & Diplomacy | 政治与外交 | 政治と外交 |
 | `tech` | Technology & Industry | 科技与产业 | テクノロジーと産業 |
 | `society` | Society & Livelihood | 社会与民生 | 社会と生活 |
-| `china_nexus` | China-Nexus Finance & Diplomacy | 海外涉华财经与外交 | 海外の対中経済・外交 |
+| `china_nexus` | China-Nexus Finance & Investment | 海外涉华财经 | 海外の対中経済・投資 |
 | `ipo_ma` | Corporate IPO & M&A | 企业IPO与并购 | 企業のIPO・M&A |
 | `other` | Other Notable Events | 其他重要事件 | その他の重要事項 |
 
@@ -92,8 +92,8 @@ active(country) = [econ, politics, tech, society]
 
 Compose each H2 line as `## ` + position number + separator + bare name, where position is the 1-based index in `active(country)`:
 
-- `lang=zh`: CJK numeral `一 二 三 四 五 六 七` + `、` (no space) → `## 五、海外涉华财经与外交`
-- `lang=en` / `lang=ja`: Arabic `1`–`7` + `. ` → `## 5. China-Nexus Finance & Diplomacy` / `## 5. 海外の対中経済・外交`
+- `lang=zh`: CJK numeral `一 二 三 四 五 六 七` + `、` (no space) → `## 五、海外涉华财经`
+- `lang=en` / `lang=ja`: Arabic `1`–`7` + `. ` → `## 5. China-Nexus Finance & Investment` / `## 5. 海外の対中経済・投資`
 
 The same category can carry a different number across countries (`ipo_ma` is `## 5.` for Japan but `## 6.` for China) — number follows position, not identity. `china_nexus` is emitted **only** for a China report; never output it for any other country.
 

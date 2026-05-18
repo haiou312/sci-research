@@ -30,7 +30,7 @@ Names below are **bare** — they carry no leading number. The number is positio
 | `politics` | Politics & Diplomacy | 政治与外交 | 政治と外交 |
 | `tech` | Technology & Industry | 科技与产业 | テクノロジーと産業 |
 | `society` | Society & Livelihood | 社会与民生 | 社会と生活 |
-| `china_nexus` | China-Nexus Finance & Diplomacy | 海外涉华财经与外交 | 海外の対中経済・外交 |
+| `china_nexus` | China-Nexus Finance & Investment | 海外涉华财经 | 海外の対中経済・投資 |
 | `ipo_ma` | Corporate IPO & M&A | 企业IPO与并购 | 企業のIPO・M&A |
 | `other` | Other Notable Events | 其他重要事件 | その他の重要事項 |
 
@@ -53,15 +53,15 @@ The H2 line is composed as `## ` + position number + separator + bare name, wher
 
 | `lang` | Number form | Separator | Example (position 5) |
 |---|---|---|---|
-| `zh` | CJK numerals `一 二 三 四 五 六 七` | `、` (no space) | `## 五、海外涉华财经与外交` |
-| `en` | Arabic `1`–`7` | `. ` (period + ASCII space) | `## 5. China-Nexus Finance & Diplomacy` |
-| `ja` | Arabic `1`–`7` | `. ` (period + ASCII space) | `## 5. 海外の対中経済・外交` |
+| `zh` | CJK numerals `一 二 三 四 五 六 七` | `、` (no space) | `## 五、海外涉华财经` |
+| `en` | Arabic `1`–`7` | `. ` (period + ASCII space) | `## 5. China-Nexus Finance & Investment` |
+| `ja` | Arabic `1`–`7` | `. ` (period + ASCII space) | `## 5. 海外の対中経済・投資` |
 
 Resulting H2 sequence:
 
-- **China, `lang=zh`**: `## 一、经济与市场` · `## 二、政治与外交` · `## 三、科技与产业` · `## 四、社会与民生` · `## 五、海外涉华财经与外交` · `## 六、企业IPO与并购` · `## 七、其他重要事件`
+- **China, `lang=zh`**: `## 一、经济与市场` · `## 二、政治与外交` · `## 三、科技与产业` · `## 四、社会与民生` · `## 五、海外涉华财经` · `## 六、企业IPO与并购` · `## 七、其他重要事件`
 - **Japan (or any non-China), `lang=zh`**: `## 一、经济与市场` · `## 二、政治与外交` · `## 三、科技与产业` · `## 四、社会与民生` · `## 五、企业IPO与并购` · `## 六、其他重要事件`
-- **China, `lang=en`**: `## 1. Economy & Markets` … `## 5. China-Nexus Finance & Diplomacy` · `## 6. Corporate IPO & M&A` · `## 7. Other Notable Events`
+- **China, `lang=en`**: `## 1. Economy & Markets` … `## 5. China-Nexus Finance & Investment` · `## 6. Corporate IPO & M&A` · `## 7. Other Notable Events`
 
 The same category may carry a different number across countries (`ipo_ma` is `## 5.` for Japan but `## 6.` for China). This is expected — number follows position, not identity.
 

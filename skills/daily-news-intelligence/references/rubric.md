@@ -105,10 +105,11 @@ Mark `Fallback used: fallback_1+gap` in the Verifier report header.
 
 This section is the **authoritative ruleset** for the two non-standard categories. The Scanner uses it to decide what to search and admit; the Verifier uses it to decide what to KEEP, DROP, and how to route. `references/language-spec.md` owns identity/naming/numbering; this section owns eligibility, scope, exclusions, and routing.
 
-### `china_nexus` — China-Nexus Finance & Diplomacy (China report only)
+### `china_nexus` — China-Nexus Finance & Investment (China report only)
 
 - **Presence**: appears **only** when `country == China`. It is absent from every non-China report. Do not emit a `china_nexus` heading for Japan, the US, the UK, etc.
-- **Cross-border requirement (hard)**: a story is eligible only if China **and at least one foreign party** interact — investment, goods/technology flow, commercial/industrial policy, sanctions/tariffs, or diplomacy that crosses China's border. A purely domestic Chinese item (PBoC reserve-ratio cut, a provincial stimulus, an onshore-only regulatory action with no foreign counterparty) is **not** eligible here — it stays in `econ` / `politics`. This keeps `china_nexus` disjoint from `econ`/`politics` within the same China report.
+- **Cross-border requirement (hard)**: a story is eligible only if China **and at least one foreign party** interact through an **economic / financial channel** — inbound or outbound investment & FDI, goods/technology flow, commercial & industrial policy, tariffs, export controls, sanctions, trade measures, or investment-screening actions that cross China's border. A purely domestic Chinese item (PBoC reserve-ratio cut, a provincial stimulus, an onshore-only regulatory action with no foreign counterparty) is **not** eligible — it stays in `econ`.
+- **Finance scope, not diplomacy (hard)**: `china_nexus` is the **economic / commercial** thread only. Pure diplomacy with no concrete economic transaction — bilateral summits, joint statements, foreign-ministry rhetoric, ambassadorial actions, treaty signings with no commercial core — belongs in `politics` (the China report's Politics & Diplomacy category at position 2 already covers it), **not** here. Tariffs, sanctions, export controls and investment-screening are NOT treated as diplomacy: they carry concrete economic substance and stay in `china_nexus`. This keeps `china_nexus` disjoint from both `econ` and `politics` within the same China report.
 - **Region scope**: the foreign counterparty may be **any country / region** — `china_nexus` is a global topical sweep, NOT country-scoped. The Scanner does not anchor it to a single country the way `econ`/`politics` are anchored to the report country.
 - **Exclusion (hard DROP)**: Chinese aid, concessional loans, or development/infrastructure finance directed to Africa or to small developing economies is **dropped** (Verifier reason `China-aid-smallcountry-excluded`). "Small developing economy" = a low- or lower-middle-income economy that is not a G20 member and not a major economy.
   - **Carve-out (overrides the exclusion)**: KEEP if the transaction is itself a **China key-industry play** — e.g. a lithium / rare-earth / cobalt / nickel mine stake, a semiconductor or chip-equipment deal, a port or rail asset that is a strategic logistics node for a key-industry supply chain. Strategic key-industry positioning outranks the aid exclusion.
@@ -125,6 +126,6 @@ This section is the **authoritative ruleset** for the two non-standard categorie
 
 A single Chinese company's cross-border deal can match both categories. One story, one category — resolve by dominant frame:
 
-- Dominant frame is China's **external strategic posture, key-industry positioning, or triggering a foreign security/antitrust review** → `china_nexus`.
+- Dominant frame is China's **external economic / industrial strategy, key-industry positioning, or triggering a foreign security / antitrust / investment-screening review** → `china_nexus`.
 - Dominant frame is a **corporate-finance event** (offering price, listing venue, ownership change) with no strategic/policy overlay → `ipo_ma`.
 - A purely domestic Chinese listing (STAR Market / ChiNext / Shanghai / Shenzhen main board, no foreign party) → always `ipo_ma` (it fails the `china_nexus` cross-border test anyway).

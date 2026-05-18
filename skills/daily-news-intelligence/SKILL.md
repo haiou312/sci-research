@@ -103,7 +103,7 @@ The orchestrator must not summarise, truncate, or reformat the upstream output �
    | Politics | `{country} politics legislation parliament {date_en}`, `{country} diplomacy foreign policy {date_en}`, `{country} election regulation {date_en}` |
    | Technology | `{country} technology AI semiconductor {date_en}`, `{country} tech industry startup {date_en}`, `{country} digital infrastructure {date_en}` |
    | Society | `{country} society health education {date_en}`, `{country} demographics labor {date_en}`, `{country} environment climate {date_en}` |
-   | China-Nexus *(China report only — NOT `{country}`-anchored)* | `China outbound investment acquisition {date_en}`, `China inbound FDI foreign firm {date_en}`, `China trade policy tariff sanctions {date_en}`, `China diplomacy summit {date_en}` |
+   | China-Nexus *(China report only — NOT `{country}`-anchored; economic channel only, not diplomacy)* | `China outbound investment acquisition {date_en}`, `China inbound FDI foreign firm {date_en}`, `China trade policy tariff sanctions {date_en}`, `China industrial policy export control investment screening {date_en}` |
    | Corporate IPO & M&A | `{country} company IPO listing {date_en}`, `{country} merger acquisition takeover {date_en}`, `{country} buyout deal {date_en}` |
    | Other | `{country} news today {date_en}`, `{country} major events {date_en}`, `{country} breaking news {date_en}` |
 

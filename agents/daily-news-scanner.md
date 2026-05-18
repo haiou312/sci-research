@@ -286,7 +286,7 @@ For the country, enumerate the applicable matrix rows per tier (Universal + Coun
 | `politics` | `politics OR parliament OR diplomacy OR election` | country-anchored |
 | `tech` | `technology OR AI OR semiconductor OR digital` | country-anchored |
 | `society` | `society OR health OR education OR labour OR environment` | country-anchored |
-| `china_nexus` | `China investment OR China FDI OR China acquisition OR China stake OR China tariff OR China sanctions OR China trade policy OR China diplomacy OR China summit` | **global topical** (China report only — NOT country-anchored) |
+| `china_nexus` | `China investment OR China FDI OR China acquisition OR China stake OR China tariff OR China export control OR China sanctions OR China trade policy OR China industrial policy OR China investment screening` | **global topical** (China report only — NOT country-anchored; economic/financial channel only — pure diplomacy is NOT here) |
 | `ipo_ma` | `IPO OR listing OR merger OR acquisition OR takeover OR buyout` | country-anchored (report-country companies as listing entity / acquirer / target) |
 | `other` | (no extra keyword — `{country_en} {date_en}` only) | country-anchored |
 
