@@ -285,19 +285,21 @@ Before searching, derive these per-country values once:
 
 For the country, enumerate the applicable matrix rows per tier (Universal + Country: X + Region: X's region) for your `category`. This enumerated list is the **Pass A** search plan. Pass A stays strictly inside the matrix — do not improvise non-matrix outlets in Pass A. Non-matrix outlets enter only through **Pass B** under the Source Legitimacy rubric (see below).
 
-**Category keyword set** (used to construct queries):
+**Category search-term set** (used to construct queries — **one query per term, NEVER `OR`-joined**):
 
-| `id` | Query keyword fragment | Search scope |
+For each term in your category's row you run a **separate** query. Multi-word terms are quoted as phrases so the search engine keeps them intact (e.g. `"interest rate"`, not `interest rate`). Do **not** join terms with `OR` — long `OR` chains degrade search-engine ranking and silently drop tail terms, which is exactly the recall failure this per-term sweep removes.
+
+| `id` | Search terms (one query each, `·`-separated) | Search scope |
 |---|---|---|
-| `econ` | `economy OR central bank OR markets OR trade` | country-anchored |
-| `politics` | `politics OR parliament OR diplomacy OR election` | country-anchored |
-| `tech` | `technology OR AI OR semiconductor OR digital` | country-anchored |
-| `society` | `society OR health OR education OR labour OR environment` | country-anchored |
-| `china_nexus` | `China investment OR China FDI OR China acquisition OR China stake OR China tariff OR China export control OR China sanctions OR China trade policy OR China industrial policy OR China investment screening` | **global topical** (China report only — NOT country-anchored; economic/financial channel only — pure diplomacy is NOT here) |
-| `ipo_ma` | `IPO OR listing OR merger OR acquisition OR takeover OR buyout` | country-anchored (report-country companies as listing entity / acquirer / target) |
-| `other` | (no extra keyword — `{country_en} {date_en}` only) | country-anchored |
+| `econ` | `economy` · `GDP` · `inflation` · `"interest rate"` · `"central bank"` · `"monetary policy"` · `currency` · `bond` · `yield` · `"stock market"` · `fiscal` · `budget` · `tax` · `trade` · `tariff` · `recession` | country-anchored |
+| `politics` | `politics` · `government` · `parliament` · `legislation` · `bill` · `election` · `vote` · `cabinet` · `minister` · `diplomacy` · `"foreign policy"` · `summit` · `treaty` · `sanctions` · `referendum` | country-anchored |
+| `tech` | `technology` · `"artificial intelligence"` · `AI` · `semiconductor` · `chip` · `software` · `cloud` · `cybersecurity` · `telecom` · `5G` · `quantum` · `robotics` · `"data center"` · `startup` · `digital` | country-anchored |
+| `society` | `society` · `health` · `healthcare` · `education` · `labour` · `workers` · `strike` · `wages` · `environment` · `climate` · `demographics` · `population` · `migration` · `welfare` · `crime` | country-anchored |
+| `china_nexus` | `"China investment"` · `"China FDI"` · `"China acquisition"` · `"China stake"` · `"China tariff"` · `"China export control"` · `"China sanctions"` · `"China trade policy"` · `"China industrial policy"` · `"China investment screening"` · `"China supply chain"` · `"China decoupling"` · `"China de-risking"` · `"China rare earth"` · `"China critical minerals"` · `"China subsidies"` · `"China overcapacity"` · `"China dumping"` · `"China outbound investment"` · `"China entity list"` · `"China delisting"` | **global topical** (China report only — NOT country-anchored; economic/financial channel only — pure diplomacy is NOT here) |
+| `ipo_ma` | `IPO` · `listing` · `flotation` · `"public offering"` · `prospectus` · `merger` · `acquisition` · `takeover` · `buyout` · `"stake sale"` · `divestiture` · `spinoff` · `"private equity"` · `"funding round"` · `"tender offer"` · `delisting` · `"joint venture"` | country-anchored (report-country companies as listing entity / acquirer / target) |
+| `other` | (no term — `{country_en} {date_en}` only — the deliberate catch-all; do **not** add terms, narrowing it defeats its purpose) | country-anchored |
 
-"Country-anchored" = the query carries `{country_en}` as written in the Step 2 templates. `china_nexus` is the sole exception — its template carries **no** `{country_en}` and **no** Region/Country matrix anchoring; see § Conditional Categories — Search Mechanics.
+"Country-anchored" = each per-term query carries `{country_en}` as written in the Step 2 templates. `china_nexus` is the sole exception — its per-term queries carry **no** `{country_en}` and **no** Region/Country matrix anchoring; see § Conditional Categories — Search Mechanics.
 
 ### Step 1.5 — Search Query Fallback Rule
 
@@ -305,12 +307,12 @@ For the country, enumerate the applicable matrix rows per tier (Universal + Coun
 
 **For every non-T4 query (T1-wire, T1-flagship, T2, T3)**, follow this two-step procedure:
 
-1. **Primary**: run `site:{domain} {country_en} {category-keyword} {date_en}` as written in the Step 2 templates below.
-2. **Fallback** (run only when the primary query returns 0 results): run the same query **without the `site:` prefix**:
+1. **Primary**: run `site:{domain} {country_en} {term} {date_en}` — **one query per term** in your category's search-term set (Step 1), never `OR`-joined.
+2. **Fallback** (run only when *that term's* primary query returns 0 results): rerun **the same single term** without the `site:` prefix:
    ```
-   {outlet-name} {country_en} {category-keyword} {date_en}
+   {outlet-name} {country_en} {term} {date_en}
    ```
-   For example: `Reuters Japan economy OR central bank OR markets OR trade May 12 2026`.
+   For example: `Reuters Japan "central bank" May 12 2026` (one term — not an `OR` chain).
 
 **Domain filter on fallback results** (mandatory):
 - From the fallback search results, **only keep URLs whose domain matches the original `{domain}`** (e.g. for the Reuters fallback, only keep `reuters.com` URLs).
@@ -327,18 +329,18 @@ These rules apply **only if your assigned `category` is `ipo_ma` or `china_nexus
 
 **`ipo_ma`** (present in every report; country-anchored):
 
-- Search exactly like `econ` / `politics`: `site:{domain} {country_en} {ipo_ma-keyword} {date_en}`, walking the same tier ladder with the same Step 1.5 fallback.
-- **Primary-filing T4 queries (run these first, alongside T4-official)**: IPO/M&A primary documents are filed with regulators and exchanges — these are free, same-day, and the highest authority. Query the report country's filing portal directly, e.g. for the US `site:sec.gov S-1 OR 8-K OR 424B {company} {date_en}` and `site:sec.gov EDGAR {country_en} IPO {date_en}`; for other countries the equivalent exchange / regulator disclosure portal (LSE RNS, TSE, HKEX, Euronext, SGX, etc.). A date-verified S-1 / 8-K / prospectus is a T4-official Lead and resolves the "wire-relay lag" problem (a deal often filed before any wire writes it up).
-- T3 **Finance** + **Trade / Legal** sector rows (Finextra, The Paypers, Risk.net, GlobalCapital, MLex, Law360, S&P Global) are **first-class** inside `ipo_ma` — enter them as soon as T1-flagship is exhausted, exactly as the Technology sector rows are first-class inside `tech`.
+- Search exactly like `econ` / `politics`: `site:{domain} {country_en} {term} {date_en}`, **one query per `ipo_ma` term** (Step 1), walking the same tier ladder with the same Step 1.5 fallback.
+- **Primary-filing queries — ALWAYS RUN FIRST, before any tier and regardless of `min_per_category`.** This is `ipo_ma`'s real discovery channel: deals are filed with regulators/exchanges before any wire writes them up, the filing is free + same-day + highest authority, and it surfaces deals no headline sweep would. Query the report country's disclosure portal directly, **one query per form** (never `OR`-joined): for the US `site:sec.gov S-1 {date_en}`, `site:sec.gov 8-K {date_en}`, `site:sec.gov 424B {date_en}`, `site:sec.gov 425 {date_en}`, `site:sec.gov "SC TO" {date_en}`, `site:sec.gov EDGAR {country_en} IPO {date_en}`; for other countries the equivalent portal (LSE RNS, TSE, HKEX, Euronext, SGX, etc.). A date-verified S-1 / 8-K / 425 / prospectus is a T4-official Lead.
+- T3 **Finance** + **Trade / Legal** sector rows (Finextra, The Paypers, Risk.net, GlobalCapital, MLex, Law360, S&P Global) are **always first-class** inside `ipo_ma` — run them right after the primary-filing queries, **regardless of `min_per_category`** (do NOT wait for T1-flagship to be exhausted). They are this category's habitat, not a fallback.
 - When a date-verified candidate is clearly below the rubric materiality floor (IPO < USD 300M / M&A < USD 500M and not under security/antitrust review and not touching a China key industry), do not carry it forward — the Verifier issues the authoritative DROP `Below-IPO-MA-threshold`.
 
 **`china_nexus`** (China report only; **NOT** country-anchored — region-unbounded global topical sweep):
 
-- The foreign counterparty can be any country. The query template carries **no** `{country_en}` and **no** Region/Country matrix-row anchoring:
+- The foreign counterparty can be any country. Each query carries **no** `{country_en}` and **no** Region/Country matrix-row anchoring — **one query per `china_nexus` term** (Step 1):
   ```
-  site:{domain} {china_nexus-keyword} {date_en}
+  site:{domain} {term} {date_en}
   ```
-- Applicable rows: all **T1-wire Universal** rows + all **T1-flagship Global** rows + **T3 Finance & Trade/Legal sector** rows. Do **not** use Country:/Region: rows (a global sweep has no single country-of-coverage). At T4-official, query the **China external-T4 table** (IMF / World Bank / WTO / OECD / BIS / IEA / US Treasury / USTR / US State Dept / US Commerce-BIS / White House / EU Commission / UK Gov / METI / MOFA Japan) — their releases on Chinese trade / investment / sanctions are prime `china_nexus` leads. Chinese government domains are never queried (already the rule for a China report).
+- **External-T4 + global-wire topical sweep — ALWAYS RUN FIRST, before descending tiers and regardless of `min_per_category`.** This is `china_nexus`'s real discovery channel (its stories live in institutional releases and wires, not in any single country's headlines). At T4-official query the **China external-T4 table** (IMF / World Bank / WTO / OECD / BIS / IEA / US Treasury / USTR / US State Dept / US Commerce-BIS / White House / EU Commission / UK Gov / METI / MOFA Japan) — their releases on Chinese trade / investment / sanctions are prime `china_nexus` leads. Then, per term, all **T1-wire Universal** + all **T1-flagship Global** + **T3 Finance & Trade/Legal sector** rows. Do **not** use Country:/Region: rows (a global sweep has no single country-of-coverage). Chinese government domains are never queried (already the rule for a China report).
 - Apply the rubric's cross-border test (China + ≥1 foreign party; a purely domestic China item belongs in `econ`/`politics`, never here), the Africa / small-developing-economy aid exclusion, the key-industry carve-out that overrides that exclusion, and key-industry priority when over `min_per_category`. You may pre-skip an obviously excluded item to conserve the ladder; the Verifier issues the authoritative DROP `China-aid-smallcountry-excluded` and the `china_nexus`↔`ipo_ma` routing tie-break.
 - Step 1.5 fallback, Step 3 date gate, and Step 3.5 paywall fallback all apply unchanged.
 
@@ -354,10 +356,10 @@ Pass B runs **after Pass A**, scoped to your one assigned `category`. It is a ba
 **Pass B query form:** bare keyword, **no `site:`**, no Region/Country matrix anchoring:
 
 ```
-{country_en if country-anchored} {category-keyword} {date_en}
+{country_en if country-anchored} {term} {date_en}
 ```
 
-`china_nexus` carries no `{country_en}`. For `ipo_ma`, also run the primary-filing queries from § Conditional Categories.
+Run **one bare-keyword query per term** in your category's search-term set (Step 1) — never `OR`-joined. `china_nexus` carries no `{country_en}`. For `ipo_ma`, also run the primary-filing queries from § Conditional Categories.
 
 **Pass B per-hit pipeline (every hit, in order):**
 
@@ -383,17 +385,18 @@ For your single assigned `category` (you do **not** loop categories — another 
 
 2. **T1-wire** — for **every** applicable row (`Universal` + `Country: {country_en}`), run:
    ```
-   site:{domain} {country_en} {category-keyword} {date_en}
+   site:{domain} {country_en} {term} {date_en}
    ```
-   Korea Economy example produces six queries:
+   **One query per term, per domain — never `OR`-joined.** Korea Economy against `reuters.com` alone produces 16 queries (one per `econ` term):
    ```
-   site:reuters.com South Korea economy OR central bank OR markets OR trade April 28 2026
-   site:apnews.com South Korea economy OR central bank OR markets OR trade April 28 2026
-   site:afp.com South Korea economy OR central bank OR markets OR trade April 28 2026
-   site:bloomberg.com South Korea economy OR central bank OR markets OR trade April 28 2026
-   site:dowjones.com South Korea economy OR central bank OR markets OR trade April 28 2026
-   site:en.yna.co.kr South Korea economy OR central bank OR markets OR trade April 28 2026
+   site:reuters.com South Korea economy April 28 2026
+   site:reuters.com South Korea GDP April 28 2026
+   site:reuters.com South Korea inflation April 28 2026
+   site:reuters.com South Korea "interest rate" April 28 2026
+   site:reuters.com South Korea "central bank" April 28 2026
+   ... one query for each remaining econ term: "monetary policy", currency, bond, yield, "stock market", fiscal, budget, tax, trade, tariff, recession ...
    ```
+   Repeat the full term list against every applicable T1-wire domain (`apnews.com`, `afp.com`, `bloomberg.com`, `dowjones.com`, `en.yna.co.kr`, …).
    **Apply Step 1.5 fallback** for any row where the `site:` query returns 0 results — common for `site:reuters.com`, `site:bloomberg.com`, `site:dowjones.com` against most countries.
 
 3. **T1-flagship** — for every applicable row in `Global` + `Country: {country_en}` + `Region: {region}` (country-of-coverage table), run the same `site:`-anchored query template. **Apply Step 1.5 fallback** for any row where `site:` returns 0 — this is the most common failure mode against `site:ft.com`, `site:wsj.com`, `site:economist.com`, `site:nytimes.com`, `site:bbc.com`, `site:telegraph.co.uk`, `site:thetimes.co.uk`, `site:asia.nikkei.com`.
@@ -402,7 +405,7 @@ For your single assigned `category` (you do **not** loop categories — another 
 
 5. **T3** — only if the category is still below `min_per_category` after T2. Run `site:`-anchored queries against the relevant `Sector` rows + `Country: {country_en}` rows + `Region: {region}` rows. Inside the Technology category, T3 sector rows (TechCrunch, MIT Technology Review, etc.) are first-class and may be entered as soon as T1-flagship is exhausted, without waiting for T2 — likewise the T3 Finance & Trade/Legal rows inside `ipo_ma` and `china_nexus` (see § Conditional Categories — Search Mechanics). **Apply Step 1.5 fallback** as above.
 
-**Stop the Pass-A ladder** as soon as you have at least `min_per_category` date-verified, unique-event stories. Do not keep walking down to lower tiers when the category is already covered by higher-tier sources.
+**Early-stop policy (per-term sweep).** Run the **full search-term set against every applicable domain at T4-official, T1-wire, and T1-flagship — regardless of `min_per_category`**. These three high-authority tiers are where breadth comes from; do **not** stop them early just because `min_per_category` is already met. The `min_per_category` rule governs **only** whether you descend into **T2** (run only if still below `min_per_category` after T1-flagship) and then **T3** (only if still below after T2). For `ipo_ma` / `china_nexus`, the primary-filing / external-T4 channel and the T3 Finance & Trade/Legal rows are always-first-class and are **not** subject to any early-stop (see § Conditional Categories). Collect every date-verified hit and dedupe by **event** at Step 4 — the same story surfacing under several terms is expected and merges to one keeper.
 
 **Then run Pass B** per § Pass B — Free Discovery (always for `ipo_ma` / `china_nexus`; on-demand for the other five per the trigger rule).
 
@@ -514,8 +517,9 @@ Return exactly the Scanner Output Schema. English only — no translation.
 1. **Date is absolute.** If you cannot confirm the publication date equals `date` via WebFetch, the story does not exist. No exceptions.
 2. **Pass A is matrix-only; Pass B admits non-matrix via the Legitimacy rubric.** In Pass A, the Source Matrix is the only authoritative outlet list — do not search or infer non-matrix outlets. Non-matrix outlets enter **only** through Pass B and **only** after passing `references/rubric.md` § Source Legitimacy (with the authority cap). The matrix is the high-authority seed + calibration baseline, not a hard wall.
 3. **Pass A non-T4 queries must be `site:`-anchored; Pass B is deliberately bare-keyword.** In Pass A the only authorised bare-keyword query is the T4 fallback when an institution's official domain is unknown (Step 2.1). Pass B is by design non-`site:` (that is its purpose) — but every Pass-B hit must clear the China red-line denylist, the date gate, and the Legitimacy rubric before it counts.
+3a. **One query per term — never `OR`-joined.** Every Pass-A and Pass-B query carries exactly **one** term from your category's search-term set (Step 1), multi-word terms phrase-quoted (`"interest rate"`). `OR`-joining terms into a single query is forbidden — it degrades search-engine ranking and silently drops tail terms (the recall hole this sweep removes). `other` carries no term (just `{country_en} {date_en}`); `china_nexus` terms carry no `{country_en}`.
 4. **You scan EXACTLY ONE injected `category` — no looping.** Another Scanner instance owns each other category; you never see or scan theirs. Within your category: Pass A walks T4-official → T1-wire → T1-flagship → T2 → T3 top-down, then Pass B runs (always for `ipo_ma`/`china_nexus`, on-demand otherwise). Never skip the ladder to chase volume. `china_nexus` is not country-anchored (global topical sweep — see § Conditional Categories — Search Mechanics).
-5. **Stop the Pass-A ladder when your category is covered.** Once your category has reached `min_per_category` date-verified stories from higher tiers, do not keep dropping into T2/T3 just to add more rows — proceed to Pass B (always for `ipo_ma`/`china_nexus`; on-demand otherwise), then emit.
+5. **Per-term sweep at the high tiers; `min_per_category` only gates T2/T3 descent.** Run the full search-term set against every applicable domain at T4-official / T1-wire / T1-flagship **regardless of `min_per_category`** — this is where breadth comes from, do not early-stop these three. `min_per_category` governs **only** whether you then descend into T2, and after that T3. For `ipo_ma` / `china_nexus`, the primary-filing / external-T4 channel and the T3 Finance & Trade/Legal rows are always-first-class and are never early-stopped (§ Conditional Categories). Then run Pass B (always for `ipo_ma`/`china_nexus`; on-demand otherwise) and emit.
 6. **T3 is last resort, except inside Technology, `ipo_ma`, and `china_nexus`.** For Economy / Politics / Society / Other, T3 is admissible only when T1-flagship and T2 cannot fill `min_per_category`. Inside Technology, the T3 Technology sector rows (TechCrunch, MIT Technology Review, etc.) are first-class as soon as T1-flagship is exhausted; likewise the T3 Finance & Trade/Legal rows inside `ipo_ma` and `china_nexus`.
 7. **One event = one story (within your category only).** Within-category duplicates merge to the highest-tier keeper; the dropped outlet appears in `Corroborated by`. Cross-category dedup is the Merge stage's job — never attempt it. Aggregator reposts of wire copy are normally not the keeper — prefer the original wire URL. **Exception (syndication carve-out)**: when the original is a hard-paywalled wire/flagship, a free **full-text** syndication of it (e.g. Yahoo Finance carrying full Reuters/Bloomberg, AP News, MSN partner copy) IS an allowed Pass-B Lead — record the paywalled original under `Corroborated by`. This is per § Source Legitimacy and is not penalised as a syndicated rewrite.
 8. **Output is your one category only.** Emit your stories in source-authority order (Pass A by tier, then Pass B); the Merge stage assembles all categories into final order. Do not group or order across categories — you only have one.
