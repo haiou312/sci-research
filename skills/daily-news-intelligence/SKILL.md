@@ -11,6 +11,7 @@ Generate a professional dated daily report for institutional readers covering a 
 ## Quick Reference (Orchestrator Checklist)
 
 ```
+0. EVERY stage spawns as general-purpose + embedded agents/<name>.md body + explicit model arg — NEVER sci-research:* (see Data Handoff § Subagent Dispatch Rule; reason: anthropics/claude-code#21318 closed not-planned)
 1. Validate params → compute derived fields (incl. active_categories) → expand ~
 2. Fan out ONE Scanner agent per active category IN PARALLEL (6 or 7) → capture each single-category bundle
 3. IF every category bundle is empty → STOP with message
@@ -67,7 +68,20 @@ Email delivery reads Gmail SMTP credentials from environment variables (`GOOGLE_
 
 ## Data Handoff Between Stages
 
-Each stage runs as a subagent. The orchestrator passes data between stages via the subagent **prompt text** — not files, not environment variables. Specifically:
+### Subagent Dispatch Rule (READ FIRST — applies to every stage below)
+
+Every stage in this pipeline is spawned with the **built-in `general-purpose` agent type**, never as a `sci-research:*` plugin subagent. Marketplace-plugin subagents do not receive `WebSearch` / `WebFetch` (and unreliably receive `Grep` / `Glob`) at runtime even when their frontmatter declares those tools — a Claude Code defect tracked as **anthropics/claude-code#21318** (status: *closed as "not planned"* — there is no upstream fix, so this dispatch model is **permanent, not a temporary patch**), corroborated by #25200 / #52055 / #46250 / #31002. A plugin subagent spawned that way silently fabricates URLs and dates instead of searching — the failure is invisible until you inspect `tool_uses`.
+
+For each stage the orchestrator MUST:
+
+1. `Read` the corresponding `${CLAUDE_PLUGIN_ROOT}/agents/<name>.md` file.
+2. Strip the YAML frontmatter; use the **body** as the subagent's instruction prompt.
+3. Append that stage's injected parameters + verbatim upstream data (per the handoff list below).
+4. Spawn it with `subagent_type: general-purpose` and an **explicit `model` argument** — the frontmatter `model:` is ignored on `general-purpose`, so pass it yourself: **`sonnet`** for Scanner / Merger / Verifier / Fact-Extractor, **`opus`** for Writer / Editor.
+
+`subagent_type: sci-research:*` is **forbidden for execution** anywhere in this pipeline — the `agents/*.md` files are prompt templates, not registered subagents. Hooks are unaffected: PostToolUse/PreToolUse matchers fire on tool calls regardless of agent type, and the format-check / email-send-guard hooks still run.
+
+Each stage runs as a (general-purpose) subagent. The orchestrator passes data between stages via the subagent **prompt text** — not files, not environment variables. Specifically:
 
 - **Orchestrator → Scanner ×N (fan-out, parallel)**: the orchestrator launches one Scanner subagent per active category in a single batch (parallel). Each Scanner prompt carries the **one** assigned `category` plus `country`, `date`, `min_per_category`. Each returns a single-category bundle (Scanner Output Schema from `references/schemas.md`).
 - **Scanner ×N → Merger**: the orchestrator includes **all N single-category bundles verbatim** plus `country`, `date`, `lang`, and `active_categories` (the ordered list) in the Merger agent's prompt. The Merger returns one unified Merged Bundle (`references/schemas.md` § Merged Bundle).
@@ -100,7 +114,7 @@ The orchestrator must not summarise, truncate, or reformat the upstream output �
    ```
    Use `OUT_DIR` (expanded) in all subsequent bash commands. The default resolves to e.g. `~/Desktop/github/daily-news-reports/2026-04-16/`.
 
-2. **Scan candidates** (Scanner stage, English only — FAN-OUT). Launch **one Scanner subagent per active category, all in parallel in a single batch** (6 for a non-China report, 7 for a China report). Each Scanner prompt carries exactly **one** `category` plus `country`, `date`, `min_per_category`; it runs Pass A (Source Matrix ladder) + Pass B (free discovery per `references/rubric.md` § Source Legitimacy) and returns a single-category bundle. Per-category query templates (each Scanner uses only its own row):
+2. **Scan candidates** (Scanner stage, English only — FAN-OUT). Launch **one Scanner subagent per active category, all in parallel in a single batch** (6 for a non-China report, 7 for a China report). **Each Scanner is a `general-purpose` subagent with the `agents/daily-news-scanner.md` body embedded and model `sonnet` passed explicitly — never `subagent_type: sci-research:daily-news-scanner` (see § Subagent Dispatch Rule).** Each Scanner prompt carries exactly **one** `category` plus `country`, `date`, `min_per_category`; it runs Pass A (Source Matrix ladder) + Pass B (free discovery per `references/rubric.md` § Source Legitimacy) and returns a single-category bundle. Per-category query templates (each Scanner uses only its own row):
 
    | Category | Example queries (substitute `{country}` and `{date_en}`) |
    |----------|----------------------------------------------------------|
@@ -124,19 +138,19 @@ Collectively the Scanners gather 20-30 candidate URLs across the active category
 
 6. **Compose the per-category Scanner outputs.** Each Scanner agent returns one single-category English bundle matching `references/schemas.md` § Scanner Output Schema (single category), tagged `Discovery: A|B` and `Source legitimacy:`. The orchestrator captures all N bundles.
 
-6.5. **Merge & route** (Merger stage). Launch a `daily-news-merger` agent (sonnet) with all N single-category bundles verbatim plus `country`, `date`, `lang`, `active_categories`. It performs cross-category deduplication and the `china_nexus`↔`ipo_ma` routing tie-break ONLY (no quality judgement), emitting one unified Merged Bundle (`references/schemas.md` § Merged Bundle). The orchestrator captures it for the Verifier.
+6.5. **Merge & route** (Merger stage). Spawn per § Subagent Dispatch Rule (`general-purpose` + `agents/daily-news-merger.md` body, model `sonnet`) with all N single-category bundles verbatim plus `country`, `date`, `lang`, `active_categories`. It performs cross-category deduplication and the `china_nexus`↔`ipo_ma` routing tie-break ONLY (no quality judgement), emitting one unified Merged Bundle (`references/schemas.md` § Merged Bundle). The orchestrator captures it for the Verifier.
 
-7. **Quality filter** (Verifier stage). Launch a Verifier agent with the **Merged Bundle** included verbatim in its prompt. The Verifier applies the five-check rubric in `references/rubric.md` (originality, authority, impact, **source legitimacy**, dedup-validation) plus § Source Legitimacy for Pass-B sources. Applies the two-step fallback if any category drops below `min_per_category`. Emits the Verifier Output Schema from `references/schemas.md`. The orchestrator captures this output for the next two stages (Fact-Extractor and Writer).
+7. **Quality filter** (Verifier stage). Spawn per § Subagent Dispatch Rule (`general-purpose` + `agents/news-verifier.md` body, model `sonnet`) with the **Merged Bundle** included verbatim in its prompt. The Verifier applies the five-check rubric in `references/rubric.md` (originality, authority, impact, **source legitimacy**, dedup-validation) plus § Source Legitimacy for Pass-B sources. Applies the two-step fallback if any category drops below `min_per_category`. Emits the Verifier Output Schema from `references/schemas.md`. The orchestrator captures this output for the next two stages (Fact-Extractor and Writer).
 
-7.5. **Extract Fact Manifest** (Fact-Extractor stage). Launch a `daily-fact-extractor` agent (sonnet) with the Verifier's full output included verbatim in its prompt plus `country`, `date`, `lang`, and `out_manifest`. Resolve `out_manifest` to `${OUT_DIR}/fact-manifest-{country_slug}-{date}.yaml` where `{country_slug}` is the lowercase ASCII slug of `country` (e.g. `japan`, `united-kingdom`, `china`). The agent emits a YAML Fact Manifest — one entry per KEPT story listing every number, date, named person, institution, product, and direct quote in the Verifier's `factual_excerpt`, each anchored to its source URL with a verbatim excerpt (see `agents/daily-fact-extractor.md` for the full schema). The Fact-Extractor calls `Write` once and returns confirmation. The orchestrator captures the manifest path for downstream stages (Writer in Step 8; Editor in the future Step 8.5).
+7.5. **Extract Fact Manifest** (Fact-Extractor stage). Spawn per § Subagent Dispatch Rule (`general-purpose` + `agents/daily-fact-extractor.md` body, model `sonnet`) with the Verifier's full output included verbatim in its prompt plus `country`, `date`, `lang`, and `out_manifest`. Resolve `out_manifest` to `${OUT_DIR}/fact-manifest-{country_slug}-{date}.yaml` where `{country_slug}` is the lowercase ASCII slug of `country` (e.g. `japan`, `united-kingdom`, `china`). The agent emits a YAML Fact Manifest — one entry per KEPT story listing every number, date, named person, institution, product, and direct quote in the Verifier's `factual_excerpt`, each anchored to its source URL with a verbatim excerpt (see `agents/daily-fact-extractor.md` for the full schema). The Fact-Extractor calls `Write` once and returns confirmation. The orchestrator captures the manifest path for downstream stages (Writer in Step 8; Editor in the future Step 8.5).
 
-8. **Translate and write the report** (Writer stage). Ensure the output directory exists:
+8. **Translate and write the report** (Writer stage). Spawn per § Subagent Dispatch Rule (`general-purpose` + `agents/daily-news-writer.md` body, model `opus`). Ensure the output directory exists:
    ```bash
    mkdir -p "$OUT_DIR"
    ```
    If `mkdir -p` fails (permissions, read-only filesystem), stop and report the error — do not silently write to a fallback location. The Verifier's KEEP set is the **spine of which stories run**. The Fact Manifest (Step 7.5) is the **locked-fact contract** — Verifier-sourced numbers / names / dates / quotes that Writer must not drift on. Writer **runs 1-3 supplemental `WebSearch` / `WebFetch` calls per story by default** to enrich body prose with background context — what came before, broader pattern, prior policy. **References = Verifier KEEP URLs ∪ {search URLs that supplied a fact in body}** — every search URL whose content backed a body fact MUST be cited with proper APA and continuous `[N]` (see `references/output-spec.md` § Cited Search URLs). Compose narrative in `lang` per `references/language-spec.md`. Structure is `### title → body → **References**` per story — **no `**摘要**` / `**Summary**` / `**要約**` / `**分析**` / `**Analysis**` markers anywhere**. **Quote marks follow `references/language-spec.md` § Canonical Quote Marks** (en ASCII `""` / zh curly `""` / ja corner `「」` — the format-check hook blocks Write on any non-canonical char). When `lang=zh`, also comply with `references/language-spec.md` § Language-Specific Rules (official titles, country prefixes, time anchors, terminology, foreign media naming). Produce Markdown obeying `references/output-spec.md`. Use the `Write` tool to overwrite `out_md`.
 
-8.5. **Fact-check editor pass** (Editor stage). Launch a `daily-editor` agent (opus) with `writer_md_path` (= `out_md`), `manifest_path` (from Step 7.5), `verifier_bundle` (the same Verifier output, inline), and runtime params `lang` / `date` / `country` in its prompt. The Editor runs four sequential passes — Verifier-locked fact verification, Writer-search fact backing (may add new search URLs to References + renumber `[N]`), quote verbatim check, quote-mark normalization — and patches the MD in place using `Edit` (never `Write`). Budget: max 2 WebSearch + 4 WebFetch per story. The Editor prints a structured stdout report (drift counts, refs added, claims cut / weakened, quote-mark fixes); the orchestrator logs it but does not gate on it. The format-check hook fires on every `Edit` and validates the post-edit state — if any Edit produces a malformed file, the hook blocks and the orchestrator surfaces the violation.
+8.5. **Fact-check editor pass** (Editor stage). Spawn per § Subagent Dispatch Rule (`general-purpose` + `agents/daily-editor.md` body, model `opus`) with `writer_md_path` (= `out_md`), `manifest_path` (from Step 7.5), `verifier_bundle` (the same Verifier output, inline), and runtime params `lang` / `date` / `country` in its prompt. The Editor runs four sequential passes — Verifier-locked fact verification, Writer-search fact backing (may add new search URLs to References + renumber `[N]`), quote verbatim check, quote-mark normalization — and patches the MD in place using `Edit` (never `Write`). Budget: max 2 WebSearch + 4 WebFetch per story. The Editor prints a structured stdout report (drift counts, refs added, claims cut / weakened, quote-mark fixes); the orchestrator logs it but does not gate on it. The format-check hook fires on every `Edit` and validates the post-edit state — if any Edit produces a malformed file, the hook blocks and the orchestrator surfaces the violation.
 
 9. **Export to Word.** First verify pandoc is available:
    ```bash
@@ -177,16 +191,16 @@ Collectively the Scanners gather 20-30 candidate URLs across the active category
 
 | Stage | Recommended Agent | Required References |
 |-------|-------------------|---------------------|
-| Scanner ×N (Step 2, parallel — one per active category) | `sci-research:daily-news-scanner` (sonnet) | `references/rubric.md`, `references/schemas.md` |
-| Merger (Step 6.5) | `sci-research:daily-news-merger` (sonnet) | `references/rubric.md` § Conditional & Topical Categories, `references/schemas.md` § Merged Bundle |
-| Verifier (Step 7) | `sci-research:news-verifier` (sonnet) | `references/rubric.md`, `references/schemas.md` |
-| Fact-Extractor (Step 7.5) | `sci-research:daily-fact-extractor` (sonnet) | (Verifier output only — agent prompt has full schema) |
-| Writer | `sci-research:daily-news-writer` (opus) | `references/language-spec.md`, `references/output-spec.md`, `references/verification.md`, Fact Manifest from Step 7.5 |
-| Editor (Step 8.5) | `sci-research:daily-editor` (opus) | Writer's MD, Fact Manifest, Verifier bundle (verbatim), `references/language-spec.md` § Canonical Quote Marks |
+| Scanner ×N (Step 2, parallel — one per active category) | `general-purpose` + embed `agents/daily-news-scanner.md` body, model `sonnet` (see § Subagent Dispatch Rule) | `references/rubric.md`, `references/schemas.md` |
+| Merger (Step 6.5) | `general-purpose` + embed `agents/daily-news-merger.md` body, model `sonnet` | `references/rubric.md` § Conditional & Topical Categories, `references/schemas.md` § Merged Bundle |
+| Verifier (Step 7) | `general-purpose` + embed `agents/news-verifier.md` body, model `sonnet` | `references/rubric.md`, `references/schemas.md` |
+| Fact-Extractor (Step 7.5) | `general-purpose` + embed `agents/daily-fact-extractor.md` body, model `sonnet` | (Verifier output only — agent prompt has full schema) |
+| Writer | `general-purpose` + embed `agents/daily-news-writer.md` body, model `opus` | `references/language-spec.md`, `references/output-spec.md`, `references/verification.md`, Fact Manifest from Step 7.5 |
+| Editor (Step 8.5) | `general-purpose` + embed `agents/daily-editor.md` body, model `opus` | Writer's MD, Fact Manifest, Verifier bundle (verbatim), `references/language-spec.md` § Canonical Quote Marks |
 | Email sender (Step 10) | — (Bash + `scripts/send-report-email.py`) | `references/email-spec.md` |
 | Orchestrator delivery check | — | `references/verification.md` |
 
-See `references/verification.md` § Recommended Agent Assignment for substitution rules and caveats.
+See `references/verification.md` § Recommended Agent Assignment for substitution rules and caveats. **The § Subagent Dispatch Rule above overrides any `sci-research:*` agent name appearing in that section or elsewhere — execution is always `general-purpose` + embedded body.**
 
 ## References
 
