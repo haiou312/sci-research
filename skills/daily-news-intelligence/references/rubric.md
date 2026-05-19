@@ -18,7 +18,7 @@ Exclude entirely: personal blogs, Wikipedia, link aggregators, forums, SEO farms
 The Scanner runs **two passes** per category:
 
 - **Pass A — Source Matrix seed (authoritative)**: `site:`-anchored queries down the T4→T1-wire→T1-flagship→T2→T3 ladder against matrix domains. The matrix is the high-authority **seed pool + authority-calibration baseline + structural red-line carrier** (the China external-view design is implemented by the matrix simply not containing Chinese domestic/government rows). It is **not** a hard wall.
-- **Pass B — free discovery (recall expansion)**: bare-keyword sweep (no `site:`). Always for `ipo_ma` and `china_nexus`; on-demand for the other five (category below `min_per_category` after Pass A, or a Pass-A hard-paywall Lead with no free Pass-A alternative). Every Pass-B hit passes, in order: (1) the China red-line denylist (China report: drop Chinese domestic-media + `*.gov.cn` domains — a rule, never a judgement), (2) the date gate, (3) § Source Legitimacy below, (4) the authority cap.
+- **Pass B — free discovery (recall expansion)**: bare-keyword sweep (no `site:`). Always for `ipo_ma` and `china_nexus`; on-demand for the other five (category below `min_per_category` after Pass A, or a Pass-A hard-paywall Lead with no free Pass-A alternative). Every Pass-B hit passes, in order: (1) the China red-line denylist (China report: drop Chinese domestic-media + `*.gov.cn` domains — a rule, never a judgement), (2) the date gate, (3) § Source Legitimacy below, (4) the authority cap. **Candidates that clear (1)–(3) but fail (4) are NOT discarded** — they are written to the Scanner's `## Reserve Pool` (`held: below-authority-cap`) so the Verifier can promote them via Fallback 1.5 if the category is short. See § Three-Step Coverage Fallback below and `references/schemas.md` § Scanner Output Schema for the reserve-pool format.
 
 Tradeoff accepted by design: Pass B introduces day-to-day source-pool drift (slightly lower reproducibility) in exchange for materially higher recall on paywalled, wire-relay-lagged, and non-whitelist-but-legitimate stories.
 
@@ -85,25 +85,45 @@ When two or more candidates cover the same underlying event:
 - Mark the rest as `Corroboration-of-#X` in the Verifier schema and drop them from the KEEP set.
 - Related consecutive actions on the same policy line (e.g. "central bank announces", "central bank publishes details") collapse to a single story anchored on the most substantive node.
 
-## Two-Step Coverage Fallback
+## Three-Step Coverage Fallback
 
-If the Verifier's primary pass leaves any category below `min_per_category`:
+If the Verifier's primary pass leaves any category below `min_per_category`, apply the steps below **in order**. Stop as soon as the category reaches `min_per_category`. Each step records its own marker; markers compose (e.g. `fallback_1+1.5+gap`).
 
 ### Fallback 1 — Relax impact tier within the shortfall category
 
 - Reconsider items dropped on **impact** grounds only.
 - Accept them under the **`Regional-structural`** impact tier if they carry structural significance at a regional or sub-national scope.
-- Never reconsider items dropped on date, T1-T4 tier, originality (Syndicated), or categorical reject grounds.
+- Never reconsider items dropped on date, T1-T4 tier, originality (Syndicated), source legitimacy (Illegitimate-source), or categorical reject grounds.
 
 Mark `Fallback used: fallback_1` in the Verifier report header.
 
+### Fallback 1.5 — Relax authority cap from Reserve Pool
+
+If Fallback 1 still leaves the category below `min_per_category`, draw from the Merged Bundle's `## Reserve Pool` (the Scanner-produced holding zone defined in `references/schemas.md` § Scanner Output Schema and `agents/daily-news-scanner.md` § Pass B). The reserve pool contains date-verified candidates that passed the China red-line denylist and the Source Legitimacy rubric but were held back at the Scanner stage for **one of two reasons**:
+
+- **`held: below-authority-cap`** — Pass-B `conditional-accept` outlets whose real tier is at or below the cap (T3 trade / niche / smaller national outlets — e.g. The Register, UKTN, Sifted, Tech.eu, Electronics Weekly, City A.M. tech section, niche industry trades). The cap is the floor for ordinary KEEP eligibility; these candidates are admissible only via this fallback.
+- **`held: below-ipo-ma-floor`** — `ipo_ma` deals that satisfy the **soft band** of the materiality scale (USD 50M ≤ value < primary floor) per § Conditional & Topical Categories below. Below USD 50M still hard-DROP at the Scanner.
+
+Rules for what Fallback 1.5 may do:
+
+- Promote held candidates to KEEP at their **real tier** (`Authority score: T3-extended` for `below-authority-cap`; `Authority score` carried verbatim for `below-ipo-ma-floor`). Mark `Dedup role: Lead`.
+- Apply only to the shortfall category; never to a category that already met `min_per_category` in Fallback 1.
+- Promote in **best-first** order: prefer (a) hits closer to T2 over deep-T3 niche; (b) `Original` over `Unclear`; (c) higher Impact tier when known; (d) `auto-accept` over `conditional-accept`.
+- Stop promoting as soon as the category reaches `min_per_category` — do NOT over-fill at the expense of report compactness.
+- Never relax date, China red-line denylist, originality (Syndicated drops stay dropped), or Source Legitimacy (`Illegitimate-source` DROPs stay dropped).
+- Hard-paywall candidates are **never** Fallback 1.5-promotable (the Writer needs ≥200 words of body; the Step 3.5 paywall workaround already handled the legitimate cases at Scanner time).
+
+Mark `Fallback used: fallback_1+1.5` in the Verifier report header.
+
 ### Fallback 2 — Record the gap
+
+If Fallback 1 and Fallback 1.5 together still leave the category below `min_per_category`:
 
 - Leave the category underfilled.
 - Emit a `Post-Verification Coverage Gap` block for that category.
 - Do NOT reach for low-tier or off-date stories to fill the hole.
 
-Mark `Fallback used: fallback_1+gap` in the Verifier report header.
+Mark `Fallback used: fallback_1+1.5+gap` (or `fallback_1+gap` if 1.5 did not need to run because the reserve pool was empty) in the Verifier report header.
 
 ## Date Verification Rules
 
@@ -139,7 +159,10 @@ This section is the **authoritative ruleset** for the two non-standard categorie
 
 - **Presence**: appears in **every** report regardless of `country`.
 - **Scope**: IPO or M&A where a **company of the report's country** is a principal — the listing entity, the acquirer, or the target. Country-scoped exactly like `econ`/`politics` (anchored to the report country's companies; the counterparty may be foreign, e.g. a domestic champion acquiring or being acquired by an overseas firm).
-- **Materiality floor (hard DROP below it)**: admit a story only if **any** of these holds — (a) an IPO whose priced offering is ≥ USD 300M; (b) an M&A / takeover / buyout with disclosed value ≥ USD 500M; (c) any cross-border deal under national-security or antitrust review; (d) any deal touching a China key industry (per the list above), regardless of size. Below the floor → Verifier reason `Below-IPO-MA-threshold`.
+- **Materiality scale (three bands)**: classify each candidate against the value bands below. Bands (a)–(d) define the **primary floor**; (e) defines the **soft band**.
+  - **Primary band (KEEP-eligible at the Scanner stage)**: any of — (a) an IPO whose priced offering is ≥ USD 300M; (b) an M&A / takeover / buyout with disclosed value ≥ USD 500M; (c) any cross-border deal under national-security or antitrust review; (d) any deal touching a China key industry (per the list above), regardless of size. Goes into the Scanner's main bundle, evaluated normally by the Verifier.
+  - **(e) Soft band (Reserve Pool, Fallback-1.5-eligible only)**: an IPO priced USD 50M ≤ value < USD 300M, or an M&A / takeover / buyout USD 50M ≤ value < USD 500M, with **no** primary-band qualifier (no review-trigger, no China-key-industry touch). The Scanner writes these to `## Reserve Pool` with `held: below-ipo-ma-floor` (per `references/schemas.md`); the Verifier may promote them via Fallback 1.5 if the category is short. Outside that fallback path they are never KEEP.
+  - **Below USD 50M** (and no primary-band qualifier): hard DROP at the Scanner with reason `Below-IPO-MA-threshold`. Not reserve-pool eligible; not Fallback-1.5-promotable.
 
 ### China-report routing tie-break (`china_nexus` ↔ `ipo_ma`)
 

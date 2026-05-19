@@ -332,7 +332,10 @@ These rules apply **only if your assigned `category` is `ipo_ma` or `china_nexus
 - Search exactly like `econ` / `politics`: `site:{domain} {country_en} {term} {date_en}`, **one query per `ipo_ma` term** (Step 1), walking the same tier ladder with the same Step 1.5 fallback.
 - **Primary-filing queries — ALWAYS RUN FIRST, before any tier and regardless of `min_per_category`.** This is `ipo_ma`'s real discovery channel: deals are filed with regulators/exchanges before any wire writes them up, the filing is free + same-day + highest authority, and it surfaces deals no headline sweep would. Query the report country's disclosure portal directly, **one query per form** (never `OR`-joined): for the US `site:sec.gov S-1 {date_en}`, `site:sec.gov 8-K {date_en}`, `site:sec.gov 424B {date_en}`, `site:sec.gov 425 {date_en}`, `site:sec.gov "SC TO" {date_en}`, `site:sec.gov EDGAR {country_en} IPO {date_en}`; for other countries the equivalent portal (LSE RNS, TSE, HKEX, Euronext, SGX, etc.). A date-verified S-1 / 8-K / 425 / prospectus is a T4-official Lead.
 - T3 **Finance** + **Trade / Legal** sector rows (Finextra, The Paypers, Risk.net, GlobalCapital, MLex, Law360, S&P Global) are **always first-class** inside `ipo_ma` — run them right after the primary-filing queries, **regardless of `min_per_category`** (do NOT wait for T1-flagship to be exhausted). They are this category's habitat, not a fallback.
-- When a date-verified candidate is clearly below the rubric materiality floor (IPO < USD 300M / M&A < USD 500M and not under security/antitrust review and not touching a China key industry), do not carry it forward — the Verifier issues the authoritative DROP `Below-IPO-MA-threshold`.
+- **Three-band materiality routing** (per `references/rubric.md` § Conditional & Topical Categories § `ipo_ma`):
+   - **Primary band** (IPO ≥ USD 300M, M&A ≥ USD 500M, or under security/antitrust review, or touching a China key industry): emit to the **main story list**, normal Verifier evaluation.
+   - **Soft band** (USD 50M ≤ value < primary floor, no primary-band qualifier): emit to `## Reserve Pool` with `Held: below-ipo-ma-floor`. Fallback-1.5-eligible only — do NOT discard.
+   - **Below USD 50M** (no primary-band qualifier): drop on the spot — the Verifier issues `Below-IPO-MA-threshold` if it ever surfaces; do not waste budget carrying it.
 
 **`china_nexus`** (China report only; **NOT** country-anchored — region-unbounded global topical sweep):
 
@@ -366,9 +369,12 @@ Run **one bare-keyword query per term** in your category's search-term set (Step
 1. **China red-line denylist (hard, runs FIRST, before anything else)**: for a China report, immediately discard any hit whose domain is a Chinese domestic-media outlet (Xinhua, Caixin, SCMP, People's Daily, Global Times, China Daily, Yicai, CGTN, TechNode, The Paper/澎湃, etc.) or a Chinese government domain (`*.gov.cn`, `pbc.gov.cn`, `mof.gov.cn`, `stats.gov.cn`, `csrc.gov.cn`, `mofcom.gov.cn`, etc.). This denylist is a rule, not a judgement call — it preserves the China external-view design even under free search.
 2. **Date gate**: same Step 3 rule — publication date must exactly equal `date`. This is the cheapest filter; it kills most free-search long-tail junk before any further work.
 3. **Source Legitimacy rubric**: classify the outlet per `references/rubric.md` § Source Legitimacy — `auto-accept` (recognized wire/flagship not yet in the matrix; or a free full-text syndication of a hard-paywalled wire/flagship original — record the paywalled original under `Corroborated by`), `conditional-accept` (independent newsroom + bylined reporter + original-or-attributed-syndication + corrections/track record + outlet's own domain), or `hard-reject` (PR-wire/press-release as primary, SEO/AI content farm, unbacked blog/Substack/Medium, social/forum/aggregator, propaganda front, pink-slime network — discard regardless of story importance).
-4. **Authority cap**: a Pass-B `auto-accept` carries its real tier (wire/flagship); a Pass-B `conditional-accept` is **capped at T2** (T3 for trade/niche) and may never be tagged T1 unless it is a recognized wire/flagship. A Pass-B story may be the sole Lead of your category only if Pass A surfaced nothing on that event; otherwise it corroborates.
+4. **Authority cap (with Reserve Pool spillover)**: a Pass-B `auto-accept` carries its real tier (wire/flagship) and enters the **main story list**. A Pass-B `conditional-accept` carries its **real** tier (typically T2 for established national outlets; T3 for trade / niche / smaller-national outlets; **never** T1 unless the outlet is itself a recognised wire / flagship — in which case it is `auto-accept`).
+   - **`conditional-accept` at T2 → main story list** (KEEP-eligible by the Verifier under the ordinary rubric).
+   - **`conditional-accept` below T2 (T3-trade / T3-niche / smaller national outlets) → `## Reserve Pool`** with `Held: below-authority-cap`. **Do NOT discard.** The Verifier may promote these via Fallback 1.5 when a category is short (see `references/rubric.md` § Three-Step Coverage Fallback).
+   - A Pass-B story may be the sole Lead of your category only if Pass A surfaced nothing on that event; otherwise it corroborates.
 
-Step 1.5 does not apply to Pass B (Pass B is already non-`site:`). Step 3.5 paywall logic still applies (a Pass-B hard-paywall hit is Corroboration-only, its free syndication is the Lead).
+Step 1.5 does not apply to Pass B (Pass B is already non-`site:`). Step 3.5 paywall logic still applies (a Pass-B hard-paywall hit is Corroboration-only, its free syndication is the Lead — and a hard-paywall hit is **never** reserve-pool eligible: paywall-truncated body cannot serve as Lead under any fallback).
 
 ### Step 2 — Walk the tier ladder for your one assigned `category` (Pass A)
 
@@ -485,6 +491,7 @@ Return exactly the Scanner Output Schema. English only — no translation.
 - Category: <your one assigned category id>
 - Candidates fetched: <N>
 - Candidates kept: <M>  (Pass A: <a> | Pass B: <b>)
+- Reserve pool size: <R>   (entries written to the Reserve Pool section below; 0 when none)
 
 ## Stories
 
@@ -504,9 +511,33 @@ Return exactly the Scanner Output Schema. English only — no translation.
 
 ... (repeat per story, in source-authority order) ...
 
-## Category Coverage Gap   (include only if your category < min_per_category after Pass A + Pass B)
+## Reserve Pool   (include only if you wrote at least one held candidate; omit the whole block when empty)
+
+Held candidates passed the date gate + China red-line denylist + Source Legitimacy rubric BUT were held back from the main story list. Two reasons only — never invent a third:
+
+- `Held: below-authority-cap` — Pass-B `conditional-accept` whose real tier is below T2 (T3-trade / T3-niche / smaller national outlets).
+- `Held: below-ipo-ma-floor` — `ipo_ma` candidate in the soft band (USD 50M ≤ value < primary floor) with no primary-band qualifier.
+
+### [<category>] <English headline>
+- Publish date (verified): <ISO timestamp or local date>
+- Discovery: B
+- Source: <outlet name> [real tier: T2 or T3 — never T1]
+- Source legitimacy: <auto-accept | conditional-accept>
+- Held: <below-authority-cap | below-ipo-ma-floor>
+- Held reason: <single sentence>
+- Proposed category: <your category>
+- URL: <full https URL>
+- Byline: <author name or "No byline">
+- Corroborated by: <list or "None">
+- Factual excerpt (≥200 words English): <same shape as main excerpt>
+- Commentary: <verbatim or "No analyst commentary in source">
+
+... (repeat per held entry) ...
+
+## Category Coverage Gap   (include only if your category < min_per_category after Pass A + Pass B AND the reserve pool would not lift it to min_per_category)
 - Category: <your category>
 - Queries attempted: <q1>, <q2>, <q3>
+- Reserve pool size: <R>   (0 if you wrote no held candidates)
 - Reason: <single sentence>
 ```
 
@@ -525,6 +556,7 @@ Return exactly the Scanner Output Schema. English only — no translation.
 8. **Output is your one category only.** Emit your stories in source-authority order (Pass A by tier, then Pass B); the Merge stage assembles all categories into final order. Do not group or order across categories — you only have one.
 9. **Impact Tier is an output label, not a search driver.** Assign Policy / Market / Structural / Humanitarian at the end of Step 4 for the Verifier's downstream use. Never let it influence which queries you run or which sources you visit.
 10. **No gap padding.** If a category genuinely has no qualifying stories on `date`, record the gap in the output. Do not substitute off-date, off-tier, or marginal stories to meet `min_per_category`.
+10b. **Hold, don't discard, below-cap conditional-accept Pass-B and soft-band ipo_ma candidates.** Any Pass-B `conditional-accept` whose real tier sits below T2 — and any `ipo_ma` candidate in the USD 50M ≤ value < primary-floor soft band — passed the date gate and Legitimacy rubric on its own merits. Write it to `## Reserve Pool` with the right `Held:` token. Do NOT mix it into the main story list, and do NOT silently drop it. The Verifier owns Fallback 1.5 promotion. (See § Pass B step 4 and § Conditional Categories — Search Mechanics.)
 10a. **Hard-paywall outlets are never Lead.** Bloomberg / FT / WSJ / Economist / The Times / Telegraph / Nikkei Asia / Dow Jones and other domains in the Source Matrix § Paywall Status — Hard list cannot serve as Lead because the Writer needs the article body. They appear only as `Corroborated by` entries, where their authority signal still surfaces in the Writer's `**References**` block. When a Hard-paywall hit is the only date-verified candidate, run Step 3.5's title-anchored fallback search to locate a free outlet covering the same event.
 11. **No image work.** Do not extract or describe images. That is handled by a separate agent in Pipeline B and is not part of Pipeline C.
 12. **English only.** All output is in English. Translation happens downstream in the Writer stage.

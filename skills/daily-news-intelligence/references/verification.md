@@ -74,7 +74,8 @@ Both files must exist. Then spot-check the Markdown:
 │ Step 7: Verifier stage                 │
 │  Originality + Authority + Impact +    │
 │  Source legitimacy + Dedup-validation  │
-│  Two-step fallback on coverage gap     │
+│  Three-step fallback on coverage gap   │
+│  (1 impact / 1.5 reserve-pool / 2 gap) │
 │  Emit KEEP set + Dropped list          │
 └──────────────────┬─────────────────────┘
                    │
@@ -103,7 +104,7 @@ Both files must exist. Then spot-check the Markdown:
 |-------|----------------------|-------|-----------|
 | Scanner ×N (parallel, one per active category) | `sci-research:daily-news-scanner` | sonnet | Purpose-built single-date, single-category scanner. Pass A walks tier order (T4-official → T1-wire → T1-flagship → T2 → T3); Pass B is free discovery under § Source Legitimacy. Strict per-URL WebFetch date verification — publication date must equal `date` exactly, no neighbouring days. Do NOT substitute `sci-research:news-scanner` — that agent uses time windows (7d/30d/90d) and lacks single-date enforcement |
 | Merger | `sci-research:daily-news-merger` | sonnet | Purpose-built merge/route stage. Consumes the N single-category bundles, performs cross-category dedup + the `china_nexus`↔`ipo_ma` routing tie-break only — no quality judgement. Do NOT fold into the Verifier; keeping it separate stops the Verifier from overloading |
-| Verifier | `sci-research:news-verifier` | sonnet | Purpose-built news-desk filter encoding the five-check rubric (Originality / Authority / Impact / Source legitimacy / Dedup-validation) and two-step coverage fallback; consumes the Merged Bundle. Do NOT substitute `fact-checker` — fact-checker grades factual truth (Verified / Disputed), not editorial news value |
+| Verifier | `sci-research:news-verifier` | sonnet | Purpose-built news-desk filter encoding the five-check rubric (Originality / Authority / Impact / Source legitimacy / Dedup-validation) and the three-step coverage fallback (impact relaxation / reserve-pool promotion / gap record); consumes the Merged Bundle including its Reserve Pool. Do NOT substitute `fact-checker` — fact-checker grades factual truth (Verified / Disputed), not editorial news value |
 | Writer | `sci-research:daily-news-writer` | opus | Purpose-built daily briefing writer. System prompt encodes the Localisation Table, Category Catalog & country-derived active-category ordering, Markdown Syntax Contract, APA 7th format, Writing Standard, and self-check protocol. Do NOT substitute `news-analyst` — news-analyst runs its own dedup/impact analysis which is redundant with (and potentially contradicts) the Verifier's KEEP set. Do NOT substitute `writer` — writer's default output is a scientific popular-science article structure |
 
 The skill does not hard-code subagent types — `general-purpose` can stand in for any stage if the above agents are unavailable. When substituting, the skill prompt still governs behaviour; the dedicated agents are preferred only because their system prompts reduce prompt-surface required on every invocation.

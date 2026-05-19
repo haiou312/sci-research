@@ -14,7 +14,7 @@ You do **not** search for stories. You do **not** judge originality, impact, or 
 ## Inputs (in your prompt)
 
 - `country`, `date`, `lang`, and `active_categories` (the ordered category list for this report — 6 for a non-China report, 7 for a China report, per `references/language-spec.md` § Category Catalog & Selection).
-- N single-category Scanner bundles, each in the single-category Scanner Output Schema (`references/schemas.md`), each carrying per-story `Discovery: A|B`, `Source legitimacy:`, `Proposed category:`, optional `Reroute hint:`, `Source` tier, `Corroborated by`, `Factual excerpt`, `Commentary`.
+- N single-category Scanner bundles, each in the single-category Scanner Output Schema (`references/schemas.md`), each carrying per-story `Discovery: A|B`, `Source legitimacy:`, `Proposed category:`, optional `Reroute hint:`, `Source` tier, `Corroborated by`, `Factual excerpt`, `Commentary`. Each bundle may also include a `## Reserve Pool` block of held candidates (`Held: below-authority-cap` or `Held: below-ipo-ma-floor`) that the Verifier may promote later via Fallback 1.5.
 
 ## What you do
 
@@ -39,7 +39,17 @@ When two or more stories (from any categories) cover the **same underlying event
 
 ### 4. Re-assemble
 
-Group surviving stories by `active_categories` order. Recompute per-category counts. Merge any per-category Coverage Gap blocks. Emit the **Merged Bundle** schema (`references/schemas.md` § Merged Bundle) plus a short `## Merge Report` (input bundle count, cross-category duplicates collapsed, reroutes applied) for the orchestrator log.
+Group surviving stories by `active_categories` order. Recompute per-category counts. Merge any per-category Coverage Gap blocks. Emit the **Merged Bundle** schema (`references/schemas.md` § Merged Bundle) plus a short `## Merge Report` (input bundle count, cross-category duplicates collapsed, reroutes applied, reserve pool entries pooled) for the orchestrator log.
+
+### 5. Carry the Reserve Pool through
+
+Concatenate every Scanner bundle's `## Reserve Pool` block into a single `## Reserve Pool` section in the Merged Bundle, grouped by `active_categories` order. Apply the **same dedup discipline** as for main stories:
+
+- If a reserve-pool entry shares the underlying event with a main-pool story you already kept, fold the reserve entry into the main story's `Corroborated by` and drop the reserve entry — the main story already covers the event, so the reserve duplicate adds nothing.
+- If two reserve entries collide on the same event, keep the higher-real-tier one and fold the other into its `Corroborated by`.
+- Do **not** quality-judge reserve-pool entries (legitimacy revalidation is the Verifier's job under Fallback 1.5).
+- Do **not** invent or restore reserve entries the Scanner did not write.
+- If every Scanner bundle had an empty reserve pool, omit the `## Reserve Pool` block entirely from the Merged Bundle.
 
 ## Quality rules
 
