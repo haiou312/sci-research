@@ -99,6 +99,26 @@ These admission rules never override the upstream date or red-line gate, and app
 
 After the primary pass, count KEEP stories per category against `min_per_category`. The authoritative rule set is `references/rubric.md` § Three-Step Coverage Fallback — apply it verbatim. The three steps run in order; stop as soon as the category hits `min_per_category`. Markers compose (`fallback_1+1.5+gap`).
 
+**Decision flow (per category):**
+
+```
+count(KEEP in category) ≥ min_per_category?
+   ├── yes → done, no fallback
+   └── no  → Fallback 1: relax impact tier to Regional-structural
+              ├── reaches min? → mark fallback_1, done
+              └── still short → Fallback 1.5: promote from Reserve Pool
+                                 ├── reaches min? → mark fallback_1+1.5, done
+                                 └── still short → Fallback 2: mark fallback_1+1.5+gap; emit Gap block
+```
+
+**What each fallback may relax (and what it never relaxes):**
+
+| Step | Relaxes | Never relaxes (under any step) |
+|------|---------|-----------------------------|
+| **1** | Impact tier → admits `Regional-structural` | Date · China red-line denylist · Hard-paywall Lead rule · Originality (`Syndicated-rewrite` stays dropped) · Source Legitimacy (`Illegitimate-source` stays dropped) · T1-T4 tier · Categorical rejects (`Op-ed` / `Routine-PR` / etc.) |
+| **1.5** | Authority cap (admits `T3-extended` from `below-authority-cap`) **and** ipo_ma soft-band floor (admits `below-ipo-ma-floor`). Revalidates Source Legitimacy on every promotion. | (same list as above) |
+| **2** | Nothing — records the gap, does not admit anything | (same list as above) |
+
 ### Fallback 1 — Relax impact tier within the shortfall category
 
 If any category has fewer KEEP stories than `min_per_category`:

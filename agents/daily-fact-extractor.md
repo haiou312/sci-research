@@ -49,6 +49,58 @@ stories:
         context: <one-line setting, e.g. "press conference April 14">
 ```
 
+### Concrete example (BoJ rate-hold story)
+
+Given the Verifier `factual_excerpt`: *"The Bank of Japan held its policy rate at 0.5% for the third consecutive meeting Tuesday, governor Kazuo Ueda told reporters at an April 14 press conference. 'We will adjust monetary policy if needed,' Ueda said. USD/JPY climbed 80 bps within 30 minutes, closing at 153.20."*
+
+A faithful extraction looks like:
+
+```yaml
+- story_id: boj-holds-rates-0-5-pct
+  category: economy_markets
+  headline_en: Bank of Japan holds benchmark rate at 0.5%
+  lead_url: https://www.reuters.com/markets/asia/...
+  corroborated_by:
+    - https://www.bloomberg.com/news/articles/...
+  locked_urls:
+    - https://www.reuters.com/markets/asia/...
+    - https://www.bloomberg.com/news/articles/...
+  hard_facts:
+    - claim: BoJ benchmark rate held
+      kind: numerical_with_unit
+      value: "0.5%"
+      source_urls: [https://www.reuters.com/markets/asia/...]
+      verbatim_excerpt: "held its policy rate at 0.5% for the third consecutive meeting"
+    - claim: meeting cadence
+      kind: temporal
+      value: third consecutive meeting
+      source_urls: [https://www.reuters.com/markets/asia/...]
+      verbatim_excerpt: "for the third consecutive meeting Tuesday"
+    - claim: USD/JPY closing rate after announcement
+      kind: numerical_with_unit
+      value: "153.20"
+      source_urls: [https://www.reuters.com/markets/asia/...]
+      verbatim_excerpt: "USD/JPY climbed 80 bps within 30 minutes, closing at 153.20"
+    - claim: BoJ Governor identity
+      kind: named_person
+      value: Kazuo Ueda
+      source_urls: [https://www.reuters.com/markets/asia/...]
+      verbatim_excerpt: "governor Kazuo Ueda told reporters"
+    - claim: press conference date
+      kind: temporal
+      value: April 14
+      source_urls: [https://www.reuters.com/markets/asia/...]
+      verbatim_excerpt: "told reporters at an April 14 press conference"
+  quotes:
+    - speaker_name: Kazuo Ueda
+      speaker_title: Bank of Japan Governor
+      verbatim_en: "We will adjust monetary policy if needed."
+      source_url: https://www.reuters.com/markets/asia/...
+      context: April 14 press conference
+```
+
+Note: every `value` is verbatim from the source ("0.5%" not "0.5 percent"; "153.20" not "153.2"). The Mizuho analyst commentary from the broader story is intentionally NOT extracted — extraction stays inside `factual_excerpt` only.
+
 ## Extraction rules
 
 1. **`locked_urls` exact equality**: `locked_urls = [lead_url] + corroborated_by` in that order. No reordering, no dedup, no additions.

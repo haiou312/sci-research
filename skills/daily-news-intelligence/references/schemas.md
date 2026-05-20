@@ -70,7 +70,7 @@ The Merger consumes the N single-category Scanner bundles and emits one unified 
 - Country: <country>
 - Date: <YYYY-MM-DD>
 - Candidates kept: <M>
-- Category counts: one `id=<n>` token per category in active-category order (per `references/language-spec.md` § Category Catalog & Selection), pipe-separated. Non-China report: `econ=<n1> | politics=<n2> | tech=<n3> | society=<n4> | ipo_ma=<n5> | other=<n6>`. China report: `econ=<n1> | politics=<n2> | tech=<n3> | society=<n4> | china_nexus=<n5> | ipo_ma=<n6> | other=<n7>`
+- Category counts: one `id=<n>` token per category in active-category order (per `references/language-spec.md` § Category Catalog & Selection), pipe-separated. Non-China report: `econ=<n1> | politics=<n2> | tech=<n3> | society=<n4> | ipo_ma=<n5> | other=<n6>`. China report: `econ=<n1> | politics=<n2> | tech=<n3> | society=<n4> | china_nexus=<n5> | ipo_ma=<n6> | other=<n7>`. **Example concrete value (Japan, non-China)**: `econ=3 | politics=2 | tech=2 | society=1 | ipo_ma=2 | other=1`. **Example (China)**: `econ=3 | politics=2 | tech=2 | society=1 | china_nexus=2 | ipo_ma=1 | other=1`.
 - Reserve pool counts: same `id=<n>` token format, pipe-separated; zero entries shown as `<id>=0`.
 
 ## Stories

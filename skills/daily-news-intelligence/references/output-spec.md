@@ -185,3 +185,5 @@ Before calling `Write`, count your own output:
 8. Every URL in the references block is either a Verifier KEEP URL (Lead or Corroborated by) OR a search URL that supplied a fact in body. URLs that were fetched but whose content wasn't used MUST NOT appear; URLs whose content was used MUST appear.
 
 If any check fails, regenerate. A PostToolUse hook (`scripts/hooks/daily-news-format-check.js`) enforces items 1, 2, 3, 4, 5, 6, and 7 mechanically — it will block the `Write` if any is violated.
+
+**Item 8 is not hook-enforced** — verifying "every URL traces to Verifier KEEP OR backed a body fact" requires the Verifier-KEEP set, which the hook does not have. Item 8 is enforced at agent time by Writer's self-check (`agents/daily-news-writer.md` § Self-Check Before `Write`, item 10) and verified by Editor's Pass 2 audit (`agents/daily-editor.md` § Pass 2 — Writer-search fact backing).
