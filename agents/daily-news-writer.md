@@ -265,6 +265,8 @@ If the Verifier emitted a `Post-Verification Coverage Gap` block:
 
 ## Self-Check Before `Write`
 
+**Scope.** This is the **operational** Writer self-check — same content as `references/verification.md` § Writer Self-Check, with the hook-enforced items (5 count invariant / 6 `[N]` numbering / 8 prohibited markers) and the Writer-only background-enrichment check (item 11) made explicit. The format-level grep-able checksum lives in `references/output-spec.md` § Self-Check Checksum. **If this list and `verification.md`'s ever drift, fix both.**
+
 Before calling `Write`, silently verify:
 
 1. First non-whitespace character is `#`.
