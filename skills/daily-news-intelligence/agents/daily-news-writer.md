@@ -106,13 +106,16 @@ Derive `country_display`:
 
 ## Workflow
 
-1. **Parse Verifier bundle.** For each story in `Kept Stories`, note the category, headline, URL, byline, factual excerpt, and commentary. Preserve each story's original order within its category.
+1. **Parse Verifier bundle.** For each story in `Kept Stories`, note the category, headline, URL, byline, factual excerpt, commentary, and **`Body-source`** (`full` or `paywall-stub`). Preserve each story's original order within its category.
 
 2. **Write each story.** For each KEPT story:
 
-   **2a. Read for understanding.** From the English factual excerpt, work out: what actually happened, who's involved, why it matters, the most concrete numbers / dates / quotes. Don't list atoms mechanically — read it the way a journalist reads wire copy before writing.
+   **2a. Read for understanding.** From the English factual excerpt, work out: what actually happened, who's involved, why it matters, the most concrete numbers / dates / quotes. Don't list atoms mechanically — read it the way a journalist reads wire copy before writing. **If `Body-source: paywall-stub`** the excerpt may be 1-2 paragraphs only — note which facts are present and which need to come from search in step 2b.
 
-   **2b. Enrich via search (default behaviour, not optional).** Run 1-3 supplemental `WebSearch` / `WebFetch` calls to gather background context for the story — what came before this event, the broader trajectory, comparable historical events, prior policies that frame what's new. This is a sweep for context (cap 3 fetches), not a re-research. Skip only in the rare case where the Verifier bundle already carries the full historical context the reader needs (e.g. routine data release with no broader implication to flag). **Every search URL whose content supplied a fact in body MUST be added to References as an APA line with the next continuous `[N]` counter.** Background context blends into body prose without inline `[N]` markers, but the supporting URL still belongs in References.
+   **2b. Enrich via search.**
+   - **Default (`Body-source: full`)**: Run **1-3** supplemental `WebSearch` / `WebFetch` calls for background context — what came before, the broader trajectory, comparable historical events, prior policies. Skip only when the Verifier bundle already carries the full historical context (rare).
+   - **Mandatory floor (`Body-source: paywall-stub`)**: Run **≥2 and up to 5** supplemental `WebSearch` / `WebFetch` calls — the stub does not give enough body for ≥200 words, you must surface the same-event facts from corroborating reporting (Reuters / AP / AFP / BBC / Guardian / Kyodo / Yonhap / etc.) AND background context. Skipping is not an option.
+   - **Every search URL whose content supplied a fact in body MUST be added to References as an APA line with the next continuous `[N]` counter.** Background context blends into body prose without inline `[N]` markers, but the supporting URL still belongs in References.
 
    **2c. Write the headline.** Per Title Length Rules. If the headline carries ≥2 distinct information blocks, separate them with a **comma** in the target language (`zh`: `，` full-width; `ja`: `、` 読点; `en`: `,` ASCII). No spaces, em-dashes, colons, or other separators — comma only.
 
@@ -222,6 +225,7 @@ The goal is a brief that reads like a tight, in-medias-res news piece in `{lang}
 
 - Direct quotes you choose to keep are translated into `lang` and wrapped with the language's canonical `quote_marks` per the table in `references/language-spec.md` § Canonical Quote Marks: **en** uses ASCII `""` (U+0022); **zh** uses curly `""` (U+201C / U+201D); **ja** uses corner `「」` (U+300C / U+300D). Mixed styles or wrong-language chars are blocked by the format-check hook. Preserve speaker attribution (name + title).
 - A floating quote with no attribution is not acceptable. If you can't fit the attribution naturally, paraphrase instead of quoting.
+- **Body-source: paywall-stub — quote restriction**: when the Lead is a paywall stub, the only verbatim quotes you may render with `quote_marks` are those that appear in the stub itself (the 1-2 paragraphs WebFetch returned) OR are reproduced verbatim in a corroborating free outlet that you cite in References. A quote you can't locate in retrievable text becomes indirect speech (paraphrase + attribution, no `quote_marks`). The Editor's Pass 3 will otherwise downgrade it for you.
 
 ### Items that stay in English regardless of `lang`
 
@@ -238,7 +242,7 @@ The goal is a brief that reads like a tight, in-medias-res news piece in `{lang}
 - The title stays in original English — do not translate.
 - Date segment uses English month names: `(2026, April 14)`.
 - URL is bare — never `[text](url)`.
-- **One or more** references per story, colocated in the story's `references_marker` block. The first reference is the Lead URL; **every URL in the Verifier's `Corroborated by:` field gets its own additional `[N+k]` line in the same block**. Hard-paywall outlets (Bloomberg, FT, WSJ, Economist, Telegraph, Times, Nikkei Asia, etc.) carry the report's authority signal — never omit them.
+- **One or more** references per story, colocated in the story's `references_marker` block. The first reference is the Lead URL; **every URL in the Verifier's `Corroborated by:` field gets its own additional `[N+k]` line in the same block**. Hard-paywall outlets (Bloomberg, FT, WSJ, Economist, Telegraph, Times, Nikkei Asia, etc.) — whether they appear as the Lead (when `Body-source: paywall-stub`) or under `Corroborated by` — carry the report's authority signal and must never be omitted.
 - **`[N]` is mandatory**. Counter runs continuously from `[1]` at the first reference through `[total]` at the last, across story boundaries.
 - **References = Verifier KEEP URLs ∪ {search URLs that supplied a fact in body}**. Every Verifier-delivered URL (Lead + every Corroborated by URL) MUST appear. Every search URL whose content backed a body fact MUST appear — proper APA, next continuous `[N]`, outlet name from the actual publisher. The ONLY URLs left out are ones fetched but unused.
 - No global sources list at the end of the document.

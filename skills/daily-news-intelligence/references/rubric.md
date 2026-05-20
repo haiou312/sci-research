@@ -111,7 +111,7 @@ Rules for what Fallback 1.5 may do:
 - Promote in **best-first** order: prefer (a) hits closer to T2 over deep-T3 niche; (b) `Original` over `Unclear`; (c) higher Impact tier when known; (d) `auto-accept` over `conditional-accept`.
 - Stop promoting as soon as the category reaches `min_per_category` — do NOT over-fill at the expense of report compactness.
 - Never relax date, China red-line denylist, originality (Syndicated drops stay dropped), or Source Legitimacy (`Illegitimate-source` DROPs stay dropped).
-- Hard-paywall candidates are **never** Fallback 1.5-promotable (the Writer needs ≥200 words of body; the Step 3.5 paywall workaround already handled the legitimate cases at Scanner time).
+- Hard-paywall outlets do not flow through Fallback 1.5 — they are admitted (or routed to `Corroborated by`) at Scanner Step 3.5, with Lead status carrying `Body-source: paywall-stub` and the Writer's mandatory ≥2 background-search obligation. Reserve Pool serves the orthogonal authority-cap and `ipo_ma` soft-band cases only.
 
 Mark `Fallback used: fallback_1+1.5` in the Verifier report header.
 

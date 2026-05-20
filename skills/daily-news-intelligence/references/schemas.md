@@ -19,14 +19,15 @@ Each Scanner instance handles **exactly one category** and returns exactly this 
 ### [<category>] <English headline>
 - Publish date (verified): <ISO timestamp or local date from article>
 - Discovery: <A | B>
-- Source: <outlet name> [T4-official|T1-wire|T1-flagship|T2|T3] (Lead must be Free or T4-official; Hard-paywall outlets are recorded under Corroborated by, never as Lead)
+- Source: <outlet name> [T4-official|T1-wire|T1-flagship|T2|T3] (Free / T4-official preferred; Hard-paywall outlets ARE Lead-eligible when Step 3.5 finds no free alternative — set `Body-source: paywall-stub` in that case)
 - Source legitimacy: <matrix | auto-accept | conditional-accept>   (matrix = Pass A; auto/conditional = Pass B per rubric § Source Legitimacy)
+- Body-source: <full | paywall-stub>   (`paywall-stub` iff the Lead URL is a Hard-paywall domain whose Step 3.5 title-anchored search returned no free same-event outlet; signals the Writer's ≥2 background-search obligation and the Editor's quote-downgrade rule)
 - Proposed category: <your category>
 - Reroute hint: <other category id — only if dominant frame looks misfiled; omit otherwise>
 - URL: <full https URL>
 - Byline: <author name or "No byline">
 - Corroborated by: <each entry on its own indented line "  - <outlet name> [<tier>|<paywall_status>] — <full https URL>"; or "None">
-- Factual excerpt (≥200 words English): <fact-only extract from the Lead URL, with numbers, named officials with titles, direct quotations in quote marks, explicit time references>
+- Factual excerpt: <fact-only extract — ≥200 words English when Body-source=full; whatever the paywall stub returned (title + 1-2 paragraphs is normal) when Body-source=paywall-stub. Numbers, named officials with titles, direct quotations in quote marks, explicit time references.>
 - Commentary: <verbatim analyst / official / institutional commentary from the Lead article, or exactly "No analyst commentary in source">
 
 ... (repeat per story, source-authority order) ...
@@ -81,10 +82,11 @@ The Merger consumes the N single-category Scanner bundles and emits one unified 
 - Discovery: <A | B>
 - Source: <outlet name> [tier]
 - Source legitimacy: <matrix | auto-accept | conditional-accept>
+- Body-source: <full | paywall-stub>   (carried verbatim from the Scanner bundle)
 - URL: <full https URL>
 - Byline: <...>
 - Corroborated by: <merged list — every cross-category duplicate folded here verbatim; or "None">
-- Factual excerpt (≥200 words English): <verbatim>
+- Factual excerpt: <verbatim from Scanner bundle; full body or paywall stub per Body-source>
 - Commentary: <verbatim>
 
 ... (repeat per surviving story) ...
@@ -134,9 +136,10 @@ Verifier must consume the **Merged bundle** and emit exactly this shape (still E
 - Byline: <author name or "No byline">
 - Discovery: <A | B>   (carried verbatim from the Merged bundle)
 - Source legitimacy: <matrix | auto-accept | conditional-accept>   (carried verbatim)
+- Body-source: <full | paywall-stub>   (carried verbatim from the Merged bundle)
 - Origin: <main-pool | reserve-pool>   (reserve-pool means promoted via Fallback 1.5; omit field for main-pool entries)
 - Corroborated by: <carried verbatim from the Merged bundle — each entry as "  - <outlet name> [<tier>|<paywall_status>] — <full https URL>"; or "None">
-- Factual excerpt (≥200 words English): <carried verbatim>
+- Factual excerpt: <carried verbatim — full body or paywall stub per Body-source>
 - Commentary: <carried verbatim>
 - Verdict: KEEP
 - Originality: <Original | Syndicated | Unclear | Sanctioned-syndication>

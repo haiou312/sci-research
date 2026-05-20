@@ -17,7 +17,7 @@ The three rules most commonly violated under time pressure. Restated at point-of
 
 1. **One query per term, never `OR`-joined.** Each per-term query is a separate `WebSearch` call. Long `OR` chains degrade search-engine ranking and silently drop tail terms — the recall failure this per-term sweep removes. Multi-word terms are phrase-quoted (`"interest rate"`, not bare `interest rate`). Canonical statement at § Quality Rules 3a; tables in § Step 1; reinforced at § Step 2 / § Step 3.5 / § Pass B.
 2. **`ipo_ma` and `china_nexus` have always-first-class channels that bypass the tier ladder** and run **regardless of `min_per_category`** — for `ipo_ma`, primary-filing queries (SEC EDGAR / LSE RNS / TSE / HKEX / Euronext / SGX disclosure) **before** any tier; for `china_nexus`, the external-T4 + global-wire topical sweep **before** any tier. Templates and per-country portal map live in § Conditional Categories — Search Mechanics.
-3. **Pass A = Source Matrix only; Pass B = free discovery under § Source Legitimacy.** No improvising non-matrix outlets in Pass A. No skipping the Legitimacy rubric in Pass B. Pass-B hard-paywall hits are Corroboration-only (their free full-text syndication is the Lead) and are never Fallback 1.5-promotable.
+3. **Pass A = Source Matrix only; Pass B = free discovery under § Source Legitimacy.** No improvising non-matrix outlets in Pass A. No skipping the Legitimacy rubric in Pass B. Pass-B hard-paywall hits are Lead-eligible — a free Pass-A/B alternative covering the same event is preferred (richer body for downstream Fact Manifest), but when no free alternative exists the hard-paywall outlet becomes the Lead under `Body-source: paywall-stub` and the Writer compensates via mandatory ≥2 WebSearch / WebFetch background calls (Step 3.5).
 
 ---
 
@@ -177,7 +177,7 @@ Personal blogs, Wikipedia, Reddit / forums, Google News aggregator pages, SEO co
 
 Every non-T4 domain falls into one of three buckets. The bucket determines whether the outlet can serve as a `Lead` (provides factual body) or only as `Corroboration` (provides authority signal in `**References**` only).
 
-**Hard paywall** — WebFetch typically returns a stub (title + 1-2 paragraphs + paywall notice). **Cannot be a Lead.** Use `Corroborated by` only.
+**Hard paywall** — WebFetch typically returns a stub (title + 1-2 paragraphs + paywall notice). **Lead-eligible with Writer body-fill obligation.** A free outlet covering the same event is still preferred (richer body for Fact Manifest extraction and quote verification); only when Step 3.5's title-anchored search returns no free match does the hard-paywall outlet become the Lead under `Body-source: paywall-stub`, and the Writer must run ≥2 mandatory WebSearch / WebFetch calls to assemble ≥200 words of factual body (every search URL whose content was used in body MUST appear in References).
 
 | Outlet | Domain |
 |---|---|
@@ -362,7 +362,7 @@ Pass B runs **after Pass A**, scoped to your one assigned `category`. It is a ba
 **When Pass B runs:**
 
 - **Always** if your `category` is `ipo_ma` or `china_nexus` (the two categories most constrained by the whitelist).
-- **On demand** for the other five categories — only if, after Pass A, the category is below `min_per_category` OR a Pass-A Lead is a hard-paywall hit with no free Pass-A Lead found.
+- **On demand** for the other five categories — only if, after Pass A, the category is below `min_per_category` OR a Pass-A Lead is a hard-paywall hit (Pass B may surface a free alternative covering the same event; if it does, promote the free outlet to Lead per Step 3.5, otherwise the hard-paywall Lead persists under `Body-source: paywall-stub`).
 
 **Pass B query form:** bare keyword, **no `site:`**, no Region/Country matrix anchoring:
 
@@ -382,7 +382,7 @@ Run **one bare-keyword query per term** in your category's search-term set (Step
    - **`conditional-accept` below T2 (T3-trade / T3-niche / smaller national outlets) → `## Reserve Pool`** with `Held: below-authority-cap`. **Do NOT discard.** The Verifier may promote these via Fallback 1.5 when a category is short (see `references/rubric.md` § Three-Step Coverage Fallback).
    - A Pass-B story may be the sole Lead of your category only if Pass A surfaced nothing on that event; otherwise it corroborates.
 
-Step 1.5 does not apply to Pass B (Pass B is already non-`site:`). Step 3.5 paywall logic still applies (a Pass-B hard-paywall hit is Corroboration-only, its free syndication is the Lead — and a hard-paywall hit is **never** reserve-pool eligible: paywall-truncated body cannot serve as Lead under any fallback).
+Step 1.5 does not apply to Pass B (Pass B is already non-`site:`). Step 3.5 paywall logic still applies — a Pass-B hard-paywall hit becomes Lead under `Body-source: paywall-stub` when Step 3.5's title-anchored fallback search finds no free outlet covering the same event (the free outlet otherwise wins Lead and the paywalled original moves to `Corroborated by`). A hard-paywall hit is **not** Reserve-Pool-eligible: it is either a Lead (with Body-source flag) or Corroboration; the Reserve Pool exists for authority-cap holdouts, which is orthogonal.
 
 ### Step 2 — Walk the tier ladder for your one assigned `category` (Pass A)
 
@@ -440,7 +440,7 @@ Keep only URLs that pass the date gate. Discard all others immediately — do no
 
 ### Step 3.5 — Paywall fallback (mandatory when paywall detected)
 
-After the date gate passes, evaluate body retrievability. A **paywalled** candidate cannot serve as `Lead` because the Writer needs ≥200 words of factual body for the story's body paragraph(s). But the paywalled outlet's authority signal is too valuable to discard — it stays as `Corroboration`.
+After the date gate passes, evaluate body retrievability. A **paywalled** candidate is Lead-eligible but a free alternative is **preferred** — the free body gives the Fact Manifest richer ground truth and the Editor can verify direct quotes against it. Only when no free alternative exists does the paywalled outlet itself become the Lead, with `Body-source: paywall-stub` flagging the Writer to compensate via mandatory background WebSearch.
 
 **Paywall detection** (apply to every date-verified candidate):
 
@@ -451,7 +451,7 @@ A candidate is paywalled if **any** of these is true:
 
 **When a candidate is paywalled:**
 
-1. **Preserve it as Corroboration**: keep its title, URL, outlet name, byline, and verified publication date. Do NOT discard.
+1. **Preserve it as a candidate Lead**: keep its title, URL, outlet name, byline, and verified publication date. Do NOT discard.
 2. **Run a title-anchored fallback search** to find a free outlet covering the same event:
    ```
    site:reuters.com "<key noun phrase from title>" {date_en}
@@ -462,10 +462,10 @@ A candidate is paywalled if **any** of these is true:
    ```
    Use 3-6 distinct word pairs from the paywalled title (e.g. `"BOJ" "split vote"`, `"rate hold" "Ueda"`). Run against **every Free-tier outlet** applicable to the country (Source Matrix § Paywall Status — Free table) until you find a match.
 3. **Verify the fallback URL**: it must pass the same Step 3 date gate (publication date equals `date`).
-4. **Promote the free outlet to `Lead`**: use its body for the factual excerpt; record the original paywalled outlet under `Corroborated by` with its URL.
-5. **If no free fallback exists**: the paywalled candidate becomes a `Corroboration-only` candidate. It does NOT count toward `min_per_category`. Continue down the source-tier ladder as normal to find a Lead from a free outlet.
+4. **If a free fallback exists — promote it to `Lead`**: use its body for the factual excerpt; record the original paywalled outlet under `Corroborated by` with its URL. Set `Body-source: full`.
+5. **If NO free fallback exists — the paywalled candidate IS the Lead**: it counts toward `min_per_category`. Set `Body-source: paywall-stub`. Record whatever stub body WebFetch returned as the factual excerpt (title + 1-2 paragraphs is normal). The Writer is contractually obligated to run ≥2 background WebSearch / WebFetch calls to fill out ≥200 words of factual body, and every search URL it uses for a body fact must appear in References (per `daily-news-writer.md` § paywall-stub handling). The Editor's quote-verification pass (Pass 3) will downgrade any direct quote not present in the stub body to indirect speech — quote retrievability is no longer a Lead-admission condition.
 
-**Output convention**: the `Source:` field always names the Lead's outlet (which is always Free or T4-official). Paywalled outlets only ever appear in `Corroborated by`. The Writer emits one APA reference line per `Corroborated by` URL plus one for the Lead, so paywalled outlets surface in the final report's `**References**` block as authority signals.
+**Output convention**: the `Source:` field names the Lead's outlet — typically Free or T4-official, but **may be Hard-paywall** when `Body-source: paywall-stub`. Paywalled outlets that lost Lead status to a free alternative (case 4 above) appear in `Corroborated by` as before. The Writer emits one APA reference line for the Lead URL, one for each `Corroborated by` URL, and one for each background-search URL used in body — so every authority signal and every cited search result surfaces in the final `**References**` block.
 
 ### Step 4 — Classify, dedupe, and label
 
@@ -506,15 +506,16 @@ Return exactly the Scanner Output Schema. English only — no translation.
 ### [<category>] <English headline>
 - Publish date (verified): <ISO timestamp or local date extracted from article HTML>
 - Discovery: <A | B>
-- Source: <outlet name> [T4-official|T1-wire|T1-flagship|T2|T3] (Lead must be Free or T4-official; Hard-paywall outlets cannot be Lead)
+- Source: <outlet name> [T4-official|T1-wire|T1-flagship|T2|T3] (Free / T4-official preferred; Hard-paywall outlets ARE Lead-eligible — set Body-source: paywall-stub when used)
 - Source legitimacy: <matrix | auto-accept | conditional-accept>   (matrix = Pass A; the other two = Pass B per rubric)
+- Body-source: <full | paywall-stub>   (paywall-stub iff the Lead URL is a Hard-paywall domain whose Step 3.5 title-anchored search found no free alternative; Writer must compensate with ≥2 background WebSearch / WebFetch calls)
 - Impact tier: <Policy|Market|Structural|Humanitarian>
 - Proposed category: <your category>
 - Reroute hint: <other category id, only if dominant frame looks misfiled — Merge decides; omit otherwise>
 - URL: <full https URL>
 - Byline: <author name or "No byline">
 - Corroborated by: <each entry on its own indented line, formatted as "  - <outlet name> [<tier>|<paywall_status>] — <full https URL>" — or "None">
-- Factual excerpt (≥200 words English): <fact-only extract from the Lead URL, with numbers, named officials with titles, direct quotations in quote marks, explicit time references>
+- Factual excerpt (≥200 words English when Body-source: full; whatever the paywall stub returned when Body-source: paywall-stub — the Writer will pad via search): <fact-only extract, with numbers, named officials with titles, direct quotations in quote marks, explicit time references>
 - Commentary: <verbatim analyst / official / institutional commentary from the Lead article, or exactly "No analyst commentary in source">
 
 ... (repeat per story, in source-authority order) ...
@@ -565,7 +566,7 @@ Held candidates passed the date gate + China red-line denylist + Source Legitima
 9. **Impact Tier is an output label, not a search driver.** Assign Policy / Market / Structural / Humanitarian at the end of Step 4 for the Verifier's downstream use. Never let it influence which queries you run or which sources you visit.
 10. **No gap padding.** If a category genuinely has no qualifying stories on `date`, record the gap in the output. Do not substitute off-date, off-tier, or marginal stories to meet `min_per_category`.
 10b. **Hold, don't discard, below-cap conditional-accept Pass-B and soft-band ipo_ma candidates.** Any Pass-B `conditional-accept` whose real tier sits below T2 — and any `ipo_ma` candidate in the USD 50M ≤ value < primary-floor soft band — passed the date gate and Legitimacy rubric on its own merits. Write it to `## Reserve Pool` with the right `Held:` token. Do NOT mix it into the main story list, and do NOT silently drop it. The Verifier owns Fallback 1.5 promotion. (See § Pass B step 4 and § Conditional Categories — Search Mechanics.)
-10a. **Hard-paywall outlets are never Lead.** Bloomberg / FT / WSJ / Economist / The Times / Telegraph / Nikkei Asia / Dow Jones and other domains in the Source Matrix § Paywall Status — Hard list cannot serve as Lead because the Writer needs the article body. They appear only as `Corroborated by` entries, where their authority signal still surfaces in the Writer's `**References**` block. When a Hard-paywall hit is the only date-verified candidate, run Step 3.5's title-anchored fallback search to locate a free outlet covering the same event.
+10a. **Hard-paywall outlets are Lead-eligible with body-fill obligation.** Bloomberg / FT / WSJ / Economist / The Times / Telegraph / Nikkei Asia / Dow Jones and other domains in the Source Matrix § Paywall Status — Hard list may serve as Lead, but a free outlet covering the same event is preferred (better Fact-Manifest grounding and quote retrievability). Always run Step 3.5's title-anchored fallback search first; if a free same-event outlet exists, it becomes the Lead and the paywalled outlet moves to `Corroborated by`. If no free alternative exists, the Hard-paywall outlet IS the Lead — set `Body-source: paywall-stub`, record whatever stub body WebFetch returned in the factual excerpt, and downstream the Writer is required to run ≥2 background WebSearch / WebFetch calls to reach ≥200 words of factual body (every search URL used in body appears in References).
 11. **No image work.** Do not extract or describe images. That is handled by a separate agent in Pipeline B and is not part of Pipeline C.
 12. **English only.** All output is in English. Translation happens downstream in the Writer stage.
 13. **Factual excerpts only.** The excerpt field must contain facts, numbers, named officials, and direct quotes — no paraphrase of opinion.

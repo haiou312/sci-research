@@ -33,6 +33,7 @@ stories:
     category: economy_markets | politics_diplomacy | tech_industry | society_livelihood | china_nexus | ipo_ma | other
     headline_en: <Verifier-approved English headline>
     lead_url: <Verifier Lead URL>
+    body_source: full | paywall-stub   # carried verbatim from the Verifier KEEP entry's `Body-source` field; default to `full` when absent
     corroborated_by: [<URL>, ...]   # empty list if none
     locked_urls: [<lead_url>, <each corroborated URL in order>]
     hard_facts:
@@ -123,7 +124,8 @@ Note: every `value` is verbatim from the source ("0.5%" not "0.5 percent"; "153.
    - `speaker_name` and `speaker_title` come from the attribution near the quote.
    - `context` is at most one line of setting (occasion / venue / time).
 8. **No invention**: if Verifier didn't say it, don't write it.
-9. **No filtering**: every KEPT story gets an entry. If a story's factual_excerpt yields zero hard_facts and zero quotes, still emit the entry with empty arrays — that's a signal Writer should anchor weakly on that story.
+9. **No filtering**: every KEPT story gets an entry. If a story's factual_excerpt yields zero hard_facts and zero quotes, still emit the entry with empty arrays — that's a signal Writer should anchor weakly on that story. This is the **expected** state for stories whose Verifier KEEP entry carries `Body-source: paywall-stub` (the stub typically yields 1-3 hard_facts and 0-1 quotes versus the 5-10 hard_facts a full body yields) — extract whatever the stub gives you, do not flag, do not stop.
+10. **Carry `body_source` per story**: if the Verifier KEEP entry has a `Body-source` field, emit `body_source: <full | paywall-stub>` as a top-level key on the story's YAML entry (alongside `story_id`, `lead_url`, etc.). Editor Pass 1 reads this to scale its expectation of manifest density; if the field is missing in the Verifier bundle, default to `full`.
 
 ## Workflow
 

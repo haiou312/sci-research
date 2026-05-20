@@ -104,12 +104,12 @@ For each direct quote in body (between canonical quote marks):
 3. WebFetch that URL.
 4. Translate the `lang` quote back to English mentally, then grep the source for 3-5 distinctive content words to confirm the meaning matches.
 5. If the meaning matches: leave the quote **as the existing `lang` translation**, log as verified. Do NOT replace it with the English source sentence.
-6. If no match:
-   - Try ONE WebSearch with the quote's distinctive phrase (in English) + speaker name. WebFetch top T1-T3 result.
+6. If no match — **including** the case where the Lead URL is on a hard-paywall domain (Bloomberg / FT / WSJ / Economist / Telegraph / Times / Nikkei Asia / etc.) and WebFetch returns a stub that does not contain the quoted span:
+   - Try ONE WebSearch with the quote's distinctive phrase (in English) + speaker name. WebFetch top T1-T3 result (a free outlet covering the same event often carries the same quote).
    - If verified: keep the quote **in `lang`**; if URL is not already in References, add it (renumber `[N]`).
-   - If not verified: `Edit` to downgrade — remove the quote marks, restructure as indirect speech in `lang`, preserve attribution.
+   - If not verified — **including** the paywall-stub-with-no-free-corroborator case: `Edit` to downgrade — remove the quote marks, restructure as indirect speech in `lang`, preserve attribution. This is the **expected** path when the Verifier carried `Body-source: paywall-stub`; do not treat it as an anomaly, just downgrade and log.
    - **Language guard (every branch): if the body quote is in English or any language ≠ `lang`, translate it into `lang` now — a verified-but-untranslated quote is still a defect.**
-7. Log: `[Pass 3] story=<story_id> quote=<short> action=<verified|downgraded>`.
+7. Log: `[Pass 3] story=<story_id> quote=<short> action=<verified|downgraded> body_source=<full|paywall-stub>`.
 
 ### Pass 4 — Quote-mark normalization
 

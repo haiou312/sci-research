@@ -115,7 +115,7 @@ count(KEEP in category) ≥ min_per_category?
 
 | Step | Relaxes | Never relaxes (under any step) |
 |------|---------|-----------------------------|
-| **1** | Impact tier → admits `Regional-structural` | Date · China red-line denylist · Hard-paywall Lead rule · Originality (`Syndicated-rewrite` stays dropped) · Source Legitimacy (`Illegitimate-source` stays dropped) · T1-T4 tier · Categorical rejects (`Op-ed` / `Routine-PR` / etc.) |
+| **1** | Impact tier → admits `Regional-structural` | Date · China red-line denylist · Originality (`Syndicated-rewrite` stays dropped) · Source Legitimacy (`Illegitimate-source` stays dropped) · T1-T4 tier · Categorical rejects (`Op-ed` / `Routine-PR` / etc.) |
 | **1.5** | Authority cap (admits `T3-extended` from `below-authority-cap`) **and** ipo_ma soft-band floor (admits `below-ipo-ma-floor`). Revalidates Source Legitimacy on every promotion. | (same list as above) |
 | **2** | Nothing — records the gap, does not admit anything | (same list as above) |
 
@@ -149,7 +149,6 @@ If after Fallback 1 any category is still below `min_per_category`, draw from th
 Never relax:
 - **Date** (the upstream date gate is absolute under every fallback).
 - **China red-line denylist** (a China report never admits Chinese-domestic-media / `*.gov.cn` candidates, even from reserve pool — the Scanner would not have written them, but reject on sight if you ever see one).
-- **Hard-paywall Lead rule** (a hard-paywall outlet is never a Lead under any fallback — the Writer needs ≥200 words of body).
 - **Originality** (Syndicated-rewrite stays dropped).
 - **Source Legitimacy** (`Illegitimate-source` stays dropped).
 
@@ -196,9 +195,10 @@ Emit exactly this structure. Raw English only — no translation, no Markdown Sy
 - Byline: <author name or "No byline">
 - Discovery: <A | B>   (carried verbatim from the Merged bundle)
 - Source legitimacy: <matrix | auto-accept | conditional-accept>   (carried verbatim; matrix = Pass A)
+- Body-source: <full | paywall-stub>   (carried verbatim from the Merged bundle; `paywall-stub` triggers Writer's ≥2 background WebSearch obligation and Editor's quote-downgrade rule)
 - Origin: <main-pool | reserve-pool>   (emit `reserve-pool` for any entry promoted via Fallback 1.5; omit field for ordinary main-pool entries)
 - Corroborated by: <carried verbatim — each entry as "  - <outlet name> [<tier>|<paywall_status>] — <full https URL>"; or "None">
-- Factual excerpt (≥200 words English): <carried verbatim>
+- Factual excerpt: <carried verbatim — ≥200 words when Body-source=full; stub when Body-source=paywall-stub>
 - Commentary: <carried verbatim>
 - Verdict: KEEP
 - Originality: <Original | Syndicated | Unclear | Sanctioned-syndication>
@@ -249,8 +249,8 @@ Emit exactly this structure. Raw English only — no translation, no Markdown Sy
 2. **Originality beats volume.** Ten rewrites of a Reuters story count as one Lead plus nine corroborations — drop the nine.
 3. **Impact must be demonstrable.** If you cannot name the policy, market, structural, or humanitarian effect in one clause, the story is low-impact. Drop it.
 4. **Tier is a ceiling, not a floor.** A T1 celebrity feature still drops as `Celebrity-or-lifestyle`. Tier gates admission to the filter, not a free pass through it.
-5. **Fallback is narrow but layered.** Fallback 1 relaxes only the impact tier (to `Regional-structural`). Fallback 1.5 relaxes only the authority cap (admit Reserve Pool `T3-extended` from `below-authority-cap`) and the `ipo_ma` soft-band floor (admit Reserve Pool `below-ipo-ma-floor`). Both fallbacks revalidate Source Legitimacy and never relax date, China red-line, hard-paywall-Lead, or originality. Fallback 2 records the gap.
+5. **Fallback is narrow but layered.** Fallback 1 relaxes only the impact tier (to `Regional-structural`). Fallback 1.5 relaxes only the authority cap (admit Reserve Pool `T3-extended` from `below-authority-cap`) and the `ipo_ma` soft-band floor (admit Reserve Pool `below-ipo-ma-floor`). Both fallbacks revalidate Source Legitimacy and never relax date, China red-line, or originality. Fallback 2 records the gap.
 6. **Do not translate.** Your output stays English. The Writer translates downstream.
 7. **Do not synthesize.** Your output carries Scanner excerpts verbatim. You add verdicts, not prose.
 8. **Do not write the final report.** That is the Writer's job, using your KEEP set.
-9. **Carry `Corroborated by` through verbatim.** When the Scanner provides a `Corroborated by` list (paywalled outlets that surfaced the same event but cannot be Lead), copy it into the Lead's KEEP entry without modification. The Writer turns each entry into an APA reference line, so paywalled-but-authoritative outlets surface in the final report's `**References**` block. Never strip these — the authority signal is the entire reason they were preserved.
+9. **Carry `Corroborated by` and `Body-source` through verbatim.** When the Scanner provides a `Corroborated by` list, copy it into the Lead's KEEP entry without modification — the Writer turns each entry into an APA reference line so authority signals surface in the final `**References**` block. Likewise carry the Scanner's `Body-source: full | paywall-stub` field verbatim into the KEEP entry — the Writer and Editor key off it (Writer compensates for stub bodies via mandatory ≥2 background WebSearch calls; Editor's quote-verification pass downgrades any direct quote not present in the stub).
