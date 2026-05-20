@@ -10,20 +10,21 @@ Generate a professional dated daily report for institutional readers covering a 
 
 ## Quick Reference (Orchestrator Checklist)
 
-```
-0. EVERY stage spawns as general-purpose + embedded agents/<name>.md body + explicit model arg — NEVER sci-research:* (see Data Handoff § Subagent Dispatch Rule; reason: anthropics/claude-code#21318 closed not-planned)
-1. Validate params → compute derived fields (incl. active_categories) → expand ~
-2. Fan out ONE Scanner agent per active category IN PARALLEL (6 or 7) → capture each single-category bundle (each may include a ## Reserve Pool of held conditional-accept-below-T2 + ipo_ma-soft-band candidates)
-3. IF every category bundle is empty (main pool AND reserve pool) → STOP with message
-4. Launch Merger agent (all N single-category bundles + active_categories) → capture Merged Bundle (carries pooled Reserve Pool through, same dedup discipline)
-5. Launch Verifier agent (Merged Bundle in prompt) → applies Three-Step Fallback (1 impact / 1.5 reserve-pool promote / 2 gap) → capture Verifier Output Schema
-6. Launch Fact-Extractor agent (Verifier output + params) → fact-manifest YAML written
-7. Launch Writer agent (Verifier output + manifest path + params) → Writer calls Write tool
-8. Launch Editor agent (writer_md + manifest + verifier_bundle + lang/date/country) → in-place Edit patches across 5 passes (1 fact / 2 search-backing / 3 quote / 4 quote-mark / 5 local fluency)
-9. mkdir -p → pandoc export (skip if pandoc missing)
-10. IF --email → send via Python script (dry-run or real)
-11. Verify: ls both files, grep H2/H3 counts
-```
+**Rule (every stage):** spawn as `general-purpose` + embedded `agents/<name>.md` body + explicit `model` arg — NEVER `sci-research:*` (see § Subagent Dispatch Rule below; root cause: anthropics/claude-code#21318 closed not-planned).
+
+**Pipeline flow** (high-level — Workflow below has the numbered procedure with bash commands):
+
+- Validate params → expand `~` → compute derived fields (incl. `active_categories`)
+- Fan out ONE Scanner per active category IN PARALLEL (6 or 7); each bundle may carry a `## Reserve Pool` (held conditional-accept-below-T2 + ipo_ma-soft-band)
+- IF every bundle empty (main pool AND reserve pool) → STOP with message
+- Merger (N bundles + `active_categories`) → unified Merged Bundle (Reserve Pool passed through, same dedup discipline)
+- Verifier (Merged Bundle in prompt) → Three-Step Fallback (1 impact / 1.5 reserve-pool promote / 2 gap) → Verifier Output Schema
+- Fact-Extractor (Verifier output + params) → fact-manifest YAML
+- Writer (Verifier output + manifest path + params) → `Write` Markdown
+- Editor (`writer_md` + manifest + `verifier_bundle` + lang/date/country) → in-place `Edit` across 5 passes (1 fact / 2 search-backing / 3 quote / 4 quote-mark / 5 local fluency)
+- mkdir `-p` → pandoc export (skip if pandoc missing)
+- IF `--email` → send via `scripts/send-report-email.py` (dry-run or real)
+- Verify: `ls` both files, grep H2/H3 counts
 
 ## Operating Principle
 
@@ -101,6 +102,13 @@ The orchestrator must not summarise, truncate, or reformat the upstream output �
    - `active_categories` — the ordered category set for this report, per `references/language-spec.md` § Category Catalog & Selection: `[econ, politics, tech, society]` ++ (`country == China` ? `[china_nexus]` : `[]`) ++ `[ipo_ma, other]`. 6 categories for a non-China report, 7 for a China report. The H2 number is the 1-based position in this list.
    - `out_md` / `out_docx` — per filename pattern in `references/language-spec.md`
 
+   **Active categories at a glance:**
+
+   | Country | Active categories (ordered, by H2 position) | Count |
+   |---------|----------------------------------------------|-------|
+   | `China` | econ → politics → tech → society → **china_nexus** → ipo_ma → other | 7 |
+   | (other) | econ → politics → tech → society → ipo_ma → other | 6 |
+
    **Print the resolved values before Step 2.** Emit one visible line so the translation step cannot be silently skipped:
    ```
    DERIVED: country_display=<value>  date_display=<value>  out_md=<absolute path>  out_docx=<absolute path>
@@ -116,7 +124,11 @@ The orchestrator must not summarise, truncate, or reformat the upstream output �
 
 2. **Scan candidates** (Scanner stage, English only — FAN-OUT). Launch **one Scanner subagent per active category, all in parallel in a single batch** (6 for a non-China report, 7 for a China report). **Each Scanner is a `general-purpose` subagent with the `agents/daily-news-scanner.md` body embedded and model `sonnet` passed explicitly — never `subagent_type: sci-research:daily-news-scanner` (see § Subagent Dispatch Rule).** Each Scanner prompt carries exactly **one** `category` plus `country`, `date`, `min_per_category`; it runs Pass A (Source Matrix ladder) + Pass B (free discovery per `references/rubric.md` § Source Legitimacy) and returns a single-category bundle. Query construction is **per-term, never `OR`-joined**: each Scanner builds queries from its category's **search-term set** in `agents/daily-news-scanner.md` § Step 1 — the **single source of truth** (do not duplicate the term lists here; an earlier copy in this file drifted out of sync, hence the pointer). One `site:{domain} {country} "{term}" {date_en}` query per term, walking the tier ladder; the full term set runs at T4-official / T1-wire / T1-flagship **regardless of `min_per_category`** (that floor only gates T2/T3 descent).
 
-   Rows run in `active_categories` order. **Corporate IPO & M&A** runs in every report (country-anchored; its primary-filing queries — SEC EDGAR / LSE RNS / exchange disclosure — and T3 Finance & Trade/Legal verticals are **always-first-class**, run first regardless of `min_per_category`). **China-Nexus** runs **only in a China report**, is **not** `{country}`-anchored (region-unbounded global topical sweep), and leads with the external-T4 + global-wire sweep. Eligibility, the China-aid exclusion + key-industry carve-out, the materiality floor, and the China-report `china_nexus`↔`ipo_ma` routing are authoritative in `references/rubric.md` § Conditional & Topical Categories.
+   Rows run in `active_categories` order. **Per-category specifics:**
+   - **Corporate IPO & M&A** — runs in every report; country-anchored. Primary-filing queries (SEC EDGAR / LSE RNS / exchange disclosure) and T3 Finance & Trade/Legal verticals are **always-first-class** — run first regardless of `min_per_category`.
+   - **China-Nexus** — runs **only in a China report**; **not** `{country}`-anchored (region-unbounded global topical sweep); leads with the external-T4 + global-wire sweep.
+
+   Authoritative rules (eligibility, China-aid exclusion + key-industry carve-out, materiality floor, `china_nexus`↔`ipo_ma` routing) live in `references/rubric.md` § Conditional & Topical Categories.
 
 Collectively the Scanners gather 20-30 candidate URLs across the active category set (each owns its one category; breadth over depth). If **every** category bundle is empty, stop and report: "No news candidates found for {country} on {date}. The date may be a future date, a holiday, or WebSearch may be temporarily unavailable." Do not proceed to the Merger.
 
@@ -140,7 +152,21 @@ Collectively the Scanners gather 20-30 candidate URLs across the active category
    ```
    If `mkdir -p` fails (permissions, read-only filesystem), stop and report the error — do not silently write to a fallback location. The Verifier's KEEP set is the **spine of which stories run**. The Fact Manifest (Step 7.5) is the **locked-fact contract** — Verifier-sourced numbers / names / dates / quotes that Writer must not drift on. Writer **runs 1-3 supplemental `WebSearch` / `WebFetch` calls per story by default** to enrich body prose with background context — what came before, broader pattern, prior policy. **References = Verifier KEEP URLs ∪ {search URLs that supplied a fact in body}** — every search URL whose content backed a body fact MUST be cited with proper APA and continuous `[N]` (see `references/output-spec.md` § Cited Search URLs). Compose narrative in `lang` per `references/language-spec.md`. Structure is `### title → body → **References**` per story — **no `**摘要**` / `**Summary**` / `**要約**` / `**分析**` / `**Analysis**` markers anywhere**. **Quote marks follow `references/language-spec.md` § Canonical Quote Marks** (en ASCII `""` / zh curly `""` / ja corner `「」` — the format-check hook blocks Write on any non-canonical char). When `lang=zh`, also comply with `references/language-spec.md` § Language-Specific Rules (official titles, country prefixes, time anchors, terminology, foreign media naming). Produce Markdown obeying `references/output-spec.md`. Use the `Write` tool to overwrite `out_md`.
 
-8.5. **Fact-check + local-fluency editor pass** (Editor stage). Spawn per § Subagent Dispatch Rule (`general-purpose` + `agents/daily-editor.md` body, model `opus`) with `writer_md_path` (= `out_md`), `manifest_path` (from Step 7.5), `verifier_bundle` (the same Verifier output, inline), and runtime params `lang` / `date` / `country` in its prompt. The Editor runs **five sequential passes** — (1) Verifier-locked fact verification, (2) Writer-search fact backing (may add new search URLs to References + renumber `[N]`), (3) quote verbatim check, (4) quote-mark normalization, (5) local-fluency / logic-gap repair under a closed five-class defect whitelist (`pass2-cut-gap` · `foreign-residue` · `inconsistent-name` · `filler-marker` · `awkward-connector`) — and patches the MD in place using `Edit` (never `Write`). Budgets: Pass 2 + Pass 3 combined ≤ 2 WebSearch + 4 WebFetch per story; Pass 5 is style-only (zero WebSearch / WebFetch) and is capped at 3 Edits/story and `2 × story_count` Edits/document. Pass 5 rolls back any Edit that violates its six invariants (manifest facts preserved · References byte-identical · paragraph count preserved · `### title` preserved · quote-mark pairs balanced · no prohibited marker introduced); on unrecoverable failure Pass 5 aborts gracefully and the pipeline continues with Passes 1–4's changes only. The Editor prints a structured stdout report (drift counts, refs added, claims cut / weakened, quote-mark fixes, per-class Pass-5 totals); the orchestrator logs it but does not gate on it. The format-check hook fires on every `Edit` and validates the post-edit state — if any Edit produces a malformed file, the hook blocks and the orchestrator surfaces the violation.
+8.5. **Fact-check + local-fluency editor pass** (Editor stage). Spawn per § Subagent Dispatch Rule (`general-purpose` + `agents/daily-editor.md` body, model `opus`) with `writer_md_path` (= `out_md`), `manifest_path` (from Step 7.5), `verifier_bundle` (the same Verifier output, inline), and runtime params `lang` / `date` / `country` in its prompt. The Editor patches the MD in place using `Edit` (never `Write`) across **five sequential passes**:
+
+   | Pass | Purpose |
+   |------|---------|
+   | 1 | Verifier-locked fact verification (drift back to manifest values) |
+   | 2 | Writer-search fact backing (may add new search URLs to References + renumber `[N]`) |
+   | 3 | Quote verbatim check (degrade to indirect speech if source disagrees) |
+   | 4 | Quote-mark normalization (canonical per `references/language-spec.md`) |
+   | 5 | Local-fluency / logic-gap repair under closed five-class defect whitelist: `pass2-cut-gap` · `foreign-residue` · `inconsistent-name` · `filler-marker` · `awkward-connector` |
+
+   **Budgets.** Pass 2 + Pass 3 combined ≤ 2 WebSearch + 4 WebFetch per story. Pass 5 is style-only (zero WebSearch / WebFetch) and is capped at **3 Edits / story** and **`2 × story_count` Edits / document**.
+
+   **Pass 5 rollback.** Any Pass-5 Edit that violates its six invariants is reverted: manifest facts preserved · References byte-identical · paragraph count preserved · `### title` preserved · quote-mark pairs balanced · no prohibited marker introduced. On unrecoverable failure, Pass 5 aborts gracefully and the pipeline continues with Passes 1-4's changes only.
+
+   **Reporting.** The Editor prints a structured stdout report (drift counts, refs added, claims cut / weakened, quote-mark fixes, per-class Pass-5 totals); the orchestrator logs it but does not gate on it. The format-check hook fires on every `Edit` and validates the post-edit state — if any Edit produces a malformed file, the hook blocks and the orchestrator surfaces the violation.
 
 9. **Export to Word.** First verify pandoc is available:
    ```bash
@@ -191,6 +217,21 @@ Collectively the Scanners gather 20-30 candidate URLs across the active category
 | Orchestrator delivery check | — | `references/verification.md` |
 
 See `references/verification.md` § Recommended Agent Assignment for substitution rules and caveats. **The § Subagent Dispatch Rule above overrides any `sci-research:*` agent name appearing in that section or elsewhere — execution is always `general-purpose` + embedded body.**
+
+## Failure Modes
+
+Scattered through the Workflow above; consolidated here for quick scanning. **None of these may silently swallow errors — always report what failed and why.**
+
+| Condition | Handling |
+|-----------|----------|
+| All Scanner bundles empty (main + reserve) | STOP. Report: "No news candidates found for {country} on {date}. The date may be a future date, a holiday, or WebSearch may be temporarily unavailable." Do not proceed to Merger. |
+| `mkdir -p "$OUT_DIR"` fails (permissions / read-only FS) | STOP. Report the OS error. Do not silently fall back to a different path. |
+| Editor Pass 5 unrecoverable failure | Abort Pass 5 only. Pipeline continues with Passes 1-4's changes. Log it; do not gate the run. |
+| `pandoc` not installed | Skip docx export. Markdown remains a valid output. Report: "pandoc not found — .docx export skipped." |
+| `pandoc` exits non-zero | Report the error. Do NOT delete the Markdown file. |
+| Email script exits non-zero (codes 1-9) | Halt and report per `references/email-spec.md` § Exit Code Handling. **Never** delete or modify the local `.md` / `.docx`. **Never** fall back to inline SMTP — the PreToolUse hook will reject it anyway. |
+| `out_dir` is not a git working tree | Skip Step 12 (publish). Best-effort detection: walk up at most three levels looking for `.git`. |
+| `git push` fails in Step 12 | Report but do not fail the run — the docx already exists on disk; the user can push manually. |
 
 ## References
 
