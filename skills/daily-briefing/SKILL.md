@@ -87,12 +87,12 @@ Derived fields:
    Write the output to /tmp/briefing-curator-output.txt using the Write tool.
    
    Output format: TITLE/DATE/TOC/STORIES/REFERENCES/DISCLAIMER
-   as specified in your system prompt (agents/briefing-curator.md).
+   as specified in your system prompt (skills/daily-briefing/agents/briefing-curator.md).
    ```
 
    The Agent reads each MD file via the Read tool, selects and rewrites stories, then writes its structured output to a temp file. The orchestrator uses this file as input to Step 7.
    
-   Expected output schema (see `agents/briefing-curator.md` for full spec):
+   Expected output schema (see `skills/daily-briefing/agents/briefing-curator.md` for full spec):
    ```
    TITLE: 新闻简报
    DATE: {YYYY年M月D日}
@@ -172,7 +172,7 @@ Derived fields:
 
 | File | Contents |
 |------|----------|
-| `agents/briefing-curator.md` (repo root) | Curator agent definition: selection criteria, writing style, output format schema |
+| `skills/daily-briefing/agents/briefing-curator.md` (repo root) | Curator agent definition: selection criteria, writing style, output format schema |
 | `references/email-spec.md` | Email subject/body templates, exit code handling |
 | `template/briefing-template.docx` | SPD Bank branded docx template (header logo + footer decoration) |
 | `scripts/generate-branded-docx.py` | Docx generation from curator output (exit codes 0-4) |

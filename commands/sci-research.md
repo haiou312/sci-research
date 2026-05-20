@@ -41,52 +41,59 @@ Resolve each entity to canonical form:
 
 ### Step 3: Parallel Research
 
-Launch **Researcher** agents in parallel (one per entity):
+Launch **Researcher** agents in parallel (one per entity). Spawn each per the skill's § Subagent Dispatch Rule — `Read ${CLAUDE_PLUGIN_ROOT}/skills/sci-research/agents/researcher.md`, strip the YAML frontmatter, embed the body as the subagent prompt, then append:
 
 ```
-For each entity:
-  Agent(subagent_type="researcher") with prompt:
-    "Research topic: {topic}
-     Target entity: {entity}
-     Search in languages: {entity_languages}
-     Return structured findings with source metadata."
+Agent(subagent_type="general-purpose", model="sonnet") with prompt:
+  <researcher.md body>
+  ---
+  Research topic: {topic}
+  Target entity: {entity}
+  Search in languages: {entity_languages}
+  Return structured findings with source metadata.
 ```
 
 ### Step 4: Comparison Analysis
 
-Launch **Comparator** agent with aggregated findings:
+Launch **Comparator** with aggregated findings. Spawn per § Subagent Dispatch Rule (`general-purpose` + embed `skills/sci-research/agents/comparator.md` body, model `opus`):
 
 ```
-Agent(subagent_type="comparator") with prompt:
-  "Topic: {topic}
-   Entity findings: {all_researcher_outputs}
-   Build comparison table and root-cause analysis."
+Agent(subagent_type="general-purpose", model="opus") with prompt:
+  <comparator.md body>
+  ---
+  Topic: {topic}
+  Entity findings: {all_researcher_outputs}
+  Build comparison table and root-cause analysis.
 ```
 
 ### Step 5: Fact Verification
 
-Launch **Fact-Checker** agent:
+Launch **Fact-Checker**. Spawn per § Subagent Dispatch Rule (`general-purpose` + embed `skills/sci-research/agents/fact-checker.md` body, model `sonnet`):
 
 ```
-Agent(subagent_type="fact-checker") with prompt:
-  "Verify top 10-15 critical claims from:
-   Research findings: {all_researcher_outputs}
-   Comparison: {comparator_output}"
+Agent(subagent_type="general-purpose", model="sonnet") with prompt:
+  <fact-checker.md body>
+  ---
+  Verify top 10-15 critical claims from:
+  Research findings: {all_researcher_outputs}
+  Comparison: {comparator_output}
 ```
 
 ### Step 6: Article Generation
 
-Launch **Writer** agent:
+Launch **Writer**. Spawn per § Subagent Dispatch Rule (`general-purpose` + embed `skills/sci-research/agents/writer.md` body, model `opus`):
 
 ```
-Agent(subagent_type="writer") with prompt:
-  "Write article in {lang}:
-   Topic: {topic}
-   Entities: {entities}
-   Research: {all_researcher_outputs}
-   Comparison: {comparator_output}
-   Fact-check: {fact_checker_output}
-   Word limit: 5000"
+Agent(subagent_type="general-purpose", model="opus") with prompt:
+  <writer.md body>
+  ---
+  Write article in {lang}:
+  Topic: {topic}
+  Entities: {entities}
+  Research: {all_researcher_outputs}
+  Comparison: {comparator_output}
+  Fact-check: {fact_checker_output}
+  Word limit: 5000
 ```
 
 ### Step 7: Validation & Delivery

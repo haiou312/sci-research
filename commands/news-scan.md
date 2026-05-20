@@ -32,18 +32,19 @@ Display a brief confirmation:
 
 ### Step 2: News Scanning (parallel)
 
-Launch **News-Scanner** agents in parallel (one per entity, or one if no entities specified):
+Launch **News-Scanner** agents in parallel (one per entity, or one if no entities specified). Spawn each per the skill's § Subagent Dispatch Rule — `Read ${CLAUDE_PLUGIN_ROOT}/skills/news-scan/agents/news-scanner.md`, strip the YAML frontmatter, embed the body as the subagent prompt, then append:
 
 ```
-For each entity:
-  Agent(subagent_type="news-scanner") with prompt:
-    "Scan news for topic: {topic}
-     Target entity: {entity}
-     Time window: {period}
-     Search in languages: {entity_languages}
-     Return structured news items with source metadata.
-     Do NOT extract images — a separate agent handles that.
-     Target 8-12 unique events."
+Agent(subagent_type="general-purpose", model="sonnet") with prompt:
+  <news-scanner.md body>
+  ---
+  Scan news for topic: {topic}
+  Target entity: {entity}
+  Time window: {period}
+  Search in languages: {entity_languages}
+  Return structured news items with source metadata.
+  Do NOT extract images — a separate agent handles that.
+  Target 8-12 unique events.
 ```
 
 If no `--entities` specified, launch a single News-Scanner with broad search.
@@ -51,34 +52,38 @@ If no `--entities` specified, launch a single News-Scanner with broad search.
 ### Step 3: Image Extraction
 
 From the Scanner results, identify the top 3-5 events by significance.
-Launch **News-Imager** agent with their primary source URLs:
+Launch **News-Imager**. Spawn per § Subagent Dispatch Rule (`general-purpose` + embed `skills/news-scan/agents/news-imager.md` body, model `sonnet`):
 
 ```
-Agent(subagent_type="news-imager") with prompt:
-  "Extract the main article image for each of these top news events:
-   Event 1: {headline} — URL: {primary_source_url}
-   Event 2: {headline} — URL: {primary_source_url}
-   Event 3: {headline} — URL: {primary_source_url}
-   ...
-   Return image URL + alt text for each. Report 'No image available' if none found."
+Agent(subagent_type="general-purpose", model="sonnet") with prompt:
+  <news-imager.md body>
+  ---
+  Extract the main article image for each of these top news events:
+  Event 1: {headline} — URL: {primary_source_url}
+  Event 2: {headline} — URL: {primary_source_url}
+  Event 3: {headline} — URL: {primary_source_url}
+  ...
+  Return image URL + alt text for each. Report 'No image available' if none found.
 ```
 
 ### Step 4: Analysis & Report Generation
 
-Launch **News-Analyst** agent with all inputs:
+Launch **News-Analyst**. Spawn per § Subagent Dispatch Rule (`general-purpose` + embed `skills/news-scan/agents/news-analyst.md` body, model `opus`):
 
 ```
-Agent(subagent_type="news-analyst") with prompt:
-  "Analyze news scan results and produce a complete report:
-   Topic: {topic}
-   Entities: {entities}
-   Period: {period}
-   Output language: {lang}
-   Scanner results: {all_scanner_outputs}
-   Image data: {imager_output}
+Agent(subagent_type="general-purpose", model="opus") with prompt:
+  <news-analyst.md body>
+  ---
+  Analyze news scan results and produce a complete report:
+  Topic: {topic}
+  Entities: {entities}
+  Period: {period}
+  Output language: {lang}
+  Scanner results: {all_scanner_outputs}
+  Image data: {imager_output}
 
-   Embed images in Section 4 for events where images were found.
-   Skip images for events marked 'No image available'."
+  Embed images in Section 4 for events where images were found.
+  Skip images for events marked 'No image available'.
 ```
 
 ### Step 5: Delivery

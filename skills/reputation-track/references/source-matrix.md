@@ -25,7 +25,7 @@ Loaded by the Scanner. Defines the three sources the reputation-track MVP covers
 
 At 2 tokens/run, the 50-token quota supports **~25 runs/month**. If you run daily, you exhaust the quota in ~3.5 weeks. If you run weekly, you have 6× headroom.
 
-**Hard rules** (enforced in `agents/reputation-scanner.md`):
+**Hard rules** (enforced in `skills/reputation-track/agents/reputation-scanner.md`):
 - No retries on failure — if apidirect returns an error or zero results, emit empty `raw_candidates` with a `coverage_notes` line. Do not retry with a different query.
 - No pagination — always `page=1` / `pages=1`. Extra pages cost extra tokens.
 - No per-executive loop — build ONE compound query covering company + ticker + top 3 executives, ≤500 chars.

@@ -150,11 +150,11 @@ The skill dispatches six stages, each as `general-purpose` + embedded `agents/<n
 
 | Stage | Agent file | Model |
 |-------|------------|-------|
-| Scanner ×N (parallel, one per active category) | `agents/daily-news-scanner.md` | sonnet |
-| Merger | `agents/daily-news-merger.md` | sonnet |
-| Verifier | `agents/news-verifier.md` | sonnet |
-| Fact-Extractor | `agents/daily-fact-extractor.md` | sonnet |
-| Writer | `agents/daily-news-writer.md` | opus |
-| Editor | `agents/daily-editor.md` | opus |
+| Scanner ×N (parallel, one per active category) | `skills/daily-news-intelligence/agents/daily-news-scanner.md` | sonnet |
+| Merger | `skills/daily-news-intelligence/agents/daily-news-merger.md` | sonnet |
+| Verifier | `skills/daily-news-intelligence/agents/news-verifier.md` | sonnet |
+| Fact-Extractor | `skills/daily-news-intelligence/agents/daily-fact-extractor.md` | sonnet |
+| Writer | `skills/daily-news-intelligence/agents/daily-news-writer.md` | opus |
+| Editor | `skills/daily-news-intelligence/agents/daily-editor.md` | opus |
 
 Reference contracts live in `skills/daily-news-intelligence/references/` — `rubric.md` (source tiers + Three-Step Fallback + Conditional Categories), `schemas.md` (Scanner / Merger / Verifier output formats), `language-spec.md` (Category Catalog + Localisation Table), `output-spec.md` (Markdown Syntax Contract + APA references), `verification.md` (self-check + flow diagram), `email-spec.md` (email subject/body templates + exit-code handling).

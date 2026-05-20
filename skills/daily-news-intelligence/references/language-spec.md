@@ -128,7 +128,7 @@ Rationale: `ja` uses corner brackets because Japanese newsroom convention treats
 
 ## Writing Standard
 
-The goal is a brief that reads like a tight, in-medias-res news piece in `lang` — short, fluid, opinion-free, packed with facts that matter. The full writing standard (in medias res / depth over breadth / 干练 / background context / quote handling) lives in `agents/daily-news-writer.md` § Writing Standard. The items below are the language-specific conventions only.
+The goal is a brief that reads like a tight, in-medias-res news piece in `lang` — short, fluid, opinion-free, packed with facts that matter. The full writing standard (in medias res / depth over breadth / 干练 / background context / quote handling) lives in `skills/daily-news-intelligence/agents/daily-news-writer.md` § Writing Standard. The items below are the language-specific conventions only.
 
 ### Story body (between `### title` and `**References**`)
 

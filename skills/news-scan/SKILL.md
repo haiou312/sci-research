@@ -37,11 +37,22 @@ This is a **completely independent** feature line:
 | `--period` | No | `30d` | Time window | `7d`, `30d`, `90d` |
 | `--lang` | No | `zh` | Output language | `zh`, `en`, `ja` |
 
+## Subagent Dispatch Rule (READ FIRST — applies to every phase below)
+
+Every phase spawns as the built-in **`general-purpose`** agent type with the agent body embedded as the prompt. For each phase the orchestrator MUST:
+
+1. `Read` `${CLAUDE_PLUGIN_ROOT}/skills/news-scan/agents/<name>.md`.
+2. Strip the YAML frontmatter; use the **body** as the subagent's instruction prompt.
+3. Append that phase's injected parameters + verbatim upstream data.
+4. Spawn with `subagent_type: general-purpose` and an **explicit `model` argument** — `general-purpose` ignores frontmatter `model:`, so pass it yourself: **`sonnet`** for `news-scanner` / `news-imager`, **`opus`** for `news-analyst`.
+
+Rationale (why we embed bodies rather than register `sci-research:*` subagents — anthropics/claude-code#21318 history): see `CLAUDE.md` § 项目定位 point 6.
+
 ## Workflow
 
 ### Phase 1: News Scanning (Parallel)
 
-Launch one **News-Scanner** agent per entity (or one for broad search):
+Launch one **News-Scanner** agent per entity (or one for broad search). Spawn per § Subagent Dispatch Rule (`general-purpose` + embed `skills/news-scan/agents/news-scanner.md` body, model `sonnet`):
 
 ```
 For each entity in [Entity A, Entity B, ...]:
@@ -59,7 +70,7 @@ For each entity in [Entity A, Entity B, ...]:
 
 ### Phase 2: Image Extraction
 
-Launch **News-Imager** agent with the top 3-5 events from Phase 1:
+Launch **News-Imager** agent with the top 3-5 events from Phase 1. Spawn per § Subagent Dispatch Rule (`general-purpose` + embed `skills/news-scan/agents/news-imager.md` body, model `sonnet`):
 
 ```
 News-Imager receives:
@@ -72,7 +83,7 @@ News-Imager produces:
 
 ### Phase 3: Analysis & Report
 
-Launch **News-Analyst** agent with scanner results + image data:
+Launch **News-Analyst** agent with scanner results + image data. Spawn per § Subagent Dispatch Rule (`general-purpose` + embed `skills/news-scan/agents/news-analyst.md` body, model `opus`):
 
 ```
 News-Analyst receives:

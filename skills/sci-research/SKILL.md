@@ -41,11 +41,22 @@ For ambiguous entities, ask the user to clarify:
 - "EU" → the EU collectively, or specific member states?
 - "中国" → mainland China only, or including Hong Kong/Taiwan?
 
+## Subagent Dispatch Rule (READ FIRST — applies to every phase below)
+
+Every phase spawns as the built-in **`general-purpose`** agent type with the agent body embedded as the prompt. For each phase the orchestrator MUST:
+
+1. `Read` `${CLAUDE_PLUGIN_ROOT}/skills/sci-research/agents/<name>.md`.
+2. Strip the YAML frontmatter; use the **body** as the subagent's instruction prompt.
+3. Append that phase's injected parameters + verbatim upstream data.
+4. Spawn with `subagent_type: general-purpose` and an **explicit `model` argument** — `general-purpose` ignores frontmatter `model:`, so pass it yourself: **`sonnet`** for `researcher` / `fact-checker`, **`opus`** for `comparator` / `writer`.
+
+Rationale (why we embed bodies rather than register `sci-research:*` subagents — anthropics/claude-code#21318 history): see `CLAUDE.md` § 项目定位 point 6.
+
 ## Workflow
 
 ### Phase 1: Research (Parallel)
 
-Launch one **Researcher** agent per entity, all in parallel:
+Launch one **Researcher** agent per entity, all in parallel. Spawn per § Subagent Dispatch Rule (`general-purpose` + embed `skills/sci-research/agents/researcher.md` body, model `sonnet`):
 
 ```
 For each entity in [Entity A, Entity B, ...Entity N]:
@@ -62,7 +73,7 @@ For each entity in [Entity A, Entity B, ...Entity N]:
 
 ### Phase 2: Comparison
 
-Launch **Comparator** agent with all entity findings:
+Launch **Comparator** agent with all entity findings. Spawn per § Subagent Dispatch Rule (`general-purpose` + embed `skills/sci-research/agents/comparator.md` body, model `opus`):
 
 ```
 Comparator receives:
@@ -87,7 +98,7 @@ Comparator produces:
 
 ### Phase 3: Fact-Check
 
-Launch **Fact-Checker** agent:
+Launch **Fact-Checker** agent. Spawn per § Subagent Dispatch Rule (`general-purpose` + embed `skills/sci-research/agents/fact-checker.md` body, model `sonnet`):
 
 ```
 Fact-Checker receives:
@@ -103,7 +114,7 @@ Fact-Checker produces:
 
 ### Phase 4: Writing
 
-Launch **Writer** agent:
+Launch **Writer** agent. Spawn per § Subagent Dispatch Rule (`general-purpose` + embed `skills/sci-research/agents/writer.md` body, model `opus`):
 
 ```
 Writer receives:

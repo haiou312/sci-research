@@ -317,7 +317,7 @@ market-data-collector (Stage B) ──┼─→ weekly-report-writer → pandoc 
 Detailed rules:
 - Pipeline A: [`rules/research/source-credibility.md`](./rules/research/source-credibility.md)
 - Pipeline B: [`rules/research/news-source.md`](./rules/research/news-source.md)
-- Pipeline C: [`skills/daily-news-intelligence/references/rubric.md`](./skills/daily-news-intelligence/references/rubric.md) + [`agents/daily-news-scanner.md`](./agents/daily-news-scanner.md) § Source Matrix
+- Pipeline C: [`skills/daily-news-intelligence/references/rubric.md`](./skills/daily-news-intelligence/references/rubric.md) + [`skills/daily-news-intelligence/agents/daily-news-scanner.md`](./skills/daily-news-intelligence/agents/daily-news-scanner.md) § Source Matrix
 
 ---
 
@@ -343,25 +343,6 @@ sci-research/
 ├── .claude-plugin/
 │   ├── plugin.json                          # Plugin metadata
 │   └── marketplace.json                     # Marketplace manifest
-├── agents/                                  # 18 agents across 6 pipelines
-│   ├── researcher.md                        # [A] Per-entity retrieval
-│   ├── comparator.md                        # [A] Cross-entity dimensions
-│   ├── fact-checker.md                      # [A] Claim verification
-│   ├── writer.md                            # [A] Article writer
-│   ├── news-scanner.md                      # [B] Per-entity news (no images)
-│   ├── news-imager.md                       # [B] Image extraction + verify
-│   ├── news-analyst.md                      # [B] Dedup + timeline + impact
-│   ├── daily-news-scanner.md                # [C] Single-date scan + date gate
-│   ├── news-verifier.md                     # [C] Editorial second-pass filter
-│   ├── daily-news-writer.md                 # [C] Free-prose target-language writer
-│   ├── briefing-curator.md                  # [D] Multi-country curator
-│   ├── reputation-resolver.md               # [E] Ticker/name → exec list
-│   ├── reputation-scanner.md                # [E] Per-source (news/reddit/x)
-│   ├── reputation-classifier.md             # [E] Per-item negativity grader
-│   ├── reputation-writer.md                 # [E] HTML email body composer
-│   ├── weekly-news-aggregator.md            # [F] 7-day event aggregator
-│   ├── market-data-collector.md             # [F] FRED/BoE/BoJ/yfinance
-│   └── weekly-report-writer.md              # [F] Weekly report writer
 ├── commands/                                # 6 main + 2 utility slash commands
 │   ├── sci-research.md
 │   ├── news-scan.md
@@ -371,11 +352,29 @@ sci-research/
 │   ├── weekly-report.md
 │   ├── add-entity.md
 │   └── set-lang.md
-├── skills/                                  # 6 independent skill workflows
-│   ├── sci-research/SKILL.md
-│   ├── news-scan/SKILL.md
-│   ├── daily-news-intelligence/
+├── skills/                                  # 6 independent skill workflows; agents/*.md live under each skill as prompt templates (NOT registered as `sci-research:*` subagents — see CLAUDE.md § 项目定位 point 6)
+│   ├── sci-research/                        # Pipeline A
 │   │   ├── SKILL.md
+│   │   └── agents/
+│   │       ├── researcher.md                # Per-entity retrieval
+│   │       ├── comparator.md                # Cross-entity dimensions
+│   │       ├── fact-checker.md              # Claim verification
+│   │       └── writer.md                    # Article writer
+│   ├── news-scan/                           # Pipeline B
+│   │   ├── SKILL.md
+│   │   └── agents/
+│   │       ├── news-scanner.md              # Per-entity news (no images)
+│   │       ├── news-imager.md               # Image extraction + verify
+│   │       └── news-analyst.md              # Dedup + timeline + impact
+│   ├── daily-news-intelligence/             # Pipeline C
+│   │   ├── SKILL.md
+│   │   ├── agents/
+│   │   │   ├── daily-news-scanner.md        # Single-date scan + date gate
+│   │   │   ├── daily-news-merger.md         # Cross-category dedup + Cat5↔Cat6 routing
+│   │   │   ├── news-verifier.md             # Editorial second-pass filter
+│   │   │   ├── daily-fact-extractor.md      # Verifier KEEP → YAML fact manifest
+│   │   │   ├── daily-news-writer.md         # Free-prose target-language writer
+│   │   │   └── daily-editor.md              # 5-pass post-Writer editor
 │   │   └── references/                      # Pipeline C specs
 │   │       ├── email-spec.md
 │   │       ├── language-spec.md
@@ -383,15 +382,22 @@ sci-research/
 │   │       ├── rubric.md
 │   │       ├── schemas.md
 │   │       └── verification.md
-│   ├── daily-briefing/
+│   ├── daily-briefing/                      # Pipeline D
 │   │   ├── SKILL.md
+│   │   ├── agents/
+│   │   │   └── briefing-curator.md          # Multi-country curator
 │   │   ├── template/briefing-template.docx  # SPD Bank brand template
 │   │   ├── references/email-spec.md
 │   │   └── scripts/
 │   │       ├── generate-branded-docx.py
 │   │       └── send-briefing-email.py
-│   ├── reputation-track/
+│   ├── reputation-track/                    # Pipeline E
 │   │   ├── SKILL.md
+│   │   ├── agents/
+│   │   │   ├── reputation-resolver.md       # Ticker/name → exec list
+│   │   │   ├── reputation-scanner.md        # Per-source (news/reddit/x)
+│   │   │   ├── reputation-classifier.md     # Per-item negativity grader
+│   │   │   └── reputation-writer.md         # HTML email body composer
 │   │   └── references/                      # Pipeline E specs
 │   │       ├── entity-resolution.md
 │   │       ├── source-matrix.md
@@ -399,7 +405,12 @@ sci-research/
 │   │       ├── html-template.md
 │   │       ├── email-spec.md
 │   │       └── schemas.md
-│   └── weekly-report/SKILL.md
+│   └── weekly-report/                       # Pipeline F
+│       ├── SKILL.md
+│       └── agents/
+│           ├── weekly-news-aggregator.md    # 7-day event aggregator
+│           ├── market-data-collector.md     # FRED/BoE/BoJ/yfinance
+│           └── weekly-report-writer.md      # Weekly report writer
 ├── contexts/sci-research.md                 # Research mode behavioral context
 ├── hooks/hooks.json                         # Hook configuration (8 hooks)
 ├── scripts/
@@ -434,21 +445,21 @@ sci-research/
 |---|---|
 | Pipeline A word limit | `scripts/hooks/word-count-check.js` (`WORD_LIMIT`, `CHAR_LIMIT_ZH`) |
 | Pipeline B news-freshness window | `scripts/hooks/news-freshness-check.js` (7-day constant) |
-| Pipeline A comparison dimensions | `agents/comparator.md` § Dimension Selection |
+| Pipeline A comparison dimensions | `skills/sci-research/agents/comparator.md` § Dimension Selection |
 | Pipeline A source grading | `rules/research/source-credibility.md` |
 | Pipeline B news source rules | `rules/research/news-source.md` |
-| Pipeline C source matrix / date verification | `agents/daily-news-scanner.md` + `skills/daily-news-intelligence/references/rubric.md` |
-| Pipeline C external-view China rules | `agents/daily-news-scanner.md` § Source Matrix § T4-official + Step 2.1 |
+| Pipeline C source matrix / date verification | `skills/daily-news-intelligence/agents/daily-news-scanner.md` + `skills/daily-news-intelligence/references/rubric.md` |
+| Pipeline C external-view China rules | `skills/daily-news-intelligence/agents/daily-news-scanner.md` § Source Matrix § T4-official + Step 2.1 |
 | Pipeline C output format / Markdown contract | `skills/daily-news-intelligence/references/output-spec.md` |
 | Pipeline C language localisation | `skills/daily-news-intelligence/references/language-spec.md` |
 | Pipeline C email delivery | `skills/daily-news-intelligence/references/email-spec.md` + `scripts/send-report-email.py` |
 | Pipeline D brand template | `skills/daily-briefing/template/briefing-template.docx` |
-| Pipeline D curator rules | `agents/briefing-curator.md` |
+| Pipeline D curator rules | `skills/daily-briefing/agents/briefing-curator.md` |
 | Pipeline E negativity rubric | `skills/reputation-track/references/negativity-rubric.md` |
 | Pipeline E HTML email template | `skills/reputation-track/references/html-template.md` |
-| Pipeline E entity resolution | `skills/reputation-track/references/entity-resolution.md` + `agents/reputation-resolver.md` |
-| Pipeline F market-data sources | `agents/market-data-collector.md` |
-| New output language | `agents/writer.md` + `agents/news-analyst.md` + `agents/daily-news-writer.md` + `commands/set-lang.md` + `skills/daily-news-intelligence/references/language-spec.md` |
+| Pipeline E entity resolution | `skills/reputation-track/references/entity-resolution.md` + `skills/reputation-track/agents/reputation-resolver.md` |
+| Pipeline F market-data sources | `skills/weekly-report/agents/market-data-collector.md` |
+| New output language | `skills/sci-research/agents/writer.md` + `skills/news-scan/agents/news-analyst.md` + `skills/daily-news-intelligence/agents/daily-news-writer.md` + `commands/set-lang.md` + `skills/daily-news-intelligence/references/language-spec.md` |
 | Adding hook / changing email-send guard | `scripts/hooks/email-send-guard.js` + the relevant SKILL.md email step |
 
 ---

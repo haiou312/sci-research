@@ -6,7 +6,7 @@
 
 ## 项目定位
 
-这是一个 **Claude Code 插件**（`sci-research`，当前版本 1.16.1），通过多 Agent 编排，将"主题 + 比较实体 + 输出语言"转化为高质量研究/新闻产出。插件包含六条**完全独立**的流水线，互不共享 Agent：
+这是一个 **Claude Code 插件**（`sci-research`，当前版本 1.16.2），通过多 Agent 编排，将"主题 + 比较实体 + 输出语言"转化为高质量研究/新闻产出。插件包含六条**完全独立**的流水线，互不共享 Agent：
 
 | 特性 | `/sci-research` | `/news-scan` | `/daily-news-intelligence` | `/daily-briefing` | `/reputation-track` | `/weekly-report` |
 |---|---|---|---|---|---|---|
@@ -21,8 +21,16 @@
 2. **Writer 自由文笔**（1.9.0+）：Writer 不再机械翻译 Verifier 包，按目标语言以解释性新闻文笔重写 — 数字/姓名/日期/直接引语必须忠于源，其余措辞自由组织。
 3. **Fact-Manifest + Editor 双层防线**（1.11.0+）：Verifier 之后插入 `daily-fact-extractor`（sonnet）抽取每条 story 的 hard_facts / quotes 的 verbatim YAML manifest；Writer 之后插入 `daily-editor`（opus）跑核查，用 `Edit` 在原文件改。**Writer 引用规则反转**：search URL 必须进 References（References = Verifier KEEP URLs ∪ {支撑了正文事实的 search URLs}）。**引号 canonical 钉死**：en `""` U+0022 / zh `""` U+201C/U+201D / ja `「」` U+300C/U+300D，hook 字符级阻断。**Editor 五道核查（1.16.0+）**：Pass 1 Verifier-locked 事实 / Pass 2 Writer-search 事实回填 / Pass 3 引语逐字 / Pass 4 引号规范化 / **Pass 5 局部通顺 + 逻辑空洞修补**（新；闭合 5 类缺陷白名单：`pass2-cut-gap` / `foreign-residue` / `inconsistent-name` / `filler-marker` / `awkward-connector`；**无 WebSearch / WebFetch**；每 story ≤ 3 Edit、全文 ≤ `2 × story_count`；动 6 个不变量任一失败立即回滚；不可恢复失败时 Pass 5 graceful abort，pipeline 不阻断）。Pass 5 永远不动 `###` 标题 / References 块 / URL / 引号内文本 / 段落数 / H1 / `##` H2。
 4. **条件化类目（1.12.0+）**：栏目集**按 `country` 派生**，不是写死 5 栏。非中国日报 6 栏（econ / politics / tech / society / **ipo_ma** / other）；中国日报 7 栏（第 5 位插入 **china_nexus**）。`china_nexus`（海外涉华财经，**仅财经口径**——投资/FDI/商业与产业政策/关税/出口管制/制裁/投资审查；纯外交归第 2 栏政治与外交）仅中国日报出现、强制跨境（中国×境外方，经济渠道）、排除中国对非洲/小型发展中经济体援助与基建贷款（关键产业例外）、关键产业优先；`ipo_ma`（企业IPO与并购）所有日报都有、聚焦本报告国公司（买方/卖方/上市主体）。**ipo_ma 重要性 3 带（1.15.0+）**：主带 IPO≥3 亿/并购≥5 亿美元（或受审或触及中国关键产业）进主池；**软带 USD 50M ≤ value < 主带门槛**写 Reserve Pool（仅 Fallback 1.5 升格）；<50M 硬 DROP。真源 = `references/language-spec.md` § Category Catalog & Selection（身份/命名/排序/编号）+ `references/rubric.md` § Conditional & Topical Categories（资格/排除/3 带门槛/Cat5↔Cat6 路由）。H2 编号随类目位置变（`ipo_ma` 非中国是第 5、中国是第 6）。格式钩子与类目数无关，不需改。
-5. **并行 Scanner + Merge + 双-Pass 源模型（1.13.0+）**：Scanner **每分类一个实例并行**（非单 agent 扛全部），只扫注入的单类、不跨类去重不路由。每个 Scanner 跑 **Pass A**（矩阵 tier 阶梯，矩阵=种子+权威标定+China 红线，非硬墙）+ **Pass B**（无 site: 自由发现，按 `references/rubric.md` § Source Legitimacy 分级：auto-accept / conditional-accept 封顶 T2 / hard-reject；付费墙原文的免费全文转载豁免为合法 Lead；ipo_ma 加 SEC EDGAR 一手申报；China 报告 Pass B 套中国本土媒体/gov denylist）。新增 **daily-news-merger**（sonnet）做跨类去重 + Cat5↔Cat6 路由（不判质），产出统一 Merged Bundle 交 Verifier。Verifier 升为**五检查**（+ 正版性，新 DROP `Illegitimate-source`；输入 Merged Bundle，去重/路由仅验证不重做）。代价：每日源池漂移（牺牲部分可复现性换召回），token 成本上升。**搜索词模型（1.14.0+）**：栏目检索词从写死 OR 串改为**逐词扫**——每词单发一条 query、多词短语加引号、禁 `OR` 拼接（长 OR 会退化丢尾词）；词集大幅拓宽；T4-official / T1-wire / T1-flagship 三高层**整表逐词全跑、不受 `min_per_category` 早停**（min 仅管是否下探 T2/T3）；`ipo_ma` 一手申报查询（SEC EDGAR / LSE RNS / 交易所披露 + 财经垂直）与 `china_nexus` 外部-T4 + 全球通讯社主题扫提为**永远首发渠道**（不再"低于 min 才进"）。真源 = `agents/daily-news-scanner.md` § Step 1 + § Conditional Categories；`SKILL.md` 不再复制词表（改为指针，杜绝漂移）。
-6. **Subagent 派发 = 内置 `general-purpose` + 嵌入 `agents/*.md` body（永久模型）**：Pipeline C **全部 stage**（Scanner ×N / Merger / Verifier / Fact-Extractor / Writer / Editor）一律以内置 `general-purpose` spawn，并**显式传 `model`**（Scanner/Merger/Verifier/Extractor=sonnet，Writer/Editor=opus，因为 `general-purpose` 不读 frontmatter `model:`）。**禁止 `subagent_type: sci-research:*` 用于执行**——marketplace 插件子 agent 运行时拿不到 `WebSearch`/`WebFetch`（`Grep`/`Glob` 也不稳），即便 frontmatter 声明也没用（Claude Code 缺陷 **anthropics/claude-code#21318，closed as "not planned"**，无上游修复 ⇒ 此 dispatch 为**永久架构非临时补丁**；旁证 #25200 / #52055 / #46250 / #31002）。那样 spawn 的插件 scanner 会**静默编造 URL/日期**，不报错——只有查 `tool_uses` 才发现。`agents/*.md` 是**提示词模板**不是注册子 agent；编排器须 `Read` 文件→剥 frontmatter→body 当指令 prompt→注入参数+上游数据。真源 = `skills/daily-news-intelligence/SKILL.md` § Subagent Dispatch Rule。Hooks 不受影响（PostToolUse/PreToolUse 按工具调用触发，与 agent 类型无关）。
+5. **并行 Scanner + Merge + 双-Pass 源模型（1.13.0+）**：Scanner **每分类一个实例并行**（非单 agent 扛全部），只扫注入的单类、不跨类去重不路由。每个 Scanner 跑 **Pass A**（矩阵 tier 阶梯，矩阵=种子+权威标定+China 红线，非硬墙）+ **Pass B**（无 site: 自由发现，按 `references/rubric.md` § Source Legitimacy 分级：auto-accept / conditional-accept 封顶 T2 / hard-reject；付费墙原文的免费全文转载豁免为合法 Lead；ipo_ma 加 SEC EDGAR 一手申报；China 报告 Pass B 套中国本土媒体/gov denylist）。新增 **daily-news-merger**（sonnet）做跨类去重 + Cat5↔Cat6 路由（不判质），产出统一 Merged Bundle 交 Verifier。Verifier 升为**五检查**（+ 正版性，新 DROP `Illegitimate-source`；输入 Merged Bundle，去重/路由仅验证不重做）。代价：每日源池漂移（牺牲部分可复现性换召回），token 成本上升。**搜索词模型（1.14.0+）**：栏目检索词从写死 OR 串改为**逐词扫**——每词单发一条 query、多词短语加引号、禁 `OR` 拼接（长 OR 会退化丢尾词）；词集大幅拓宽；T4-official / T1-wire / T1-flagship 三高层**整表逐词全跑、不受 `min_per_category` 早停**（min 仅管是否下探 T2/T3）；`ipo_ma` 一手申报查询（SEC EDGAR / LSE RNS / 交易所披露 + 财经垂直）与 `china_nexus` 外部-T4 + 全球通讯社主题扫提为**永远首发渠道**（不再"低于 min 才进"）。真源 = `skills/daily-news-intelligence/agents/daily-news-scanner.md` § Step 1 + § Conditional Categories；`SKILL.md` 不再复制词表（改为指针，杜绝漂移）。
+6. **Subagent 派发 = 内置 `general-purpose` + 嵌入 `agents/*.md` body（永久模型，全 6 条流水线通用）**：**A / B / C / D / E / F 全部 stage** 一律以内置 `general-purpose` spawn，并**显式传 `model`**（`general-purpose` 不读 frontmatter `model:`，必须显式指定）。各流水线模型分配：
+   - **A**: researcher=sonnet / comparator=opus / fact-checker=sonnet / writer=opus
+   - **B**: news-scanner=sonnet / news-imager=sonnet / news-analyst=opus
+   - **C**: Scanner ×N / Merger / Verifier / Fact-Extractor = sonnet；Writer / Editor = opus
+   - **D**: briefing-curator=opus
+   - **E**: reputation-resolver=opus / reputation-scanner ×3=sonnet / reputation-classifier=sonnet / reputation-writer=opus
+   - **F**: weekly-news-aggregator=sonnet / market-data-collector=sonnet / weekly-report-writer=opus
+
+   **历史背景（rationale 单一真源在本条；SKILL.md 只描述流程，不再重复 rationale）**：1.16.2 之前 `agents/*.md` 放在 plugin 根目录，Claude Code 会自动注册为 `sci-research:*` 子 agent；marketplace 插件子 agent 运行时拿不到 `WebSearch`/`WebFetch`（`Grep`/`Glob`/`Bash`/MCP 也不稳），即便 frontmatter 声明也没用（Claude Code 缺陷 **anthropics/claude-code#21318，closed as "not planned"**，无上游修复；旁证 #25200 / #52055 / #46250 / #31002），那样 spawn 的插件 agent 会**静默编造 URL/日期/JSON**——只有查 `tool_uses` 才发现。1.16.2 起 `agents/` 子目录搬到各 skill 下（不再 auto-register），并把 dispatch 永久改为 "general-purpose + embed body"，**两层防线叠用**：即便将来 Claude Code 修了 #21318，这套机制也不再回退（避免每条流水线代码大改）。`agents/*.md` 一律视为**提示词模板**，编排器须 `Read` 文件→剥 frontmatter→body 当指令 prompt→注入参数+上游数据。流程细节见各 skill 的 SKILL.md § Subagent Dispatch Rule。Hooks 不受影响（PostToolUse/PreToolUse 按工具调用触发，与 agent 类型无关）。
 7. **Reserve Pool + Three-Step Coverage Fallback（1.15.0+）**：解决"当日来源稀疏 / 付费墙挤压"导致分类 < `min_per_category` 时的兜底通道。Scanner Pass B 把**通过日期门 + 红线 + Legitimacy 但卡在 authority cap 下方**的 conditional-accept 候选（T3-niche / T3-trade / 小型国家媒体）写入 `## Reserve Pool`（`Held: below-authority-cap`）而非丢弃；`ipo_ma` 软带（USD 50M ≤ value < 主带门槛）同入 Reserve Pool（`Held: below-ipo-ma-floor`）。Merger 同样的去重原则把 Reserve Pool 透传到 Merged Bundle。Verifier 的兜底从 Two-Step 升为 **Three-Step**：**Fallback 1** 放宽 impact tier→`Regional-structural`；**Fallback 1.5**（新）从 Reserve Pool 升格——按 best-first（更接近 T2、更原创、更高 impact、auto-accept 优先），promote 出来的故事标 `Origin: reserve-pool` + `Authority score: T3-extended`（仅 below-authority-cap 用），且**stop-at-floor**（够 min 即停）；Fallback 1.5 仍**revalidate Source Legitimacy**——`Illegitimate-source` 不放过；**Fallback 2** 录 gap。**永远不放宽**：日期、China 红线、hard-paywall-Lead、Originality `Syndicated-rewrite`、Source Legitimacy `Illegitimate-source`。真源 = `references/rubric.md` § Three-Step Coverage Fallback + § Conditional & Topical Categories 三带；Scanner / Merger / Verifier 三 agent 同步实现。Output Schema 拓展：`Fallback used: fallback_1+1.5 | fallback_1+1.5+gap`；新字段 `Reserve pool input count / promotions / Reserve Pool — Held` block。
 
 ---
@@ -34,28 +42,6 @@ sci-research/
 ├── .claude-plugin/
 │   ├── plugin.json              # 插件元数据（name, version, author）
 │   └── marketplace.json         # 市场清单
-├── agents/                      # 21 个专业 Agent（六条流水线共用目录）
-│   ├── researcher.md            # [A] 每实体多源检索
-│   ├── comparator.md            # [A] 跨实体维度对比分析
-│   ├── fact-checker.md          # [A] 关键论断核验
-│   ├── writer.md                # [A] 多语言文章合成
-│   ├── news-scanner.md          # [B] 每实体实时新闻抓取（时间窗 7d/30d/90d，不取图）
-│   ├── news-imager.md           # [B] 热点事件图片提取与校验
-│   ├── news-analyst.md          # [B] 去重、时间线、影响分析
-│   ├── daily-news-scanner.md    # [C] 单分类扫描×N 并行（Pass A 矩阵 + Pass B 自由发现，严格日期核验；China=外部视角）
-│   ├── daily-news-merger.md     # [C] 跨类去重 + Cat5↔Cat6 路由 → 统一 Merged Bundle（sonnet，不判质，不上网）
-│   ├── news-verifier.md         # [C] 编辑台五检查（原创性/权威性/影响力/正版性/去重验证，输入 Merged Bundle）
-│   ├── daily-fact-extractor.md  # [C] Verifier KEEP → YAML Fact Manifest（hard_facts / quotes / locked_urls，sonnet，不上网）
-│   ├── daily-news-writer.md     # [C] 多语言每日简报合成（吃 Verifier + Manifest，自由文笔 + search URL 强制进 References）
-│   ├── daily-editor.md          # [C] Writer 之后五道核查（1-4 事实 / 引语 / 引号 + 5 局部通顺与逻辑空洞修补，闭合 5 类缺陷白名单，无 web），用 Edit 在原文件改
-│   ├── briefing-curator.md      # [D] 多国新闻筛选改写（读取已有 MD，不搜索）
-│   ├── reputation-resolver.md   # [E] ticker/name → 公司 + 高管列表消歧
-│   ├── reputation-scanner.md    # [E] 每源并行扫 News/Reddit/X（不判负面）
-│   ├── reputation-classifier.md # [E] 逐条打分：category + severity + verbatim quote
-│   ├── reputation-writer.md     # [E] 渲染内联 HTML 邮件正文（模板固定）
-│   ├── weekly-news-aggregator.md # [F] 读 7 天 Pipeline C 报告，去重 + 按国家分组
-│   ├── market-data-collector.md # [F] 并行跑 FRED / BoE / BoJ / yfinance 脚本，聚合 JSON
-│   └── weekly-report-writer.md  # [F] 消费 events bundle + market data bundle，按语言本地化合成 Markdown
 ├── commands/                    # 6 个主命令 + 2 个工具命令
 │   ├── sci-research.md          # /sci-research 入口
 │   ├── news-scan.md             # /news-scan 入口
@@ -65,11 +51,29 @@ sci-research/
 │   ├── weekly-report.md         # /weekly-report 入口
 │   ├── add-entity.md            # /add-entity 会话中加实体
 │   └── set-lang.md              # /set-lang 切换输出语言
-├── skills/                      # 六个独立 Skill 工作流
-│   ├── sci-research/SKILL.md
-│   ├── news-scan/SKILL.md
-│   ├── daily-news-intelligence/
+├── skills/                      # 六个独立 Skill 工作流；agents/*.md 作为提示词模板挂在各 skill 下（不在 plugin 根，避免 Claude Code 把它们注册成 `sci-research:*` 子 agent — 真源 § 项目定位 第 6 条）
+│   ├── sci-research/            # Pipeline A
 │   │   ├── SKILL.md
+│   │   └── agents/              # 提示词模板（非注册子 agent）
+│   │       ├── researcher.md            # 每实体多源检索
+│   │       ├── comparator.md            # 跨实体维度对比分析
+│   │       ├── fact-checker.md          # 关键论断核验
+│   │       └── writer.md                # 多语言文章合成
+│   ├── news-scan/               # Pipeline B
+│   │   ├── SKILL.md
+│   │   └── agents/
+│   │       ├── news-scanner.md          # 每实体实时新闻抓取（时间窗 7d/30d/90d，不取图）
+│   │       ├── news-imager.md           # 热点事件图片提取与校验
+│   │       └── news-analyst.md          # 去重、时间线、影响分析
+│   ├── daily-news-intelligence/ # Pipeline C
+│   │   ├── SKILL.md
+│   │   ├── agents/
+│   │   │   ├── daily-news-scanner.md    # 单分类扫描×N 并行（Pass A 矩阵 + Pass B 自由发现，严格日期核验；China=外部视角）
+│   │   │   ├── daily-news-merger.md     # 跨类去重 + Cat5↔Cat6 路由 → 统一 Merged Bundle（sonnet，不判质，不上网）
+│   │   │   ├── news-verifier.md         # 编辑台五检查（原创性/权威性/影响力/正版性/去重验证，输入 Merged Bundle）
+│   │   │   ├── daily-fact-extractor.md  # Verifier KEEP → YAML Fact Manifest（hard_facts / quotes / locked_urls，sonnet，不上网）
+│   │   │   ├── daily-news-writer.md     # 多语言每日简报合成（吃 Verifier + Manifest，自由文笔 + search URL 强制进 References）
+│   │   │   └── daily-editor.md          # Writer 之后五道核查（1-4 事实 / 引语 / 引号 + 5 局部通顺与逻辑空洞修补，闭合 5 类缺陷白名单，无 web），用 Edit 在原文件改
 │   │   └── references/          # Pipeline C 的规范文档
 │   │       ├── email-spec.md
 │   │       ├── language-spec.md
@@ -79,23 +83,36 @@ sci-research/
 │   │       └── verification.md
 │   ├── daily-briefing/          # Pipeline D（完全独立）
 │   │   ├── SKILL.md
+│   │   ├── agents/
+│   │   │   └── briefing-curator.md      # 多国新闻筛选改写（读取已有 MD，不搜索）
 │   │   ├── template/
-│   │   │   └── briefing-template.docx  # SPD Bank 品牌模板
+│   │   │   └── briefing-template.docx   # SPD Bank 品牌模板
 │   │   ├── references/
-│   │   │   └── email-spec.md    # 独立邮件模板规范
+│   │   │   └── email-spec.md            # 独立邮件模板规范
 │   │   └── scripts/
-│   │       ├── generate-branded-docx.py  # docx 生成脚本
-│   │       └── send-briefing-email.py    # 独立邮件发送脚本
+│   │       ├── generate-branded-docx.py # docx 生成脚本
+│   │       └── send-briefing-email.py   # 独立邮件发送脚本
 │   ├── reputation-track/        # Pipeline E（完全独立）
 │   │   ├── SKILL.md
+│   │   ├── agents/
+│   │   │   ├── reputation-resolver.md   # ticker/name → 公司 + 高管列表消歧
+│   │   │   ├── reputation-scanner.md    # 每源并行扫 News/Reddit/X（不判负面）
+│   │   │   ├── reputation-classifier.md # 逐条打分：category + severity + verbatim quote
+│   │   │   └── reputation-writer.md     # 渲染内联 HTML 邮件正文（模板固定）
 │   │   └── references/          # Pipeline E 的规范文档
-│   │       ├── entity-resolution.md  # 代码/名字消歧 + 高管抓取
-│   │       ├── source-matrix.md      # News + Reddit + X 的搜索模板
-│   │       ├── negativity-rubric.md  # 分类 + 严重度 + 可信度加权
-│   │       ├── html-template.md      # 内联 CSS HTML 邮件正文骨架
-│   │       ├── email-spec.md         # 调用 send-report-email.py 的契约
-│   │       └── schemas.md            # Resolver/Scanner/Classifier 输出格式
-│   └── weekly-report/SKILL.md   # Pipeline F 工作流（含 references / scripts）
+│   │       ├── entity-resolution.md     # 代码/名字消歧 + 高管抓取
+│   │       ├── source-matrix.md         # News + Reddit + X 的搜索模板
+│   │       ├── negativity-rubric.md     # 分类 + 严重度 + 可信度加权
+│   │       ├── html-template.md         # 内联 CSS HTML 邮件正文骨架
+│   │       ├── email-spec.md            # 调用 send-report-email.py 的契约
+│   │       └── schemas.md               # Resolver/Scanner/Classifier 输出格式
+│   └── weekly-report/           # Pipeline F
+│       ├── SKILL.md
+│       ├── agents/
+│       │   ├── weekly-news-aggregator.md # 读 7 天 Pipeline C 报告，去重 + 按国家分组
+│       │   ├── market-data-collector.md  # 并行跑 FRED / BoE / BoJ / yfinance 脚本，聚合 JSON
+│       │   └── weekly-report-writer.md   # 消费 events bundle + market data bundle，按语言本地化合成 Markdown
+│       └── (references / scripts 见 skill 目录)
 ├── contexts/
 │   └── sci-research.md          # 研究模式行为上下文
 ├── hooks/
@@ -349,7 +366,7 @@ End Date (default: today) → 计算前 7 日窗口
 | T2 | 区域旗舰 / 主流 | NHK World, ABC Australia, Straits Times, Korea Herald, The Hindu, CNBC, CNN, NPR, Politico Europe, DW |
 | T3 | 行业垂直 | TechCrunch, MIT Tech Review, Wired, Finextra, S&P Global, STAT News, MLex, Law360 |
 
-**China 特殊处理（1.9.1+）**：`country = China` 时矩阵结构本身就是外部视角 — 不含 Xinhua / Caixin / People's Daily / SCMP / TechNode / 澎湃 等中国本土媒体；不查询 `gov.cn` / `pbc.gov.cn` / `stats.gov.cn` 等中国政府域名；T4 改用 IMF / World Bank / WTO / OECD / BIS / IEA / Treasury / USTR / State Dept / Commerce-BIS / White House / EU Commission / UK Gov / METI / MOFA Japan 等外部机构清单。详见 `agents/daily-news-scanner.md` § Source Matrix § T4-official 表底 + Step 2.1。
+**China 特殊处理（1.9.1+）**：`country = China` 时矩阵结构本身就是外部视角 — 不含 Xinhua / Caixin / People's Daily / SCMP / TechNode / 澎湃 等中国本土媒体；不查询 `gov.cn` / `pbc.gov.cn` / `stats.gov.cn` 等中国政府域名；T4 改用 IMF / World Bank / WTO / OECD / BIS / IEA / Treasury / USTR / State Dept / Commerce-BIS / White House / EU Commission / UK Gov / METI / MOFA Japan 等外部机构清单。详见 `skills/daily-news-intelligence/agents/daily-news-scanner.md` § Source Matrix § T4-official 表底 + Step 2.1。
 
 详细规则见 `skills/daily-news-intelligence/references/rubric.md`。
 
@@ -391,44 +408,44 @@ End Date (default: today) → 计算前 7 日窗口
 |---|---|
 | 调整 A 字数限制 | `scripts/hooks/word-count-check.js`（`WORD_LIMIT` / `CHAR_LIMIT_ZH`） |
 | 调整 B 新鲜度窗口 | `scripts/hooks/news-freshness-check.js`（7 天常量） |
-| 增加 A 对比维度 | `agents/comparator.md`（Section 1 Dimension Selection） |
-| 新增输出语言 | `agents/writer.md` + `agents/news-analyst.md` + `agents/daily-news-writer.md` + `commands/set-lang.md` + `skills/daily-news-intelligence/references/language-spec.md` |
+| 增加 A 对比维度 | `skills/sci-research/agents/comparator.md`（Section 1 Dimension Selection） |
+| 新增输出语言 | `skills/sci-research/agents/writer.md` + `skills/news-scan/agents/news-analyst.md` + `skills/daily-news-intelligence/agents/daily-news-writer.md` + `commands/set-lang.md` + `skills/daily-news-intelligence/references/language-spec.md` |
 | 调整 A 来源分级 | `rules/research/source-credibility.md` |
 | 调整 B 新闻来源规则 | `rules/research/news-source.md` |
-| 调整 C 来源分级与日期核验 | `agents/daily-news-scanner.md` + `skills/daily-news-intelligence/references/rubric.md` |
-| 调整 C 付费墙补救逻辑（Step 3.5） | `agents/daily-news-scanner.md` § Source Matrix § Paywall Status + § Search Process § Step 3.5 |
-| 调整 C Corroborated by 透传 | `agents/news-verifier.md` + `agents/daily-news-writer.md` + `skills/daily-news-intelligence/references/schemas.md`（三处必须同时改） |
-| 调整 C Verifier 筛选逻辑 | `agents/news-verifier.md` |
+| 调整 C 来源分级与日期核验 | `skills/daily-news-intelligence/agents/daily-news-scanner.md` + `skills/daily-news-intelligence/references/rubric.md` |
+| 调整 C 付费墙补救逻辑（Step 3.5） | `skills/daily-news-intelligence/agents/daily-news-scanner.md` § Source Matrix § Paywall Status + § Search Process § Step 3.5 |
+| 调整 C Corroborated by 透传 | `skills/daily-news-intelligence/agents/news-verifier.md` + `skills/daily-news-intelligence/agents/daily-news-writer.md` + `skills/daily-news-intelligence/references/schemas.md`（三处必须同时改） |
+| 调整 C Verifier 筛选逻辑 | `skills/daily-news-intelligence/agents/news-verifier.md` |
 | 调整 C 输出格式 / Markdown 语法 | `skills/daily-news-intelligence/references/output-spec.md` |
-| 调整 C Writer 文笔约束（自由度 vs 事实纪律） | `agents/daily-news-writer.md` + `skills/daily-news-intelligence/references/output-spec.md` + `skills/daily-news-intelligence/references/language-spec.md`（三处同步） |
-| 调整 C Fact Manifest schema / 抽取规则 | `agents/daily-fact-extractor.md`（schema、kind 分类、locked_urls 约定都在 agent prompt 内） |
-| 调整 C Editor 五道核查的判定 / 预算 | `agents/daily-editor.md`（Pass 1-4 的判定阈值、WebSearch/WebFetch 预算上限；Pass 5 的 5 类缺陷白名单、每-story / 每-文档 Edit 上限、6 个回滚不变量） |
-| 调整 C Editor Pass 5 缺陷类目（增/删/改 5 类缺陷判定） | `agents/daily-editor.md` § Pass 5（5 类白名单是 Pass 5 的唯一 scope；删类需同时审视 Writer self-check 能否补位；加类需写明触发条件 + 允许动作 + 禁止动作 + 与现有 Pass 1-4 的非重叠证明） |
-| 调整 C 引号 canonical 字符表 | `skills/daily-news-intelligence/references/language-spec.md` § Canonical Quote Marks + `agents/daily-news-writer.md`（多处引用）+ `scripts/hooks/daily-news-format-check.js`（`forbiddenByLang` map） |
-| 调整 C Writer 引用契约（search URL 是否进 References） | `agents/daily-news-writer.md`（多处明文 + Quality Rules 第 4 条）+ `skills/daily-news-intelligence/references/output-spec.md` § Cited Search URLs |
+| 调整 C Writer 文笔约束（自由度 vs 事实纪律） | `skills/daily-news-intelligence/agents/daily-news-writer.md` + `skills/daily-news-intelligence/references/output-spec.md` + `skills/daily-news-intelligence/references/language-spec.md`（三处同步） |
+| 调整 C Fact Manifest schema / 抽取规则 | `skills/daily-news-intelligence/agents/daily-fact-extractor.md`（schema、kind 分类、locked_urls 约定都在 agent prompt 内） |
+| 调整 C Editor 五道核查的判定 / 预算 | `skills/daily-news-intelligence/agents/daily-editor.md`（Pass 1-4 的判定阈值、WebSearch/WebFetch 预算上限；Pass 5 的 5 类缺陷白名单、每-story / 每-文档 Edit 上限、6 个回滚不变量） |
+| 调整 C Editor Pass 5 缺陷类目（增/删/改 5 类缺陷判定） | `skills/daily-news-intelligence/agents/daily-editor.md` § Pass 5（5 类白名单是 Pass 5 的唯一 scope；删类需同时审视 Writer self-check 能否补位；加类需写明触发条件 + 允许动作 + 禁止动作 + 与现有 Pass 1-4 的非重叠证明） |
+| 调整 C 引号 canonical 字符表 | `skills/daily-news-intelligence/references/language-spec.md` § Canonical Quote Marks + `skills/daily-news-intelligence/agents/daily-news-writer.md`（多处引用）+ `scripts/hooks/daily-news-format-check.js`（`forbiddenByLang` map） |
+| 调整 C Writer 引用契约（search URL 是否进 References） | `skills/daily-news-intelligence/agents/daily-news-writer.md`（多处明文 + Quality Rules 第 4 条）+ `skills/daily-news-intelligence/references/output-spec.md` § Cited Search URLs |
 | 调整 C 编排顺序（插入/移除 agent） | `skills/daily-news-intelligence/SKILL.md`（Quick Reference Checklist + Data Handoff Between Stages + Workflow Steps + Stage → Agent → Reference Map 四处同步） |
-| 调整 C 并行 Scanner / Merge 拓扑（fan-out、Merger 职责） | `skills/daily-news-intelligence/SKILL.md`（fan-out + Step 6.5）+ `agents/daily-news-scanner.md`（单分类）+ `agents/daily-news-merger.md`（跨类去重/路由）+ `references/schemas.md`（§ Merged Bundle） |
-| 调整 C 源发现模型 / Pass B / 正版性 rubric | `references/rubric.md` § Source Discovery Model + § Source Legitimacy（真源）；镜像机制在 `agents/daily-news-scanner.md` § Pass B — Free Discovery；Verifier 第 4 检查在 `agents/news-verifier.md` |
-| 调整 C China 外部视角矩阵 | `agents/daily-news-scanner.md` § Source Matrix（T4 China 子表、T1-wire / T1-flagship / T3 行的增删、Paywall Status 三表） |
+| 调整 C 并行 Scanner / Merge 拓扑（fan-out、Merger 职责） | `skills/daily-news-intelligence/SKILL.md`（fan-out + Step 6.5）+ `skills/daily-news-intelligence/agents/daily-news-scanner.md`（单分类）+ `skills/daily-news-intelligence/agents/daily-news-merger.md`（跨类去重/路由）+ `references/schemas.md`（§ Merged Bundle） |
+| 调整 C 源发现模型 / Pass B / 正版性 rubric | `references/rubric.md` § Source Discovery Model + § Source Legitimacy（真源）；镜像机制在 `skills/daily-news-intelligence/agents/daily-news-scanner.md` § Pass B — Free Discovery；Verifier 第 4 检查在 `skills/daily-news-intelligence/agents/news-verifier.md` |
+| 调整 C China 外部视角矩阵 | `skills/daily-news-intelligence/agents/daily-news-scanner.md` § Source Matrix（T4 China 子表、T1-wire / T1-flagship / T3 行的增删、Paywall Status 三表） |
 | 调整 C 邮件投递 | `skills/daily-news-intelligence/references/email-spec.md` + `scripts/send-report-email.py` |
-| 调整 C 栏目目录 / 命名 / 排序 / 编号 / 本地化 | `skills/daily-news-intelligence/references/language-spec.md` § Category Catalog & Selection（真源）；镜像在 `agents/daily-news-writer.md` § Category Catalog & Selection |
-| 调整 C 条件化类目规则（china_nexus 资格/排除/关键产业、ipo_ma 门槛、Cat5↔Cat6 路由） | `skills/daily-news-intelligence/references/rubric.md` § Conditional & Topical Categories（真源，Scanner/Verifier 引用）；搜索机制在 `agents/daily-news-scanner.md` § Conditional Categories — Search Mechanics |
+| 调整 C 栏目目录 / 命名 / 排序 / 编号 / 本地化 | `skills/daily-news-intelligence/references/language-spec.md` § Category Catalog & Selection（真源）；镜像在 `skills/daily-news-intelligence/agents/daily-news-writer.md` § Category Catalog & Selection |
+| 调整 C 条件化类目规则（china_nexus 资格/排除/关键产业、ipo_ma 门槛、Cat5↔Cat6 路由） | `skills/daily-news-intelligence/references/rubric.md` § Conditional & Topical Categories（真源，Scanner/Verifier 引用）；搜索机制在 `skills/daily-news-intelligence/agents/daily-news-scanner.md` § Conditional Categories — Search Mechanics |
 | 调整 C 类目集（增/删栏目、改国家派生规则） | `references/language-spec.md` § Category Catalog（active 规则）+ 同步 `daily-news-scanner.md` / `news-verifier.md` / `schemas.md` / `daily-news-writer.md` / `output-spec.md` / `verification.md` / `email-spec.md` / `SKILL.md` / `commands/daily-news-intelligence.md` / `daily-fact-extractor.md`（enum） |
 | 调整 C Reference 格式校验规则 | `scripts/hooks/daily-news-format-check.js` + `skills/daily-news-intelligence/references/output-spec.md` § Self-Check Checksum |
 | 调整邮件发送守卫（禁止 inline SMTP） | `scripts/hooks/email-send-guard.js` + 四份 SKILL.md（C/D/E/F）的 email Step 里的 "Hard rule" 段 |
 | 修改 A 文章格式 | `rules/research/output-format.md` |
 | 调整 D 品牌模板 | `skills/daily-briefing/template/briefing-template.docx` |
-| 调整 D 新闻筛选逻辑 | `agents/briefing-curator.md` |
+| 调整 D 新闻筛选逻辑 | `skills/daily-briefing/agents/briefing-curator.md` |
 | 调整 D docx 生成 | `skills/daily-briefing/scripts/generate-branded-docx.py` |
 | 调整 D 邮件投递 | `skills/daily-briefing/references/email-spec.md` + `skills/daily-briefing/scripts/send-briefing-email.py` |
 | 调整 E 负面分类/严重度 | `skills/reputation-track/references/negativity-rubric.md` |
 | 调整 E 数据源（News/Reddit/X）搜索模板 | `skills/reputation-track/references/source-matrix.md` |
 | 调整 E HTML 邮件模板 | `skills/reputation-track/references/html-template.md` |
-| 调整 E 实体消歧/高管抓取 | `skills/reputation-track/references/entity-resolution.md` + `agents/reputation-resolver.md` |
+| 调整 E 实体消歧/高管抓取 | `skills/reputation-track/references/entity-resolution.md` + `skills/reputation-track/agents/reputation-resolver.md` |
 | 调整 E 邮件投递 | `skills/reputation-track/references/email-spec.md` + `scripts/send-report-email.py`（`--body-html-file` 支持） |
-| 调整 F 行情数据采集（FRED / BoE / BoJ / yfinance） | `agents/market-data-collector.md` + `skills/weekly-report/scripts/*.py`（如有） |
+| 调整 F 行情数据采集（FRED / BoE / BoJ / yfinance） | `skills/weekly-report/agents/market-data-collector.md` + `skills/weekly-report/scripts/*.py`（如有） |
 | 调整 F 周报输出格式 / 分节 | `skills/weekly-report/references/output-spec.md`（或对应 spec） + `scripts/hooks/weekly-report-format-check.js` |
-| 调整 F 多语言本地化 | `agents/weekly-report-writer.md` + `skills/weekly-report/references/language-spec.md`（如有） |
+| 调整 F 多语言本地化 | `skills/weekly-report/agents/weekly-report-writer.md` + `skills/weekly-report/references/language-spec.md`（如有） |
 | 调整 F 邮件投递 | `skills/weekly-report/references/email-spec.md`（如有） + `scripts/send-report-email.py` |
 
 ---

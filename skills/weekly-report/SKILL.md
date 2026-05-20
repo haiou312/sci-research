@@ -51,6 +51,17 @@ Derived fields (`country_display` per country, `out_md` path) come from `referen
 - `FRED_API_KEY` (required for Money Market / Fixed Income US block / FX). If missing, those scripts return error envelopes and their data flows into the Data Gaps section.
 - `GOOGLE_EMAIL_USERNAME` / `GOOGLE_EMAIL_APP_PASSWORD` (only when `--email` is non-empty). Same as `/daily-news-intelligence`.
 
+## Subagent Dispatch Rule (READ FIRST — applies to every stage below)
+
+Every stage spawns as the built-in **`general-purpose`** agent type with the agent body embedded as the prompt. For each stage the orchestrator MUST:
+
+1. `Read` `${CLAUDE_PLUGIN_ROOT}/skills/weekly-report/agents/<name>.md`.
+2. Strip the YAML frontmatter; use the **body** as the subagent's instruction prompt.
+3. Append that stage's injected parameters + verbatim upstream data.
+4. Spawn with `subagent_type: general-purpose` and an **explicit `model` argument** — `general-purpose` ignores frontmatter `model:`, so pass it yourself: **`sonnet`** for `weekly-news-aggregator` / `market-data-collector`, **`opus`** for `weekly-report-writer`.
+
+Rationale (why we embed bodies rather than register `sci-research:*` subagents — anthropics/claude-code#21318 history): see `CLAUDE.md` § 项目定位 point 6.
+
 ## Workflow
 
 ### Step 0: Pre-check
@@ -84,14 +95,14 @@ Print a confirmation block:
 
 **CRITICAL — issue both Task calls in a single assistant message** so the platform runs them in parallel. Sequential dispatch wastes wall time and cache.
 
-- **Task → `weekly-news-aggregator`** with prompt containing `start_date`, `end_date`, `lang`, `countries`, `news_dir`. Capture the returned `WeeklyEventsBundle` JSON.
-- **Task → `market-data-collector`** with prompt containing `start_date`, `end_date`, `lang`, `kr_bond_symbol`, `commodity_symbols`, `boe_tenors`, `boj_tenors`. Capture the returned `MarketDataBundle` JSON.
+- Spawn the **Aggregator** per § Subagent Dispatch Rule (`general-purpose` + embed `skills/weekly-report/agents/weekly-news-aggregator.md` body, model `sonnet`) with prompt containing `start_date`, `end_date`, `lang`, `countries`, `news_dir`. Capture the returned `WeeklyEventsBundle` JSON.
+- Spawn the **Market-Data Collector** per § Subagent Dispatch Rule (`general-purpose` + embed `skills/weekly-report/agents/market-data-collector.md` body, model `sonnet`) with prompt containing `start_date`, `end_date`, `lang`, `kr_bond_symbol`, `commodity_symbols`, `boe_tenors`, `boj_tenors`. Capture the returned `MarketDataBundle` JSON.
 
 If either bundle is empty/error, do NOT abort — pass an empty bundle through and let Stage C surface gaps.
 
 ### Step 3: Stage C — Writer
 
-Launch the **`weekly-report-writer`** agent in a single Task call. Prompt must include:
+Spawn the **Writer** per § Subagent Dispatch Rule (`general-purpose` + embed `skills/weekly-report/agents/weekly-report-writer.md` body, model `opus`) in a single Task call. Prompt must include:
 
 1. Full `WeeklyEventsBundle` JSON verbatim (do not summarise).
 2. Full `MarketDataBundle` JSON verbatim.

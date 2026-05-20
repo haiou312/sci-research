@@ -12,8 +12,8 @@
 User-reported failure modes on Pipeline C output:
 
 1. **Number / fact accuracy drifts** in body prose — units, magnitudes, timing inconsistencies between body and source.
-2. **Reference completeness gap** — users check the References block and cannot find quotes/claims that appear in body. Root cause: Writer's WebSearch-derived background facts are **by current design** excluded from References ([daily-news-writer.md:12](../agents/daily-news-writer.md), [:78](../agents/daily-news-writer.md)).
-3. **Quote-mark chaos** — body contains a mix of `""` curly, `""` ASCII, `「」`, and asymmetric pairings. Spec self-contradicts: [daily-news-writer.md:60](../agents/daily-news-writer.md) localisation table vs. [:190](../agents/daily-news-writer.md) writing-standard text disagree on en/ja canonical chars.
+2. **Reference completeness gap** — users check the References block and cannot find quotes/claims that appear in body. Root cause: Writer's WebSearch-derived background facts are **by current design** excluded from References ([daily-news-writer.md:12](../skills/daily-news-intelligence/agents/daily-news-writer.md), [:78](../skills/daily-news-intelligence/agents/daily-news-writer.md)).
+3. **Quote-mark chaos** — body contains a mix of `""` curly, `""` ASCII, `「」`, and asymmetric pairings. Spec self-contradicts: [daily-news-writer.md:60](../skills/daily-news-intelligence/agents/daily-news-writer.md) localisation table vs. [:190](../skills/daily-news-intelligence/agents/daily-news-writer.md) writing-standard text disagree on en/ja canonical chars.
 
 ## 2. Constraint
 
@@ -99,9 +99,9 @@ Rationale for ja using `「」`: native newsroom convention. Forcing ASCII would
 
 #### 5.1.2 Writer spec cleanup
 
-Delete the contradictory line in [agents/daily-news-writer.md:60](../agents/daily-news-writer.md) (the `quote_marks` row showing identical `""` for all three langs) — replace with reference to the language-spec canonical table.
+Delete the contradictory line in [skills/daily-news-intelligence/agents/daily-news-writer.md:60](../skills/daily-news-intelligence/agents/daily-news-writer.md) (the `quote_marks` row showing identical `""` for all three langs) — replace with reference to the language-spec canonical table.
 
-Delete the contradictory parenthetical in [:190](../agents/daily-news-writer.md): `(zh "" curly U+201C/U+201D; en/ja ASCII "" — never 「」)` — this conflicts with the new ja convention.
+Delete the contradictory parenthetical in [:190](../skills/daily-news-intelligence/agents/daily-news-writer.md): `(zh "" curly U+201C/U+201D; en/ja ASCII "" — never 「」)` — this conflicts with the new ja convention.
 
 New Writer rule (replaces both):
 
@@ -196,7 +196,7 @@ This is a **single-rule reversal** plus surrounding edits to keep the spec coher
 
 | File | Change |
 |---|---|
-| [agents/daily-news-writer.md](../agents/daily-news-writer.md) | Reverse search-URL exclusion rule; add "search URLs MUST be cited" rule; update self-check |
+| [skills/daily-news-intelligence/agents/daily-news-writer.md](../skills/daily-news-intelligence/agents/daily-news-writer.md) | Reverse search-URL exclusion rule; add "search URLs MUST be cited" rule; update self-check |
 | [skills/daily-news-intelligence/references/output-spec.md](../skills/daily-news-intelligence/references/output-spec.md) | Update Reference Format Rules; replace "Search-derived URL in references" prohibition with new policy |
 | [skills/daily-news-intelligence/references/rubric.md](../skills/daily-news-intelligence/references/rubric.md) | Mention the new rule in passing if relevant (TBD on read) |
 
@@ -263,7 +263,7 @@ Spot-check 3 stories: for each background fact in body, find the corresponding U
 
 ### 5.3 PR #3 — daily-fact-extractor + Fact Manifest
 
-#### 5.3.1 New file: `agents/daily-fact-extractor.md`
+#### 5.3.1 New file: `skills/daily-news-intelligence/agents/daily-fact-extractor.md`
 
 ```markdown
 ---
@@ -399,7 +399,7 @@ Once the manifest exists, proceed to the Writer dispatch.
 
 #### 5.3.4 Writer prompt update for Fact Manifest input
 
-Add to [daily-news-writer.md](../agents/daily-news-writer.md) "Inputs You Expect" section:
+Add to [daily-news-writer.md](../skills/daily-news-intelligence/agents/daily-news-writer.md) "Inputs You Expect" section:
 
 ```markdown
 1. ... (existing)
@@ -422,7 +422,7 @@ Manual: pick a past Verifier bundle (or rerun Verifier in dry-run). Feed to Fact
 
 ### 5.4 PR #4 — daily-editor
 
-#### 5.4.1 New file: `agents/daily-editor.md`
+#### 5.4.1 New file: `skills/daily-news-intelligence/agents/daily-editor.md`
 
 ```markdown
 ---
@@ -764,12 +764,12 @@ Before declaring Pipeline C v2 done:
 
 New files:
 
-- `agents/daily-fact-extractor.md` (~150 lines, full spec in §5.3.1)
-- `agents/daily-editor.md` (~250 lines, full spec in §5.4.1)
+- `skills/daily-news-intelligence/agents/daily-fact-extractor.md` (~150 lines, full spec in §5.3.1)
+- `skills/daily-news-intelligence/agents/daily-editor.md` (~250 lines, full spec in §5.4.1)
 
 Modified files:
 
-- `agents/daily-news-writer.md` (~30 lines added/changed, §5.2.3 + §5.3.4)
+- `skills/daily-news-intelligence/agents/daily-news-writer.md` (~30 lines added/changed, §5.2.3 + §5.3.4)
 - `skills/daily-news-intelligence/SKILL.md` (~30 lines added for Steps 3.5 and 5.5)
 - `skills/daily-news-intelligence/references/language-spec.md` (~20 lines: canonical quote-mark table)
 - `skills/daily-news-intelligence/references/output-spec.md` (~30 lines: search-URL citation policy)
