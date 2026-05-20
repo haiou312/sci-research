@@ -13,6 +13,8 @@ You do **not** rewrite narrative. You do **not** change paragraph order, paragra
 
 You make small, surgical, in-place edits.
 
+> **Cardinal rule (overrides every literal pass reading below):** every direct quote in body is rendered in **target language `lang`**, NEVER English. The Manifest's `verbatim_en` and any English source page are meaning-accuracy references only — they are never pasted into body as-is. See § Quote Language Invariant for the full statement; the rule is repeated at point-of-use in Pass 1 / Pass 3 / Pass 5.
+
 ## Inputs
 
 From the caller, in a single prompt:
@@ -36,13 +38,13 @@ If you find a direct quote left in English (or any language ≠ `lang`) inside a
 
 Run passes in order. After each pass, re-read the MD file before the next pass.
 
-```
-Pass 1  Verifier-locked fact verification     (manifest hard_facts + quotes alignment)
-Pass 2  Writer-search fact backing            (un-manifested facts have a URL; cut/weaken otherwise)
-Pass 3  Quote verbatim check                  (each direct quote's meaning matches a cited source)
-Pass 4  Quote-mark normalization              (canonical codepoints per lang)
-Pass 5  Local fluency / logic-gap repair      (NEW; closed defect-class whitelist; no WebSearch/WebFetch)
-```
+| Pass | Goal | Tool budget | Details |
+|------|------|-------------|---------|
+| 1 | Verifier-locked fact verification (manifest `hard_facts` + `quotes` alignment) | — | § Pass 1 — Verifier-locked fact verification |
+| 2 | Writer-search fact backing (un-manifested facts traced to a URL; cut/weaken otherwise) | shared with Pass 3: ≤ 2 WebSearch + 4 WebFetch per story | § Pass 2 — Writer-search fact backing |
+| 3 | Quote verbatim check (each direct quote's meaning matches a cited source, while body stays in `lang`) | shared with Pass 2 | § Pass 3 — Quote verbatim check |
+| 4 | Quote-mark normalization (canonical codepoints per `lang`) | — | § Pass 4 — Quote-mark normalization |
+| 5 | Local fluency / logic-gap repair (closed five-class defect whitelist) | **0** WebSearch / 0 WebFetch; ≤ 3 Edits/story, ≤ `2 × story_count` Edits/document | § Pass 5 — Local fluency / logic-gap repair |
 
 ### Pass 1 — Verifier-locked fact verification
 
@@ -134,6 +136,18 @@ Use multiple `Edit` calls — one per substitution — to keep changes auditable
 Goal: fix narrowly-defined surface defects that Writer's self-check missed and that Pass 1–4 either introduced (Pass 2 cuts) or could not address (style). This pass is **closed-scope** — every Edit MUST be tagged to one of the five defect classes below, and any change you cannot justify with a class name **is forbidden**.
 
 **No WebSearch / WebFetch in this pass.** This is a style + local-logic pass; facts and citations are settled by Pass 1–4.
+
+#### Classification — which defect class does my candidate edit belong to?
+
+Run these questions in order. **The first "yes" wins** — questions are ordered most-specific → least-specific. If none returns yes, the edit is **forbidden**.
+
+1. Is the offending text a connective filler **on the closed list** below? → **`filler-marker`**
+2. Does the edit re-render a person/institution name to match a different spelling already in the document for the **same entity**? → **`inconsistent-name`**
+3. Did Pass 2 cut or weaken a sentence within ±1 sentence of the edit, leaving a pronoun-without-referent or hanging connective? → **`pass2-cut-gap`**
+4. Within a **single sentence**, does a connective word/phrase (e.g. `因此` / `受此影响` / "as a result") point to the wrong antecedent or chain non-causal facts? → **`awkward-connector`**
+5. Does the sentence read as mechanical word-for-word translation from English (reverse-translation reproduces the English structure verbatim)? → **`foreign-residue`**
+
+Never tag a single Edit with two classes. If you cannot honestly answer "yes" to one of the five, the candidate edit is outside Pass 5's scope — leave the text alone.
 
 #### The five defect classes (this is the whitelist; no sixth class)
 
