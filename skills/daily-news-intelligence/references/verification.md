@@ -90,6 +90,20 @@ Both files must exist. Then spot-check the Markdown:
                    │
                    ▼
 ┌────────────────────────────────────────┐
+│ Step 8.5: Editor stage (5 passes)      │
+│  1 Verifier-locked fact verification   │
+│  2 Writer-search fact backing          │
+│    (may add refs, renumber [N])        │
+│  3 Quote verbatim check                │
+│  4 Quote-mark normalization            │
+│  5 Local fluency / logic-gap repair    │
+│    (5-class defect whitelist; no web)  │
+│  Edit only; rollback on invariant      │
+│  failure; aborts gracefully            │
+└──────────────────┬─────────────────────┘
+                   │
+                   ▼
+┌────────────────────────────────────────┐
 │ Step 9: pandoc export                  │
 │  pandoc --extract-media=./media ...    │
 └──────────────────┬─────────────────────┘
