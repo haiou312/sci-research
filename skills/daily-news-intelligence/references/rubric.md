@@ -1,6 +1,6 @@
 # Rubric — Source Tiers, Authority & Impact, Date Verification, Category Coverage
 
-Loaded by the per-category Scanner (tier + date + coverage + Pass-B legitimacy), the Merger (cross-category dedup + routing), and the Verifier (authority + impact + source legitimacy). Not needed by the Writer.
+Loaded by the Scanner (tier + date + coverage + Pass-B legitimacy + § Step 6 cross-category dedup + routing) and the Verifier (authority + impact + source legitimacy). Not needed by the Writer.
 
 ## Source Tier Rules
 
@@ -18,7 +18,7 @@ Exclude entirely: personal blogs, Wikipedia, link aggregators, forums, SEO farms
 The Scanner runs **two passes** per category:
 
 - **Pass A — Source Matrix seed (authoritative)**: `site:`-anchored queries down the T4→T1-wire→T1-flagship→T2→T3 ladder against matrix domains. The matrix is the high-authority **seed pool + authority-calibration baseline + structural red-line carrier** (the China external-view design is implemented by the matrix simply not containing Chinese domestic/government rows). It is **not** a hard wall.
-- **Pass B — free discovery (recall expansion)**: bare-keyword sweep (no `site:`). Always for `ipo_ma` and `china_nexus`; on-demand for the other five (category below `min_per_category` after Pass A, or a Pass-A hard-paywall Lead with no free Pass-A alternative). Every Pass-B hit passes, in order: (1) the China red-line denylist (China report: drop Chinese domestic-media + `*.gov.cn` domains — a rule, never a judgement), (2) the date gate, (3) § Source Legitimacy below, (4) the authority cap. **Candidates that clear (1)–(3) but fail (4) are NOT discarded** — they are written to the Scanner's `## Reserve Pool` (`held: below-authority-cap`) so the Verifier can promote them via Fallback 1.5 if the category is short. See § Three-Step Coverage Fallback below and `references/schemas.md` § Scanner Output Schema for the reserve-pool format.
+- **Pass B — free discovery (recall expansion)**: bare-keyword sweep (no `site:`). Always for `ipo_ma` and `china_nexus`; on-demand for the other five (category below `min_per_category` after Pass A, or a Pass-A hard-paywall Lead with no free Pass-A alternative). Every Pass-B hit passes, in order: (1) the China red-line denylist (China report: drop Chinese domestic-media + `*.gov.cn` domains — a rule, never a judgement), (2) the date gate, (3) § Source Legitimacy below, (4) the authority cap. **Candidates that clear (1)–(3) but fail (4) are NOT discarded** — they are written to the Scanner's `## Reserve Pool` (`held: below-authority-cap`) so the Verifier can promote them via Fallback 1.5 if the category is short. See § Three-Step Coverage Fallback below and `references/schemas.md` § Scanner Bundle Schema for the reserve-pool format.
 
 Tradeoff accepted by design: Pass B introduces day-to-day source-pool drift (slightly lower reproducibility) in exchange for materially higher recall on paywalled, wire-relay-lagged, and non-whitelist-but-legitimate stories.
 
@@ -99,7 +99,7 @@ Mark `Fallback used: fallback_1` in the Verifier report header.
 
 ### Fallback 1.5 — Relax authority cap from Reserve Pool
 
-If Fallback 1 still leaves the category below `min_per_category`, draw from the Merged Bundle's `## Reserve Pool` (the Scanner-produced holding zone defined in `references/schemas.md` § Scanner Output Schema and `skills/daily-news-intelligence/agents/daily-news-scanner.md` § Pass B). The reserve pool contains date-verified candidates that passed the China red-line denylist and the Source Legitimacy rubric but were held back at the Scanner stage for **one of two reasons**:
+If Fallback 1 still leaves the category below `min_per_category`, draw from the Scanner Bundle's `## Reserve Pool` (the holding zone defined in `references/schemas.md` § Scanner Bundle Schema and `skills/daily-news-intelligence/agents/daily-news-scanner.md` § Pass B). The reserve pool contains date-verified candidates that passed the China red-line denylist and the Source Legitimacy rubric but were held back at the Scanner stage for **one of two reasons**:
 
 - **`held: below-authority-cap`** — Pass-B `conditional-accept` outlets whose real tier is at or below the cap (T3 trade / niche / smaller national outlets — e.g. The Register, UKTN, Sifted, Tech.eu, Electronics Weekly, City A.M. tech section, niche industry trades). The cap is the floor for ordinary KEEP eligibility; these candidates are admissible only via this fallback.
 - **`held: below-ipo-ma-floor`** — `ipo_ma` deals that satisfy the **soft band** of the materiality scale (USD 50M ≤ value < primary floor) per § Conditional & Topical Categories below. Below USD 50M still hard-DROP at the Scanner.
@@ -166,7 +166,7 @@ This section is the **authoritative ruleset** for the two non-standard categorie
 
 ### China-report routing tie-break (`china_nexus` ↔ `ipo_ma`)
 
-**Applied at the Merge stage, not by the Scanner.** Each per-category Scanner only judges whether an item is in-scope for its own category and may leave a `Reroute hint`; the Merger owns this tie-break and all cross-category dedup. A single Chinese company's cross-border deal can match both categories. One story, one category — resolve by dominant frame:
+**Applied in Scanner § Step 6 (after all per-category Pass A + Pass B passes complete).** During each per-category pass the Scanner only judges whether an item is in-scope for the current category and may leave a `Reroute hint`; the routing tie-break and all cross-category dedup are resolved together in § Step 6. A single Chinese company's cross-border deal can match both categories. One story, one category — resolve by dominant frame:
 
 - Dominant frame is China's **external economic / industrial strategy, key-industry positioning, or triggering a foreign security / antitrust / investment-screening review** → `china_nexus`.
 - Dominant frame is a **corporate-finance event** (offering price, listing venue, ownership change) with no strategic/policy overlay → `ipo_ma`.

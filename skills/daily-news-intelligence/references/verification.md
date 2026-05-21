@@ -56,19 +56,13 @@ Both files must exist. Then spot-check the Markdown:
           │
           ▼
 ┌────────────────────────────────────────┐
-│ Step 2-6: Scanner ×N (parallel,        │
-│  one per active category, English)     │
+│ Step 2: Scanner (single agent, all     │
+│  active categories sequentially)       │
 │  Pass A matrix ladder + Pass B free    │
 │  WebFetch → per-URL date verification  │
-│  Emit N single-category bundles        │
-└──────────────────┬─────────────────────┘
-                   │
-                   ▼
-┌────────────────────────────────────────┐
-│ Step 6.5: Merger stage                 │
-│  Cross-category dedup + china_nexus↔   │
-│  ipo_ma routing (no quality judgement) │
-│  Emit one unified Merged Bundle        │
+│  § Step 6 cross-category dedup +       │
+│  china_nexus↔ipo_ma routing            │
+│  Emit one unified Scanner Bundle       │
 └──────────────────┬─────────────────────┘
                    │
                    ▼
@@ -120,9 +114,8 @@ Both files must exist. Then spot-check the Markdown:
 
 | Stage | Dispatch | Model | Rationale (the embedded body encodes this) |
 |-------|----------|-------|--------------------------------------------|
-| Scanner ×N (parallel, one per active category) | `general-purpose` + embed `skills/daily-news-intelligence/agents/daily-news-scanner.md` body | `sonnet` | Single-date, single-category scanner. Pass A walks tier order (T4-official → T1-wire → T1-flagship → T2 → T3); Pass B is free discovery under § Source Legitimacy. Strict per-URL WebFetch date verification — publication date must equal `date` exactly, no neighbouring days. Do NOT embed `skills/news-scan/agents/news-scanner.md` — that agent uses time windows (7d/30d/90d) and lacks single-date enforcement |
-| Merger | `general-purpose` + embed `skills/daily-news-intelligence/agents/daily-news-merger.md` body | `sonnet` | Merge/route stage. Consumes the N single-category bundles, performs cross-category dedup + the `china_nexus`↔`ipo_ma` routing tie-break only — no quality judgement. Do NOT fold into the Verifier; keeping it separate stops the Verifier from overloading |
-| Verifier | `general-purpose` + embed `skills/daily-news-intelligence/agents/news-verifier.md` body | `sonnet` | News-desk filter encoding the five-check rubric (Originality / Authority / Impact / Source legitimacy / Dedup-validation) and the three-step coverage fallback (impact relaxation / reserve-pool promotion / gap record); consumes the Merged Bundle including its Reserve Pool. Do NOT embed `skills/sci-research/agents/fact-checker.md` — fact-checker grades factual truth (Verified / Disputed), not editorial news value |
+| Scanner (single agent, all active categories sequentially) | `general-purpose` + embed `skills/daily-news-intelligence/agents/daily-news-scanner.md` body | `sonnet` | Single-date scanner across all active categories. Pass A walks tier order (T4-official → T1-wire → T1-flagship → T2 → T3); Pass B is free discovery under § Source Legitimacy. Strict per-URL WebFetch date verification — publication date must equal `date` exactly, no neighbouring days. § Step 6 performs cross-category dedup + `china_nexus`↔`ipo_ma` routing internally before emitting the Scanner Bundle. Do NOT embed `skills/news-scan/agents/news-scanner.md` — that agent uses time windows (7d/30d/90d) and lacks single-date enforcement |
+| Verifier | `general-purpose` + embed `skills/daily-news-intelligence/agents/news-verifier.md` body | `sonnet` | News-desk filter encoding the five-check rubric (Originality / Authority / Impact / Source legitimacy / Dedup-validation) and the three-step coverage fallback (impact relaxation / reserve-pool promotion / gap record); consumes the Scanner Bundle including its Reserve Pool. Do NOT embed `skills/sci-research/agents/fact-checker.md` — fact-checker grades factual truth (Verified / Disputed), not editorial news value |
 | Fact-Extractor | `general-purpose` + embed `skills/daily-news-intelligence/agents/daily-fact-extractor.md` body | `sonnet` | Extracts every hard fact + direct quote from the Verifier KEEP set into a locked-values YAML manifest. Pure transformation — no web, no narrative. The manifest is the Writer's locked-values contract and the Editor's Pass-1 ground truth |
 | Writer | `general-purpose` + embed `skills/daily-news-intelligence/agents/daily-news-writer.md` body | `opus` | Daily briefing writer. Body encodes the Localisation Table, Category Catalog & country-derived active-category ordering, Markdown Syntax Contract, APA 7th format, Writing Standard, search-for-background contract, citation contract (search URLs that supplied a body fact MUST be in References), and self-check protocol. Do NOT embed `skills/news-scan/agents/news-analyst.md` — it runs its own dedup/impact analysis which contradicts the Verifier's KEEP set. Do NOT embed `skills/sci-research/agents/writer.md` — that body emits a scientific popular-science article structure |
 | Editor | `general-purpose` + embed `skills/daily-news-intelligence/agents/daily-editor.md` body | `opus` | Five-pass editor (fact verification / search-backing / quote verbatim / quote-mark normalization / local-fluency repair). Uses `Edit` only, never `Write`. Pass 5 is style-only with closed defect-class whitelist and six rollback invariants; aborts gracefully without blocking the pipeline |

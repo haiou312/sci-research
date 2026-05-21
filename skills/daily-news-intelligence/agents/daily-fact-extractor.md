@@ -30,7 +30,7 @@ date: <YYYY-MM-DD>
 total_stories: <count>
 stories:
   - story_id: <kebab-case slug derived from headline_en>
-    category: economy_markets | politics_diplomacy | tech_industry | society_livelihood | china_nexus | ipo_ma | other
+    category: econ | politics | tech | society | china_nexus | ipo_ma | other   # canonical IDs per references/language-spec.md § Category Catalog — carry verbatim from the Verifier's `### [<id>]` headline
     headline_en: <Verifier-approved English headline>
     lead_url: <Verifier Lead URL>
     body_source: full | paywall-stub   # carried verbatim from the Verifier KEEP entry's `Body-source` field; default to `full` when absent
@@ -58,7 +58,7 @@ A faithful extraction looks like:
 
 ```yaml
 - story_id: boj-holds-rates-0-5-pct
-  category: economy_markets
+  category: econ
   headline_en: Bank of Japan holds benchmark rate at 0.5%
   lead_url: https://www.reuters.com/markets/asia/...
   corroborated_by:

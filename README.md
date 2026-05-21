@@ -369,8 +369,7 @@ sci-research/
 │   ├── daily-news-intelligence/             # Pipeline C
 │   │   ├── SKILL.md
 │   │   ├── agents/
-│   │   │   ├── daily-news-scanner.md        # Single-date scan + date gate
-│   │   │   ├── daily-news-merger.md         # Cross-category dedup + Cat5↔Cat6 routing
+│   │   │   ├── daily-news-scanner.md        # Single-date scan + date gate + cross-category dedup + Cat5↔Cat6 routing
 │   │   │   ├── news-verifier.md             # Editorial second-pass filter
 │   │   │   ├── daily-fact-extractor.md      # Verifier KEEP → YAML fact manifest
 │   │   │   ├── daily-news-writer.md         # Free-prose target-language writer

@@ -55,17 +55,16 @@ Proceed? (Y/n)
 
 ### Step 2: Delegate to Skill
 
-Invoke the `daily-news-intelligence` skill and pass through all parsed arguments, including `lang`. The skill owns the multi-stage pipeline — parallel per-category Scanner ×N → Merger → Verifier → Fact-Extractor → Writer → Editor — and the `pandoc` export step.
+Invoke the `daily-news-intelligence` skill and pass through all parsed arguments, including `lang`. The skill owns the multi-stage pipeline — single Scanner → Verifier → Fact-Extractor → Writer → Editor — and the `pandoc` export step.
 
 The skill will:
 
-1. Run the Scanner stage in English — **one Scanner per active category, all in parallel** (6 for a non-China report, 7 for a China report). Each runs Pass A (Source Matrix tier ladder) + Pass B (free discovery under the Source Legitimacy rubric), verifies each URL via WebFetch against `date`.
-2. Run the Merger stage — cross-category dedup + the `china_nexus`↔`ipo_ma` routing tie-break, producing one unified bundle (no quality judgement).
-3. Run the Verifier stage — originality, authority, impact, source legitimacy, and dedup-validation on the Merged bundle.
-4. Run the Fact-Extractor, Writer, and Editor stages — Writer consumes the Verifier's KEEP set only, translates the narrative into `lang`, and emits Markdown obeying the skill's Markdown Syntax Contract. APA 7th references stay in English.
-5. Write the Markdown to `out_md`.
-6. Export via `pandoc --extract-media=./media "{out_md}" -o "{out_docx}"`.
-7. (Only if `--email` is non-empty) Send the report via Gmail SMTP per `skills/daily-news-intelligence/references/email-spec.md`.
+1. Run the Scanner stage in English as a **single agent processing all active categories sequentially** (6 for a non-China report, 7 for a China report). It runs Pass A (Source Matrix tier ladder) + Pass B (free discovery under the Source Legitimacy rubric) per category, verifies each URL via WebFetch against `date`, then in § Step 6 performs cross-category dedup + the `china_nexus`↔`ipo_ma` routing tie-break, emitting one unified Scanner Bundle.
+2. Run the Verifier stage — originality, authority, impact, source legitimacy, and dedup-validation on the Scanner Bundle.
+3. Run the Fact-Extractor, Writer, and Editor stages — Writer consumes the Verifier's KEEP set only, translates the narrative into `lang`, and emits Markdown obeying the skill's Markdown Syntax Contract. APA 7th references stay in English.
+4. Write the Markdown to `out_md`.
+5. Export via `pandoc --extract-media=./media "{out_md}" -o "{out_docx}"`.
+6. (Only if `--email` is non-empty) Send the report via Gmail SMTP per `skills/daily-news-intelligence/references/email-spec.md`.
 
 ### Step 3: Deliver
 
@@ -146,15 +145,14 @@ The catch-all *Other* is always last; *China-Nexus* (when present) sits at posit
 
 ## Agent Reference (for debugging / inspection)
 
-The skill dispatches six stages, each as `general-purpose` + embedded `agents/<name>.md` body (see SKILL.md § Subagent Dispatch Rule):
+The skill dispatches five stages, each as `general-purpose` + embedded `agents/<name>.md` body (see SKILL.md § Subagent Dispatch Rule):
 
 | Stage | Agent file | Model |
 |-------|------------|-------|
-| Scanner ×N (parallel, one per active category) | `skills/daily-news-intelligence/agents/daily-news-scanner.md` | sonnet |
-| Merger | `skills/daily-news-intelligence/agents/daily-news-merger.md` | sonnet |
+| Scanner (single agent, all active categories sequentially; § Step 6 cross-category dedup + Cat5↔Cat6 routing) | `skills/daily-news-intelligence/agents/daily-news-scanner.md` | sonnet |
 | Verifier | `skills/daily-news-intelligence/agents/news-verifier.md` | sonnet |
 | Fact-Extractor | `skills/daily-news-intelligence/agents/daily-fact-extractor.md` | sonnet |
 | Writer | `skills/daily-news-intelligence/agents/daily-news-writer.md` | opus |
 | Editor | `skills/daily-news-intelligence/agents/daily-editor.md` | opus |
 
-Reference contracts live in `skills/daily-news-intelligence/references/` — `rubric.md` (source tiers + Three-Step Fallback + Conditional Categories), `schemas.md` (Scanner / Merger / Verifier output formats), `language-spec.md` (Category Catalog + Localisation Table), `output-spec.md` (Markdown Syntax Contract + APA references), `verification.md` (self-check + flow diagram), `email-spec.md` (email subject/body templates + exit-code handling).
+Reference contracts live in `skills/daily-news-intelligence/references/` — `rubric.md` (source tiers + Three-Step Fallback + Conditional Categories), `schemas.md` (Scanner Bundle + Verifier output formats), `language-spec.md` (Category Catalog + Localisation Table), `output-spec.md` (Markdown Syntax Contract + APA references), `verification.md` (self-check + flow diagram), `email-spec.md` (email subject/body templates + exit-code handling).

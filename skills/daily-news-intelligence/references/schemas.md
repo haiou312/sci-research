@@ -1,71 +1,17 @@
-# Schemas — Scanner, Merged Bundle, and Verifier Output Formats
+# Schemas — Scanner Bundle and Verifier Output Formats
 
-Loaded by the per-category Scanner, the Merger, and the Verifier stages. Not needed by the Writer.
+Loaded by the Scanner and the Verifier stages. Not needed by the Writer.
 
-## Scanner Output Schema (single category)
+## Scanner Bundle Schema (all categories)
 
-Each Scanner instance handles **exactly one category** and returns exactly this shape (English raw data — no translation):
-
-```
-## Scan Summary
-- Country: <country>
-- Date: <YYYY-MM-DD>
-- Category: <your one assigned category id>
-- Candidates fetched: <N>
-- Candidates kept: <M>  (Pass A: <a> | Pass B: <b>)
-
-## Stories
-
-### [<category>] <English headline>
-- Publish date (verified): <ISO timestamp or local date from article>
-- Discovery: <A | B>
-- Source: <outlet name> [T4-official|T1-wire|T1-flagship|T2|T3] (Free / T4-official preferred; Hard-paywall outlets ARE Lead-eligible when Step 3.5 finds no free alternative — set `Body-source: paywall-stub` in that case)
-- Source legitimacy: <matrix | auto-accept | conditional-accept>   (matrix = Pass A; auto/conditional = Pass B per rubric § Source Legitimacy)
-- Body-source: <full | paywall-stub>   (`paywall-stub` iff the Lead URL is a Hard-paywall domain whose Step 3.5 title-anchored search returned no free same-event outlet; signals the Writer's ≥2 background-search obligation and the Editor's quote-downgrade rule)
-- Proposed category: <your category>
-- Reroute hint: <other category id — only if dominant frame looks misfiled; omit otherwise>
-- URL: <full https URL>
-- Byline: <author name or "No byline">
-- Corroborated by: <each entry on its own indented line "  - <outlet name> [<tier>|<paywall_status>] — <full https URL>"; or "None">
-- Factual excerpt: <fact-only extract — ≥200 words English when Body-source=full; whatever the paywall stub returned (title + 1-2 paragraphs is normal) when Body-source=paywall-stub. Numbers, named officials with titles, direct quotations in quote marks, explicit time references.>
-- Commentary: <verbatim analyst / official / institutional commentary from the Lead article, or exactly "No analyst commentary in source">
-
-... (repeat per story, source-authority order) ...
-
-## Reserve Pool   (include only candidates that passed the date gate + China red-line denylist + Source Legitimacy rubric BUT were held back from the main story list at the Scanner stage)
-
-### [<category>] <English headline>
-- Publish date (verified): <ISO timestamp or local date from article>
-- Discovery: B
-- Source: <outlet name> [real tier: T2|T3 — never T1; capped by § Source Legitimacy authority rule]
-- Source legitimacy: <auto-accept | conditional-accept>
-- Held: <below-authority-cap | below-ipo-ma-floor>   (single token; see `references/rubric.md` § Three-Step Coverage Fallback)
-- Held reason: <single sentence, e.g. "Pass-B conditional-accept at T3-niche, real tier below KEEP cap" OR "ipo_ma deal value USD 180M, in soft band USD 50M ≤ value < USD 300M floor">
-- Proposed category: <your category>
-- URL: <full https URL>
-- Byline: <author name or "No byline">
-- Corroborated by: <each entry on its own indented line "  - <outlet name> [<tier>|<paywall_status>] — <full https URL>"; or "None">
-- Factual excerpt (≥200 words English): <fact-only extract from the URL, same shape as the main story excerpt>
-- Commentary: <verbatim analyst / official / institutional commentary, or exactly "No analyst commentary in source">
-
-... (repeat per held candidate; omit the entire `## Reserve Pool` block if it has zero entries) ...
-
-## Category Coverage Gap   (include only if your category < min_per_category after Pass A + Pass B AND reserve pool would not lift it to min_per_category)
-- Category: <your category>
-- Queries attempted: <q1>, <q2>, <q3>
-- Reason: <single sentence>
-```
-
-## Merged Bundle Schema
-
-The Merger consumes the N single-category Scanner bundles and emits one unified bundle plus a short report. Same per-story field shape as the Scanner schema (all tags carried verbatim: `Discovery`, `Source legitimacy`, tier, `Corroborated by`, excerpt, commentary), grouped by `active_categories` order:
+The Scanner handles all active categories and returns one unified bundle. Same per-story field shape, grouped by `active_categories` order (English raw data — no translation):
 
 ```
-## Merge Report
-- Input bundles: <N>  (one per active category)
+## Scan Report
+- Categories processed: <N>  (N=6 non-China, N=7 China)
 - Cross-category duplicates collapsed: <d>
 - Reroutes applied: <r>
-- Reserve pool entries pooled: <p>
+- Reserve pool entries held: <p>
 
 ## Scan Summary
 - Country: <country>
@@ -75,24 +21,25 @@ The Merger consumes the N single-category Scanner bundles and emits one unified 
 - Reserve pool counts: same `id=<n>` token format, pipe-separated; zero entries shown as `<id>=0`.
 
 ## Stories
-(grouped by active-category order; each story keeps the Scanner per-story fields verbatim, minus `Reroute hint` which the Merger resolves)
+(grouped by active-category order; each story keeps the Scanner per-story fields verbatim, minus `Reroute hint` which the Scanner resolves in § Step 6)
 
 ### [<final category>] <English headline>
 - Publish date (verified): <...>
 - Discovery: <A | B>
 - Source: <outlet name> [tier]
 - Source legitimacy: <matrix | auto-accept | conditional-accept>
-- Body-source: <full | paywall-stub>   (carried verbatim from the Scanner bundle)
+- Body-source: <full | paywall-stub>
+- Impact tier: <Policy | Market | Structural | Humanitarian>
 - URL: <full https URL>
 - Byline: <...>
 - Corroborated by: <merged list — every cross-category duplicate folded here verbatim; or "None">
-- Factual excerpt: <verbatim from Scanner bundle; full body or paywall stub per Body-source>
+- Factual excerpt: <verbatim Scanner extract; full body or paywall stub per Body-source>
 - Commentary: <verbatim>
 
 ... (repeat per surviving story) ...
 
 ## Reserve Pool
-(carried through from Scanner bundles verbatim, grouped by `active_categories` order; same dedup discipline as main stories — if a reserve-pool entry shares the underlying event with a main-pool story, fold the reserve entry into the main story's `Corroborated by` instead and drop the reserve entry; if two reserve entries collide, keep the higher-real-tier one and fold the other into its `Corroborated by`. Omit the whole block if every Scanner bundle had an empty reserve pool.)
+(consolidated from all per-category passes, grouped by `active_categories` order; same dedup discipline as main stories — if a reserve-pool entry shares the underlying event with a main-pool story, fold the reserve entry into the main story's `Corroborated by` instead and drop the reserve entry; if two reserve entries collide, keep the higher-real-tier one and fold the other into its `Corroborated by`. Omit the whole block when no held candidates remain.)
 
 ### [<final category>] <English headline>
 - Publish date (verified): <...>
@@ -109,19 +56,21 @@ The Merger consumes the N single-category Scanner bundles and emits one unified 
 
 ... (repeat per surviving reserve entry) ...
 
-## Category Coverage Gap   (include per category still short after merge AND reserve pool would not lift it to min_per_category)
+## Category Coverage Gap   (include per category still short after Pass A + Pass B AND reserve pool would not lift it to min_per_category)
 - Category: <id>
+- Queries attempted: <q1>, <q2>, <q3>
+- Reserve pool size: <R>   (0 if no held candidates for this category)
 - Reason: <single sentence>
 ```
 
 ## Verifier Output Schema
 
-Verifier must consume the **Merged bundle** and emit exactly this shape (still English raw data — no translation, no Writer-style narrative):
+Verifier must consume the **Scanner Bundle** and emit exactly this shape (still English raw data — no translation, no Writer-style narrative):
 
 ```
 ## Verification Report
-- Input count (from Merger): <N>
-- Reserve pool input count (from Merger): <P>
+- Input count (from Scanner): <N>
+- Reserve pool input count (from Scanner): <P>
 - Kept count: <M>   (includes any Fallback-1.5 promotions)
 - Category counts after verification: one `id=<n>` token per category in active-category order, pipe-separated. Non-China report: `econ=<n1> | politics=<n2> | tech=<n3> | society=<n4> | ipo_ma=<n5> | other=<n6>`. China report: `econ=<n1> | politics=<n2> | tech=<n3> | society=<n4> | china_nexus=<n5> | ipo_ma=<n6> | other=<n7>`
 - Fallback used: <none | fallback_1 | fallback_1+gap | fallback_1+1.5 | fallback_1+1.5+gap>
@@ -134,11 +83,11 @@ Verifier must consume the **Merged bundle** and emit exactly this shape (still E
 - Source: <outlet name> [T1|T2|T3|T4]
 - URL: <full https URL>
 - Byline: <author name or "No byline">
-- Discovery: <A | B>   (carried verbatim from the Merged bundle)
+- Discovery: <A | B>   (carried verbatim from the Scanner Bundle)
 - Source legitimacy: <matrix | auto-accept | conditional-accept>   (carried verbatim)
-- Body-source: <full | paywall-stub>   (carried verbatim from the Merged bundle)
+- Body-source: <full | paywall-stub>   (carried verbatim from the Scanner Bundle)
 - Origin: <main-pool | reserve-pool>   (reserve-pool means promoted via Fallback 1.5; omit field for main-pool entries)
-- Corroborated by: <carried verbatim from the Merged bundle — each entry as "  - <outlet name> [<tier>|<paywall_status>] — <full https URL>"; or "None">
+- Corroborated by: <carried verbatim from the Scanner Bundle — each entry as "  - <outlet name> [<tier>|<paywall_status>] — <full https URL>"; or "None">
 - Factual excerpt: <carried verbatim — full body or paywall stub per Body-source>
 - Commentary: <carried verbatim>
 - Verdict: KEEP
@@ -157,7 +106,7 @@ Verifier must consume the **Merged bundle** and emit exactly this shape (still E
 ... (repeat per dropped story) ...
 
 ## Reserve Pool — Held (not promoted)
-(reserve-pool entries the Verifier left held — either because the category already met `min_per_category` without 1.5, or because 1.5 ran and stopped at the floor without needing this entry. Omit this block when the Merged Bundle's reserve pool was empty.)
+(reserve-pool entries the Verifier left held — either because the category already met `min_per_category` without 1.5, or because 1.5 ran and stopped at the floor without needing this entry. Omit this block when the Scanner Bundle's reserve pool was empty.)
 
 - URL: <full https URL>
 - Category: <id>
