@@ -114,7 +114,8 @@ See `.env.example` for the required variables.
 ### Pipeline C — `/daily-news-intelligence` (Single-Country Daily Briefing)
 
 ```
-/daily-news-intelligence --country "<name>" [--date YYYY-MM-DD] [--lang zh|en|ja] \
+/daily-news-intelligence --country "<name>" [--date YYYY-MM-DD] \
+  [--lang zh|en|ja|zh+en|en+zh|zh+ja|ja+zh|en+ja|ja+en] \
   [--out-dir <path>] [--min-per-category <N>] \
   [--email <a@x.com,b@y.com>] [--email-attach both|docx|md|none] [--email-dry-run]
 ```
@@ -128,6 +129,9 @@ See `.env.example` for the required variables.
 
 # Japanese briefing for Japan, English output
 /daily-news-intelligence --country "Japan" --lang en
+
+# Bilingual (1.18.0+) — Chinese primary, ships 4 attachments (zh+en md+docx) + stacked zh+en email body
+/daily-news-intelligence --country "China" --lang zh+en --email boss@company.com
 ```
 
 **Note on `--country "China"`**: Pipeline C scans China from an outside-observer perspective. Chinese-domestic outlets (Xinhua, People's Daily, Caixin, China Daily, SCMP, TechNode, etc.) and Chinese government domains (`gov.cn`, `pbc.gov.cn`, `stats.gov.cn`, …) are **not queried**. Source pool is Reuters / AP / AFP / Bloomberg / DJ Newswires (T1-wire); FT / WSJ / NYT / WaPo / Guardian / BBC / Telegraph / Times / Economist / Le Monde / Spiegel / FAZ / El País / Nikkei Asia (T1-flagship); NHK World / ABC Australia / Straits Times / Korea Herald / The Hindu (T2 regional); IMF / World Bank / WTO / OECD / BIS / IEA / US Treasury / USTR / State Dept / Commerce-BIS / White House / EU Commission / UK Gov / METI / MOFA Japan (T4 external institutions).

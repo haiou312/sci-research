@@ -92,6 +92,64 @@ The same category may carry a different number across countries (`ipo_ma` is `##
 
 If `lang` is `zh` or `ja` and the resolved filename contains only ASCII letters in the country segment, the translation step was skipped — regenerate before writing.
 
+## Bilingual Mode (multi-lang `--lang`)
+
+`--lang` accepts a **single language** (`zh` / `en` / `ja`) — the legacy mode — **OR** a **two-language combination** joined by `+` (`zh+en`, `en+zh`, `zh+ja`, `ja+zh`, `en+ja`, `ja+en`) — the bilingual mode introduced in 1.18.0. Three-language combos are NOT supported in 1.18.0.
+
+### Parsing
+
+```
+langs = lang.split('+')                       # e.g. "zh+en" → ["zh", "en"]
+primary_lang   = langs[0]                     # drives subject + email-body lead section
+secondary_lang = langs[1] if len(langs) > 1 else None
+is_bilingual   = len(langs) == 2
+```
+
+The **primary language is the first token**. `zh+en` and `en+zh` are distinct intents: same files produced, but the subject and email-body lead change.
+
+### Derived fields per lang
+
+In bilingual mode, the orchestrator computes every per-lang derived field **once per lang**:
+
+| Per-lang field | Source |
+|---|---|
+| `country_display_{lang}` | the Localisation rule above applied with `lang` |
+| `date_display_{lang}` | the Localisation rule above applied with `lang` |
+| `out_md_{lang}` | the Filename Pattern above applied with `lang` and `country_display_{lang}` |
+| `out_docx_{lang}` | same as `out_md_{lang}` with `.docx` extension |
+| `title_label_{lang}` | the Localisation Table token above resolved with `lang` |
+
+`date_en` stays singular (English form is language-agnostic; Scanner / Verifier / Fact-Extractor use it regardless of `--lang`).
+
+### Concrete example (`--country "Japan" --date 2026-05-21 --lang zh+en`)
+
+```
+primary_lang        = zh
+secondary_lang      = en
+is_bilingual        = true
+
+country_display_zh  = 日本
+country_display_en  = Japan
+date_display_zh     = 2026年5月21日
+date_display_en     = May 21, 2026
+
+out_md_zh           = {out_dir}日本每日热点新闻-2026-05-21.md
+out_docx_zh         = {out_dir}日本每日热点新闻-2026-05-21.docx
+out_md_en           = {out_dir}Japan-daily-news-2026-05-21.md
+out_docx_en         = {out_dir}Japan-daily-news-2026-05-21.docx
+```
+
+### Pipeline behaviour
+
+- **Upstream (Scanner / Verifier / Fact-Extractor)**: runs **once** regardless of `is_bilingual`. These three stages are English language-agnostic; their output is the same for `zh` / `en` / `ja` / `zh+en`.
+- **Per-lang (Writer / Editor / pandoc)**: fans out **once per lang** in `langs` order. The orchestrator invokes the Writer subagent for each lang separately, then Editor for each lang separately, then pandoc for each lang separately. Each Writer/Editor invocation still sees a single `lang` — the agents themselves are unchanged.
+- **Email (Step 10)**: collects every per-lang file into a single email per § email-spec.md § Bilingual Subject + Body Templates.
+- **Self-check (filename)**: the rule `lang is zh or ja and country segment is ASCII` is checked **per generated file**, not on the combined `--lang` string.
+
+### Backward compatibility
+
+Single-lang `--lang zh` / `en` / `ja` behaviour is preserved unchanged: `is_bilingual` is `false`, only one Writer / Editor / pandoc cycle runs, the email body uses the existing single-lang template.
+
 ## Language Rules
 
 - Search queries: English only, regardless of `lang`.

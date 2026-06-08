@@ -1,5 +1,5 @@
 ---
-description: Generate a dated single-country daily news briefing in the target language, with optional Gmail SMTP email delivery. Usage: /daily-news-intelligence --country "<name>" [--date YYYY-MM-DD] [--lang zh|en|ja] [--out-dir <path>] [--min-per-category <N>] [--email <a@x.com,b@y.com>] [--email-subject <text>] [--email-body <text>] [--email-attach both|docx|md|none] [--email-dry-run]
+description: Generate a dated single-country daily news briefing in the target language, with optional Gmail SMTP email delivery. Supports bilingual mode (1.18.0+) via --lang zh+en. Usage: /daily-news-intelligence --country "<name>" [--date YYYY-MM-DD] [--lang zh|en|ja|zh+en|en+zh|zh+ja|ja+zh|en+ja|ja+en] [--out-dir <path>] [--min-per-category <N>] [--email <a@x.com,b@y.com>] [--email-subject <text>] [--email-body <text>] [--email-attach both|docx|md|none] [--email-dry-run]
 ---
 
 # Daily News Intelligence (Single Country)
@@ -12,7 +12,10 @@ Parse the user input into the following parameters:
 
 1. `--country` (required): Single country or region. Accepts input in any language (e.g. `"Japan"`, `"日本"`, `"United Kingdom"`, `"中国"`, `"Germany"`).
 2. `--date` (optional, default: today): Target publication date in ISO `YYYY-MM-DD` format. Used for both the WebFetch date gate and the report filename.
-3. `--lang` (optional, default: `zh`): Output language for the final report. Supported values: `zh` (Simplified Chinese), `en` (English), `ja` (Japanese). Scanner always operates in English regardless of this setting.
+3. `--lang` (optional, default: `zh`): Output language for the final report.
+   - **Single-language**: `zh` (Simplified Chinese), `en` (English), `ja` (Japanese).
+   - **Bilingual (1.18.0+)**: any two of `zh / en / ja` joined by `+` — `zh+en`, `en+zh`, `zh+ja`, `ja+zh`, `en+ja`, `ja+en`. The first token is the **primary language** (drives email subject + body lead section). 3-language combos are not supported in 1.18.0.
+   - Scanner always operates in English regardless of this setting (output is language-agnostic, reused across bilingual halves).
 4. `--out-dir` (optional, default: `~/Desktop/github/daily-news-reports/{date}/`): Output directory. `{date}` is replaced with the ISO date (e.g. `2026-04-16`). `~` is expanded at runtime. The directory is auto-created if it doesn't exist. Default writes directly into the GitHub Pages publishing repo.
 5. `--min-per-category` (optional, default: `2`): Minimum stories per fixed category.
 6. `--email` (optional, default: empty): Comma-separated recipient email addresses. When non-empty, the report is sent via Gmail SMTP at the end of the pipeline. Requires `GOOGLE_EMAIL_USERNAME` and `GOOGLE_EMAIL_APP_PASSWORD` environment variables. See `.env.example` at the repo root.
@@ -55,16 +58,16 @@ Proceed? (Y/n)
 
 ### Step 2: Delegate to Skill
 
-Invoke the `daily-news-intelligence` skill and pass through all parsed arguments, including `lang`. The skill owns the multi-stage pipeline — single Scanner → Verifier → Fact-Extractor → Writer → Editor — and the `pandoc` export step.
+Invoke the `daily-news-intelligence` skill and pass through all parsed arguments, including `lang`. The skill owns the multi-stage pipeline — single Scanner → Verifier → Fact-Extractor → Writer (× langs) → Editor (× langs) — and the `pandoc` export step.
 
 The skill will:
 
 1. Run the Scanner stage in English as a **single agent processing all active categories sequentially** (6 for a non-China report, 7 for a China report). It runs Pass A (Source Matrix tier ladder) + Pass B (free discovery under the Source Legitimacy rubric) per category, verifies each URL via WebFetch against `date`, then in § Step 6 performs cross-category dedup + the `china_nexus`↔`ipo_ma` routing tie-break, emitting one unified Scanner Bundle.
 2. Run the Verifier stage — originality, authority, impact, source legitimacy, and dedup-validation on the Scanner Bundle.
-3. Run the Fact-Extractor, Writer, and Editor stages — Writer consumes the Verifier's KEEP set only, translates the narrative into `lang`, and emits Markdown obeying the skill's Markdown Syntax Contract. APA 7th references stay in English.
-4. Write the Markdown to `out_md`.
-5. Export via `pandoc --extract-media=./media "{out_md}" -o "{out_docx}"`.
-6. (Only if `--email` is non-empty) Send the report via Gmail SMTP per `skills/daily-news-intelligence/references/email-spec.md`.
+3. Run the Fact-Extractor stage — extract every number / name / date / quote into a YAML Fact Manifest.
+4. **For each language in `langs = lang.split('+')`** (single-lang: 1 iteration; bilingual: 2 iterations): run Writer + Editor for that lang. Writer consumes the shared Verifier KEEP set + shared Fact Manifest, translates the narrative into that lang, and emits Markdown to `out_md_{lang}` obeying the skill's Markdown Syntax Contract. APA 7th references stay in English.
+5. Export via `pandoc --extract-media=./media "{out_md_{lang}}" -o "{out_docx_{lang}}"` per lang.
+6. (Only if `--email` is non-empty) Send the report via Gmail SMTP per `skills/daily-news-intelligence/references/email-spec.md`. Single-lang: 1-2 attachments + single-lang body. **Bilingual: 2-4 attachments + stacked bilingual body** (primary lang first, divider, secondary lang).
 
 ### Step 3: Deliver
 
@@ -138,6 +141,22 @@ The catch-all *Other* is always last; *China-Nexus* (when present) sits at posit
 /daily-news-intelligence --country "UK" --lang en --email "you@gmail.com" --email-dry-run
 ```
 
+### Example 9: Bilingual zh+en (1.18.0+) — Chinese primary
+
+```
+/daily-news-intelligence --country "China" --lang zh+en --email "boss@company.com"
+```
+
+Email subject: `中国每日热点新闻 — 2026年4月14日（中英双语）`. Attachments: 4 files (zh.md + zh.docx + en.md + en.docx). Body: Chinese summary first, divider, English summary.
+
+### Example 10: Bilingual en+zh — English primary, docx-only attachments
+
+```
+/daily-news-intelligence --country "Japan" --lang en+zh --email "team@company.com" --email-attach docx
+```
+
+Email subject: `Japan Daily News Intelligence — April 14, 2026 (Bilingual EN+ZH)`. Attachments: 2 files (en.docx + zh.docx). Body: English summary first, divider, Chinese summary.
+
 ## Related Skills
 
 - `skills/daily-news-intelligence/SKILL.md` — canonical skill definition (Scanner + Writer rules, Localisation Table, Markdown Syntax Contract, tier rules, date verification rules).
@@ -152,7 +171,7 @@ The skill dispatches five stages, each as `general-purpose` + embedded `agents/<
 | Scanner (single agent, all active categories sequentially; § Step 6 cross-category dedup + Cat5↔Cat6 routing) | `skills/daily-news-intelligence/agents/daily-news-scanner.md` | sonnet |
 | Verifier | `skills/daily-news-intelligence/agents/news-verifier.md` | sonnet |
 | Fact-Extractor | `skills/daily-news-intelligence/agents/daily-fact-extractor.md` | sonnet |
-| Writer | `skills/daily-news-intelligence/agents/daily-news-writer.md` | opus |
-| Editor | `skills/daily-news-intelligence/agents/daily-editor.md` | opus |
+| Writer (**× len(langs)** in bilingual mode) | `skills/daily-news-intelligence/agents/daily-news-writer.md` | opus |
+| Editor (**× len(langs)** in bilingual mode) | `skills/daily-news-intelligence/agents/daily-editor.md` | opus |
 
 Reference contracts live in `skills/daily-news-intelligence/references/` — `rubric.md` (source tiers + Three-Step Fallback + Conditional Categories), `schemas.md` (Scanner Bundle + Verifier output formats), `language-spec.md` (Category Catalog + Localisation Table), `output-spec.md` (Markdown Syntax Contract + APA references), `verification.md` (self-check + flow diagram), `email-spec.md` (email subject/body templates + exit-code handling).

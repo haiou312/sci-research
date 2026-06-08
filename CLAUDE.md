@@ -6,17 +6,17 @@
 
 ## 项目定位
 
-这是一个 **Claude Code 插件**（`sci-research`，当前版本 1.17.0），通过多 Agent 编排，将"主题 + 比较实体 + 输出语言"转化为高质量研究/新闻产出。插件包含六条**完全独立**的流水线，互不共享 Agent：
+这是一个 **Claude Code 插件**（`sci-research`，当前版本 1.18.0），通过多 Agent 编排，将"主题 + 比较实体 + 输出语言"转化为高质量研究/新闻产出。插件包含六条**完全独立**的流水线，互不共享 Agent：
 
 | 特性 | `/sci-research` | `/news-scan` | `/daily-news-intelligence` | `/daily-briefing` | `/reputation-track` | `/weekly-report` |
 |---|---|---|---|---|---|---|
 | **目标** | 多实体对比的科普研究文章 | 指定时间窗内的新闻简报 | 单国每日新闻简报 | 多国品牌新闻简报（SPD Bank） | 公司声誉风险监控 | 周度宏观与市场报告 |
 | **时间焦点** | 历史 + 当前 | 近 7/30/90 天 | 单日（指定日期） | 单日（读取已有报告） | 单日（指定日期） | 前 7 日滚动 |
 | **来源** | 学术论文、官方报告、权威媒体 | 通讯社、财经媒体、行业媒体 | T1-T4 分级媒体（逐 URL 日期核验） | Pipeline C 产出的各国 Markdown | News (T1-T4) + Reddit + X | Pipeline C 报告 + FRED/BOE/BOJ/yfinance 行情 |
-| **Agent 链** | researcher → comparator → fact-checker → writer | news-scanner → news-imager → news-analyst | daily-news-scanner（单 agent，顺序扫全类目） → news-verifier → daily-fact-extractor → daily-news-writer → daily-editor | briefing-curator → docx 脚本 → 邮件脚本 | reputation-resolver → reputation-scanner×3 → reputation-classifier → reputation-writer | weekly-news-aggregator ‖ market-data-collector → weekly-report-writer |
-| **产出** | ≤5000 字结构化文章（含 APA 引用） | 1000-3000 字简报（含事件时间线 + 图片） | 条件化 6/7 栏简报（中国 7 栏含涉华，其余 6 栏；Markdown + docx，可邮件投递） | 13-15 条品牌 Word 文档（含邮件投递） | 仅当命中负面时发送 HTML 邮件（inline body，无附件） | 多分节 Markdown + docx（市场事件 + Money Market + Fixed Income + FX + Commodity，可邮件投递） |
+| **Agent 链** | researcher → comparator → fact-checker → writer | news-scanner → news-imager → news-analyst | daily-news-scanner（单 agent，顺序扫全类目） → news-verifier → daily-fact-extractor → daily-news-writer（× langs） → daily-editor（× langs） | briefing-curator → docx 脚本 → 邮件脚本 | reputation-resolver → reputation-scanner×3 → reputation-classifier → reputation-writer | weekly-news-aggregator ‖ market-data-collector → weekly-report-writer |
+| **产出** | ≤5000 字结构化文章（含 APA 引用） | 1000-3000 字简报（含事件时间线 + 图片） | 条件化 6/7 栏简报（中国 7 栏含涉华，其余 6 栏；Markdown + docx；**单/双语模式**：`--lang zh\|en\|ja` 单语 1 套文件，`--lang zh+en` 等 6 种双语组合 2 套文件 + 堆叠双语邮件正文） | 13-15 条品牌 Word 文档（含邮件投递） | 仅当命中负面时发送 HTML 邮件（inline body，无附件） | 多分节 Markdown + docx（市场事件 + Money Market + Fixed Income + FX + Commodity，可邮件投递） |
 
-**Pipeline C 六个结构性设计**（容易被忽视）：
+**Pipeline C 八个结构性设计**（容易被忽视）：
 1. **China 外部视角**：`--country "China"` 时 Source Matrix 本身就是外部视角 — 不查询中国本土媒体（Xinhua / Caixin / SCMP / People's Daily / TechNode / 澎湃 等），不查询中国政府域名（`gov.cn` / `pbc.gov.cn` / `stats.gov.cn` 等）。T4 改用外部机构清单（IMF / World Bank / WTO / OECD / BIS / IEA / Treasury / USTR / State Dept / Commerce-BIS / White House / EU Commission / UK Gov / METI / MOFA Japan）。
 2. **Writer 自由文笔**（1.9.0+）：Writer 不再机械翻译 Verifier 包，按目标语言以解释性新闻文笔重写 — 数字/姓名/日期/直接引语必须忠于源，其余措辞自由组织。
 3. **Fact-Manifest + Editor 双层防线**（1.11.0+）：Verifier 之后插入 `daily-fact-extractor`（sonnet）抽取每条 story 的 hard_facts / quotes 的 verbatim YAML manifest；Writer 之后插入 `daily-editor`（opus）跑核查，用 `Edit` 在原文件改。**Writer 引用规则反转**：search URL 必须进 References（References = Verifier KEEP URLs ∪ {支撑了正文事实的 search URLs}）。**引号 canonical 钉死**：en `""` U+0022 / zh `""` U+201C/U+201D / ja `「」` U+300C/U+300D，hook 字符级阻断。**Editor 五道核查（1.16.0+）**：Pass 1 Verifier-locked 事实 / Pass 2 Writer-search 事实回填 / Pass 3 引语逐字 / Pass 4 引号规范化 / **Pass 5 局部通顺 + 逻辑空洞修补**（新；闭合 5 类缺陷白名单：`pass2-cut-gap` / `foreign-residue` / `inconsistent-name` / `filler-marker` / `awkward-connector`；**无 WebSearch / WebFetch**；每 story ≤ 3 Edit、全文 ≤ `2 × story_count`；动 6 个不变量任一失败立即回滚；不可恢复失败时 Pass 5 graceful abort，pipeline 不阻断）。Pass 5 永远不动 `###` 标题 / References 块 / URL / 引号内文本 / 段落数 / H1 / `##` H2。
@@ -32,6 +32,7 @@
 
    **历史背景（rationale 单一真源在本条；SKILL.md 只描述流程，不再重复 rationale）**：1.16.2 之前 `agents/*.md` 放在 plugin 根目录，Claude Code 会自动注册为 `sci-research:*` 子 agent；marketplace 插件子 agent 运行时拿不到 `WebSearch`/`WebFetch`（`Grep`/`Glob`/`Bash`/MCP 也不稳），即便 frontmatter 声明也没用（Claude Code 缺陷 **anthropics/claude-code#21318，closed as "not planned"**，无上游修复；旁证 #25200 / #52055 / #46250 / #31002），那样 spawn 的插件 agent 会**静默编造 URL/日期/JSON**——只有查 `tool_uses` 才发现。1.16.2 起 `agents/` 子目录搬到各 skill 下（不再 auto-register），并把 dispatch 永久改为 "general-purpose + embed body"，**两层防线叠用**：即便将来 Claude Code 修了 #21318，这套机制也不再回退（避免每条流水线代码大改）。`agents/*.md` 一律视为**提示词模板**，编排器须 `Read` 文件→剥 frontmatter→body 当指令 prompt→注入参数+上游数据。流程细节见各 skill 的 SKILL.md § Subagent Dispatch Rule。Hooks 不受影响（PostToolUse/PreToolUse 按工具调用触发，与 agent 类型无关）。
 7. **Reserve Pool + Three-Step Coverage Fallback（1.15.0+）**：解决"当日来源稀疏 / 付费墙挤压"导致分类 < `min_per_category` 时的兜底通道。Scanner Pass B 把**通过日期门 + 红线 + Legitimacy 但卡在 authority cap 下方**的 conditional-accept 候选（T3-niche / T3-trade / 小型国家媒体）写入 `## Reserve Pool`（`Held: below-authority-cap`）而非丢弃；`ipo_ma` 软带（USD 50M ≤ value < 主带门槛）同入 Reserve Pool（`Held: below-ipo-ma-floor`）。Scanner § Step 6 同样的去重原则把 Reserve Pool 汇总到 Scanner Bundle。Verifier 的兜底从 Two-Step 升为 **Three-Step**：**Fallback 1** 放宽 impact tier→`Regional-structural`；**Fallback 1.5**（新）从 Reserve Pool 升格——按 best-first（更接近 T2、更原创、更高 impact、auto-accept 优先），promote 出来的故事标 `Origin: reserve-pool` + `Authority score: T3-extended`（仅 below-authority-cap 用），且**stop-at-floor**（够 min 即停）；Fallback 1.5 仍**revalidate Source Legitimacy**——`Illegitimate-source` 不放过；**Fallback 2** 录 gap。**永远不放宽**：日期、China 红线、Originality `Syndicated-rewrite`、Source Legitimacy `Illegitimate-source`。真源 = `references/rubric.md` § Three-Step Coverage Fallback + § Conditional & Topical Categories 三带；Scanner / Verifier 两 agent 同步实现。Output Schema 拓展：`Fallback used: fallback_1+1.5 | fallback_1+1.5+gap`；新字段 `Reserve pool input count / promotions / Reserve Pool — Held` block。
+8. **双语模式 + 上游复用（1.18.0+）**：`--lang` 既接受单语（`zh` / `en` / `ja`）也接受双语组合（`zh+en` / `en+zh` / `zh+ja` / `ja+zh` / `en+ja` / `ja+en`，共 6 种排列；3 语暂不支持）。**架构关键：上游 3 stage（Scanner / Verifier / Fact-Extractor）只跑 1 次**——因为它们是英文 language-agnostic 的；Writer + Editor **per-lang fan out**，每语一个 subagent 实例，写 `out_md_{lang}` / `out_docx_{lang}`，pandoc 也跑 N 次。Token 成本约 +70%（对比单语；如果完全跑 2 遍则是 +100%）。**邮件 Step 10**：双语模式下 subject 用 primary-lang + 双语 tag（`（中英双语）` / `(Bilingual EN+ZH)`）；body 堆叠 primary-lang 全文 + `━━━━━━━━━━━` 分隔线 + secondary-lang 全文；`--email-attach both` 附 4 个文件（zh.md / zh.docx / en.md / en.docx），`docx` 附 2 个，`md` 附 2 个，`none` 附 0。`send-report-email.py --attach` 已是 `nargs="*"`，**无需改 Python 脚本**。每个 lang 派生字段（`out_md_{lang}` / `country_display_{lang}` / `date_display_{lang}`）独立计算；filename ASCII-only 自检（zh/ja 必须翻译过 country）按 per-lang 验。Failure：单边 Writer 失败默认 halt + 报错。真源 = `references/language-spec.md` § Bilingual Mode + `references/email-spec.md` § Bilingual subject + § Bilingual body。
 
 ---
 
@@ -153,7 +154,7 @@ sci-research/
 /news-scan <topic> --entities "Entity1,Entity2,..." --period 7d|30d|90d --lang zh|en|ja
 
 # 单国每日新闻情报（支持邮件投递）
-/daily-news-intelligence --country "Japan" [--date 2026-04-14] [--lang zh|en|ja] [--out-dir <path>] [--min-per-category <N>] [--email <a@x.com,b@y.com>] [--email-attach both|docx|md|none] [--email-dry-run]
+/daily-news-intelligence --country "Japan" [--date 2026-04-14] [--lang zh|en|ja|zh+en|en+zh|zh+ja|ja+zh|en+ja|ja+en] [--out-dir <path>] [--min-per-category <N>] [--email <a@x.com,b@y.com>] [--email-attach both|docx|md|none] [--email-dry-run]
 
 # 多国品牌新闻简报（读取已有报告，生成 SPD Bank 品牌 Word）
 /daily-briefing [--date 2026-04-16] [--countries "中国,英国,美国,欧洲,日本,韩国"] [--total 14] [--email <a@x.com>] [--email-dry-run] [--no-wait]
@@ -424,6 +425,7 @@ End Date (default: today) → 计算前 7 日窗口
 | 调整 C 源发现模型 / Pass B / 正版性 rubric | `references/rubric.md` § Source Discovery Model + § Source Legitimacy（真源）；镜像机制在 `skills/daily-news-intelligence/agents/daily-news-scanner.md` § Pass B — Free Discovery；Verifier 第 4 检查在 `skills/daily-news-intelligence/agents/news-verifier.md` |
 | 调整 C China 外部视角矩阵 | `skills/daily-news-intelligence/agents/daily-news-scanner.md` § Source Matrix（T4 China 子表、T1-wire / T1-flagship / T3 行的增删、Paywall Status 三表） |
 | 调整 C 邮件投递 | `skills/daily-news-intelligence/references/email-spec.md` + `scripts/send-report-email.py` |
+| 调整 C 双语模式（1.18.0+ 新增/删除语言组合、修改双语 subject/body 模板、附件分发） | `skills/daily-news-intelligence/references/language-spec.md` § Bilingual Mode（解析 + 派生字段）+ `references/email-spec.md` § Bilingual subject + § Bilingual body（subject + body + attach 规则）+ `SKILL.md` Step 1 / 8 / 8.5 / 9 / 10（编排器 fan-out 循环）+ `commands/daily-news-intelligence.md`（`--lang` 校验 + 示例）；`send-report-email.py` 已是 `nargs="*"`，无需改 |
 | 调整 C 栏目目录 / 命名 / 排序 / 编号 / 本地化 | `skills/daily-news-intelligence/references/language-spec.md` § Category Catalog & Selection（真源）；镜像在 `skills/daily-news-intelligence/agents/daily-news-writer.md` § Category Catalog & Selection |
 | 调整 C 条件化类目规则（china_nexus 资格/排除/关键产业、ipo_ma 门槛、Cat5↔Cat6 路由） | `skills/daily-news-intelligence/references/rubric.md` § Conditional & Topical Categories（真源，Scanner/Verifier 引用）；搜索机制在 `skills/daily-news-intelligence/agents/daily-news-scanner.md` § Conditional Categories — Search Mechanics |
 | 调整 C 类目集（增/删栏目、改国家派生规则） | `references/language-spec.md` § Category Catalog（active 规则）+ 同步 `daily-news-scanner.md` / `news-verifier.md` / `schemas.md` / `daily-news-writer.md` / `output-spec.md` / `verification.md` / `email-spec.md` / `SKILL.md` / `commands/daily-news-intelligence.md` / `daily-fact-extractor.md`（enum） |
