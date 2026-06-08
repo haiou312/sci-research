@@ -19,7 +19,7 @@ Generate a professional dated daily report for institutional readers covering a 
 - IF Scanner Bundle empty (main pool AND reserve pool) → STOP with message
 - Verifier (Scanner Bundle in prompt) → Three-Step Fallback (1 impact / 1.5 reserve-pool promote / 2 gap) → Verifier Output Schema
 - Fact-Extractor (Verifier output + params) → fact-manifest YAML (single, language-agnostic — shared across bilingual halves)
-- **FAN OUT per `lang` in `langs`**:
+- **FAN OUT per `lang` in `langs` — SEQUENTIAL** (primary first, then secondary; never parallel, see § Workflow Step 8 rationale):
   - Writer (Verifier output + manifest path + that `lang`'s params) → `Write` Markdown to `out_md_{lang}`
   - Editor (`writer_md_{lang}` + manifest + `verifier_bundle` + lang/date/country) → in-place `Edit` across 5 passes (1 fact / 2 search-backing / 3 quote / 4 quote-mark / 5 local fluency)
   - pandoc export `out_md_{lang}` → `out_docx_{lang}` (skip if pandoc missing)
@@ -84,7 +84,7 @@ The orchestrator passes data between stages via the subagent **prompt text** —
 - **Orchestrator → Scanner**: the orchestrator launches ONE Scanner subagent with **all** `active_categories` plus `country`, `date`, `min_per_category`. The Scanner processes all categories sequentially, performs cross-category dedup + routing internally, and returns a unified Scanner Bundle (`references/schemas.md` § Scanner Bundle Schema).
 - **Scanner → Verifier**: the orchestrator includes the Scanner's full Scanner Bundle verbatim in the Verifier agent's prompt.
 - **Verifier → Fact-Extractor**: The orchestrator includes the Verifier's full output verbatim plus runtime parameters (`country`, `date`, `lang`) and `out_manifest` (target YAML path, e.g. `${OUT_DIR}/fact-manifest-{country_slug}-{date}.yaml`) in the Fact-Extractor agent's prompt. The Fact-Extractor writes the manifest to `out_manifest` and returns confirmation.
-- **Verifier + Fact-Extractor → Writer (per `lang` in `langs`)**: For each `lang` the orchestrator launches a separate Writer subagent with the same Verifier full output, the same Fact Manifest content (read from `out_manifest`) or its absolute path, plus that invocation's runtime parameters (`country`, `date`, that `lang`, `out_md_{lang}`, `min_per_category`). Single-lang: 1 Writer invocation. Bilingual: 2 parallel-or-sequential Writer invocations sharing the same Verifier/Manifest inputs.
+- **Verifier + Fact-Extractor → Writer (per `lang` in `langs`)**: For each `lang` the orchestrator launches a separate Writer subagent with the same Verifier full output, the same Fact Manifest content (read from `out_manifest`) or its absolute path, plus that invocation's runtime parameters (`country`, `date`, that `lang`, `out_md_{lang}`, `min_per_category`). Single-lang: 1 Writer invocation. **Bilingual: 2 SEQUENTIAL Writer invocations** (run the primary-lang Writer to completion, then the secondary-lang Writer) sharing the same Verifier/Manifest inputs — see § Workflow Step 8 for the rationale (avoid untested parallel-subagent orchestration; capitalise on prompt-cache reuse on the shared Verifier bundle).
 - **Writer + Fact-Extractor + Verifier → Editor (per `lang` in `langs`)**: For each `lang` the orchestrator launches a separate Editor subagent with `writer_md_path` = `out_md_{lang}` (this lang's Writer output), `manifest_path` (single, from Step 7.5), `verifier_bundle` (same Verifier output passed verbatim, inline), plus that invocation's runtime parameters (that `lang`, `date`, `country`). Each Editor makes in-place `Edit` calls on its own `writer_md_path` and prints a structured stdout report. The format-check hook fires on every Edit and on the final state, per file.
 
 The orchestrator must not summarise, truncate, or reformat the upstream output — pass it verbatim so downstream agents can parse the expected schema.
@@ -156,11 +156,18 @@ The Scanner gathers 20-30 candidate URLs across all categories. If the Scanner B
 
    Compose narrative in `lang` per `references/language-spec.md`. Structure is `### title → body → **References**` per story — **no `**摘要**` / `**Summary**` / `**要約**` / `**分析**` / `**Analysis**` markers anywhere**. **Quote marks follow `references/language-spec.md` § Canonical Quote Marks** (en ASCII `""` / zh curly `""` / ja corner `「」` — the format-check hook blocks Write on any non-canonical char). When `lang=zh`, also comply with `references/language-spec.md` § Language-Specific Rules (official titles, country prefixes, time anchors, terminology, foreign media naming). Produce Markdown obeying `references/output-spec.md`. Use the `Write` tool to overwrite `out_md_{lang}`.
 
-   **Bilingual parallelism**: the two Writer invocations may run in parallel (independent inputs / independent outputs / no shared file). Sequential is also fine — the dominant cost is Opus inference, not orchestration overhead.
+   **Bilingual execution order — SEQUENTIAL (not parallel)**. Run the **primary-lang Writer to completion first**, then the **secondary-lang Writer**. Rationale (do NOT change to parallel without explicit testing):
 
-8.5. **Fact-check + local-fluency editor pass** (Editor stage — **fans out per `lang` in `langs`** when `is_bilingual`). Spawn per § Subagent Dispatch Rule (`general-purpose` + `skills/daily-news-intelligence/agents/daily-editor.md` body, model `opus`).
+   1. **Avoid untested orchestration path.** Pipeline C has never exercised parallel `opus` subagent spawn for Writer/Editor. The known Claude Code bug we work around (anthropics/claude-code#21318) is about marketplace-plugin subagent **tool access** — orthogonal to parallel scheduling — but concurrent subagent invocation is itself an unverified code path in this pipeline. Sequential keeps us on a path we know works.
+   2. **Avoid 2× concurrent web-call rate.** Each Writer runs 1-3 `WebSearch` / `WebFetch` calls per story. With 10-14 stories that is 10-42 calls per Writer. Running two Writers concurrently doubles the instantaneous call rate, risking rate limits on Anthropic's web tooling or the upstream search API.
+   3. **Win the prompt cache.** The second Writer subagent's prompt contains the same Verifier bundle + Fact Manifest text as the first. When the two run sequentially within the same orchestrator context (5-min cache TTL), the second call hits the cached prefix at 0.1× cost. Parallel spawn loses that benefit.
+   4. **Hook concurrency.** `daily-news-format-check` fires per `Write` / `Edit`. Sequential keeps hook invocations serialised — one decision at a time.
 
-   **For each `lang` in `langs`** (single-lang: 1 invocation; bilingual: 2 invocations) launch a separate Editor subagent, each receiving:
+   Wall-clock cost of sequential vs parallel is ~+5 min on a typical bilingual run, a price the user paid in choosing bilingual mode. **Do not optimise this away by going parallel unless and until you have explicitly validated concurrent subagent spawn for this pipeline.**
+
+8.5. **Fact-check + local-fluency editor pass** (Editor stage — **fans out per `lang` in `langs`** when `is_bilingual`; **SEQUENTIAL like Writer**, same rationale as Step 8). Spawn per § Subagent Dispatch Rule (`general-purpose` + `skills/daily-news-intelligence/agents/daily-editor.md` body, model `opus`).
+
+   **For each `lang` in `langs`** (single-lang: 1 invocation; bilingual: 2 invocations) — run primary-lang Editor to completion, then secondary-lang Editor — launch a separate Editor subagent, each receiving:
    - `writer_md_path` = `out_md_{lang}` (this lang's Writer output).
    - `manifest_path` (same single manifest from Step 7.5).
    - `verifier_bundle` (same Verifier output verbatim, inline).
