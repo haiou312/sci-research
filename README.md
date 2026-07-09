@@ -215,22 +215,25 @@ Detailed rules:
 
 ```
 sci-research/
-├── .claude-plugin/
-│   ├── plugin.json                          # Plugin metadata
-│   └── marketplace.json                     # Marketplace manifest
-├── commands/                                # 3 slash commands
-│   ├── daily-news-intelligence.md
-│   ├── daily-briefing.md
-│   └── reputation-track.md
-├── skills/                                  # 3 independent skill workflows; agents/*.md live under each skill as prompt templates (NOT registered as `sci-research:*` subagents — see AGENTS.md § 项目定位 point 6)
+├── .codex-plugin/
+│   └── plugin.json                          # Codex plugin manifest (skills + hooks + mcp)
+├── .agents/plugins/
+│   └── marketplace.json                     # Codex install manifest
+├── .codex/agents/                           # Native Codex subagents (TOML — dispatched by the skills)
+│   ├── daily-news-scanner.toml              # Pipeline C: single-date scan + dedup + Cat5↔Cat6 routing
+│   ├── news-verifier.toml                   # Pipeline C: editorial second-pass filter
+│   ├── daily-fact-extractor.toml            # Pipeline C: Verifier KEEP → YAML fact manifest
+│   ├── daily-news-writer.toml               # Pipeline C: free-prose target-language writer
+│   ├── daily-editor.toml                    # Pipeline C: 5-pass post-Writer editor
+│   ├── briefing-curator.toml                # Pipeline D: multi-country curator
+│   ├── reputation-resolver.toml             # Pipeline E: ticker/name → exec list
+│   ├── reputation-scanner.toml              # Pipeline E: per-source (news/reddit/x)
+│   ├── reputation-classifier.toml           # Pipeline E: per-item negativity grader
+│   └── reputation-writer.toml               # Pipeline E: HTML email body composer
+├── skills/                                  # 3 independent skill workflows (SKILL.md = orchestration; agents/openai.yaml = metadata)
 │   ├── daily-news-intelligence/             # Pipeline C
 │   │   ├── SKILL.md
-│   │   ├── agents/
-│   │   │   ├── daily-news-scanner.md        # Single-date scan + date gate + cross-category dedup + Cat5↔Cat6 routing
-│   │   │   ├── news-verifier.md             # Editorial second-pass filter
-│   │   │   ├── daily-fact-extractor.md      # Verifier KEEP → YAML fact manifest
-│   │   │   ├── daily-news-writer.md         # Free-prose target-language writer
-│   │   │   └── daily-editor.md              # 5-pass post-Writer editor
+│   │   ├── agents/openai.yaml               # skill metadata (display_name, default_prompt)
 │   │   └── references/                      # Pipeline C specs
 │   │       ├── email-spec.md
 │   │       ├── language-spec.md
@@ -240,8 +243,7 @@ sci-research/
 │   │       └── verification.md
 │   ├── daily-briefing/                      # Pipeline D
 │   │   ├── SKILL.md
-│   │   ├── agents/
-│   │   │   └── briefing-curator.md          # Multi-country curator
+│   │   ├── agents/openai.yaml
 │   │   ├── template/briefing-template.docx  # SPD Bank brand template
 │   │   ├── references/email-spec.md
 │   │   └── scripts/
@@ -249,11 +251,7 @@ sci-research/
 │   │       └── send-briefing-email.py
 │   └── reputation-track/                    # Pipeline E
 │       ├── SKILL.md
-│       ├── agents/
-│       │   ├── reputation-resolver.md       # Ticker/name → exec list
-│       │   ├── reputation-scanner.md        # Per-source (news/reddit/x)
-│       │   ├── reputation-classifier.md     # Per-item negativity grader
-│       │   └── reputation-writer.md         # HTML email body composer
+│       ├── agents/openai.yaml
 │       └── references/                      # Pipeline E specs
 │           ├── entity-resolution.md
 │           ├── source-matrix.md
@@ -261,7 +259,7 @@ sci-research/
 │           ├── html-template.md
 │           ├── email-spec.md
 │           └── schemas.md
-├── hooks/hooks.json                         # Hook configuration (3 hooks)
+├── hooks/hooks.json                         # Hook config (PreToolUse Bash + PostToolUse apply_patch)
 ├── scripts/
 │   ├── hooks/                               # Hook implementations (Node.js)
 │   │   ├── daily-news-format-check.js
@@ -270,8 +268,10 @@ sci-research/
 │   └── send-report-email.py                 # Gmail SMTP (Pipelines C / E)
 ├── rules/research/
 │   └── news-source.md                       # T1-T4 news tiering (Pipeline E dependency)
+├── .mcp.json                                # apidirect MCP declaration (Pipeline E)
 ├── .env.example                             # Gmail SMTP environment template
 ├── AGENTS.md                                # Project guidance for Codex
+├── PORTING-NOTES.md                         # Claude→Codex migration state + verify-on-first-run points
 ├── README.md
 └── LICENSE
 ```

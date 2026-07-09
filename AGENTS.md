@@ -41,22 +41,25 @@
 
 ```
 sci-research/
-├── .claude-plugin/
-│   ├── plugin.json              # 插件元数据（name, version, author）
-│   └── marketplace.json         # 市场清单
-├── commands/                    # 3 个主命令
-│   ├── daily-news-intelligence.md # /daily-news-intelligence 入口
-│   ├── daily-briefing.md        # /daily-briefing 入口
-│   └── reputation-track.md      # /reputation-track 入口
-├── skills/                      # 三个独立 Skill 工作流；agents/*.md 作为提示词模板挂在各 skill 下（不在 plugin 根，避免 Claude Code 把它们注册成 `sci-research:*` 子 agent — 真源 § 项目定位 第 6 条）
+├── .codex-plugin/
+│   └── plugin.json              # Codex 插件清单（skills + hooks + mcpServers + interface）
+├── .agents/plugins/
+│   └── marketplace.json         # Codex 安装清单（local source + policy）
+├── .codex/agents/               # 原生 Codex subagent（TOML；由 skill 派发。frontmatter=name/description/model/model_reasoning_effort，body=developer_instructions）
+│   ├── daily-news-scanner.toml      # C：单 agent 顺序扫全类目（Pass A 矩阵 + Pass B 自由发现，严格日期核验；§ Step 6 跨类去重 + Cat5↔Cat6 路由；China=外部视角）
+│   ├── news-verifier.toml           # C：编辑台五检查（原创/权威/影响/正版/去重，输入 Scanner Bundle）
+│   ├── daily-fact-extractor.toml    # C：Verifier KEEP → YAML Fact Manifest（不上网）
+│   ├── daily-news-writer.toml       # C：多语言每日简报合成（Verifier + Manifest，自由文笔）
+│   ├── daily-editor.toml            # C：Writer 之后五道核查（用 apply_patch 改）
+│   ├── briefing-curator.toml        # D：多国新闻筛选改写
+│   ├── reputation-resolver.toml     # E：ticker/name → 公司 + 高管消歧
+│   ├── reputation-scanner.toml      # E：每源扫 News/Reddit/X（含 [mcp_servers.apidirect]）
+│   ├── reputation-classifier.toml   # E：逐条 category + severity + verbatim quote
+│   └── reputation-writer.toml       # E：渲染内联 HTML 邮件正文
+├── skills/                      # 三个独立 Skill 工作流（SKILL.md=编排指令；agents/openai.yaml=元数据）
 │   ├── daily-news-intelligence/ # Pipeline C
 │   │   ├── SKILL.md
-│   │   ├── agents/
-│   │   │   ├── daily-news-scanner.md    # 单 agent 顺序扫全类目（Pass A 矩阵 + Pass B 自由发现，严格日期核验；§ Step 6 跨类去重 + Cat5↔Cat6 路由；China=外部视角）
-│   │   │   ├── news-verifier.md         # 编辑台五检查（原创性/权威性/影响力/正版性/去重验证，输入 Scanner Bundle）
-│   │   │   ├── daily-fact-extractor.md  # Verifier KEEP → YAML Fact Manifest（hard_facts / quotes / locked_urls，sonnet，不上网）
-│   │   │   ├── daily-news-writer.md     # 多语言每日简报合成（吃 Verifier + Manifest，自由文笔 + search URL 强制进 References）
-│   │   │   └── daily-editor.md          # Writer 之后五道核查（1-4 事实 / 引语 / 引号 + 5 局部通顺与逻辑空洞修补，闭合 5 类缺陷白名单，无 web），用 Edit 在原文件改
+│   │   ├── agents/openai.yaml   # skill 元数据（display_name / default_prompt / allow_implicit_invocation）
 │   │   └── references/          # Pipeline C 的规范文档
 │   │       ├── email-spec.md
 │   │       ├── language-spec.md
@@ -66,8 +69,7 @@ sci-research/
 │   │       └── verification.md
 │   ├── daily-briefing/          # Pipeline D（完全独立）
 │   │   ├── SKILL.md
-│   │   ├── agents/
-│   │   │   └── briefing-curator.md      # 多国新闻筛选改写（读取已有 MD，不搜索）
+│   │   ├── agents/openai.yaml
 │   │   ├── template/
 │   │   │   └── briefing-template.docx   # SPD Bank 品牌模板
 │   │   ├── references/
@@ -77,11 +79,7 @@ sci-research/
 │   │       └── send-briefing-email.py   # 独立邮件发送脚本
 │   └── reputation-track/        # Pipeline E（完全独立）
 │       ├── SKILL.md
-│       ├── agents/
-│       │   ├── reputation-resolver.md   # ticker/name → 公司 + 高管列表消歧
-│       │   ├── reputation-scanner.md    # 每源并行扫 News/Reddit/X（不判负面）
-│       │   ├── reputation-classifier.md # 逐条打分：category + severity + verbatim quote
-│       │   └── reputation-writer.md     # 渲染内联 HTML 邮件正文（模板固定）
+│       ├── agents/openai.yaml
 │       └── references/          # Pipeline E 的规范文档
 │           ├── entity-resolution.md     # 代码/名字消歧 + 高管抓取
 │           ├── source-matrix.md         # News + Reddit + X 的搜索模板
@@ -90,19 +88,21 @@ sci-research/
 │           ├── email-spec.md            # 调用 send-report-email.py 的契约
 │           └── schemas.md               # Resolver/Scanner/Classifier 输出格式
 ├── hooks/
-│   └── hooks.json               # 3 个质量钩子的配置
+│   └── hooks.json               # 2 个质量钩子（PreToolUse:Bash + PostToolUse:apply_patch）
 ├── scripts/
 │   ├── hooks/                   # 钩子实现（Node.js）
-│   │   ├── daily-news-format-check.js   # [C] Markdown 格式硬阻断（计数/[N]连续/URL/禁用模式）
+│   │   ├── daily-news-format-check.js   # [C] Markdown 格式硬阻断（apply_patch 后从磁盘读文件校验）
 │   │   └── email-send-guard.js          # [C/D/E] 阻断 inline SMTP，强制走 send-*-email.py
 │   ├── publish-reports.sh       # [C] GitHub Pages 发布脚本
 │   └── send-report-email.py     # [C & E] Gmail SMTP 邮件发送脚本（支持 --body-html-file）
 ├── rules/research/
 │   └── news-source.md           # [E] 新闻来源 T1-T4 分级（reputation-scanner 依赖；原 Pipeline B 资产，B 删除后保留）
+├── .mcp.json                    # apidirect MCP 声明（Pipeline E）
 ├── .env.example                 # Gmail SMTP 环境变量模板
 ├── .gitignore
+├── PORTING-NOTES.md             # Claude→Codex 迁移状态 + 首跑验证点
 ├── README.md                    # 用户文档
-├── CLAUDE.md                    # 本文件
+├── AGENTS.md                    # 本文件（Codex 项目指引）
 └── LICENSE                      # MIT
 ```
 
