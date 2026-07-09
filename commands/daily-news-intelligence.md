@@ -160,7 +160,6 @@ Email subject: `Japan Daily News Intelligence — April 14, 2026 (Bilingual EN+Z
 ## Related Skills
 
 - `skills/daily-news-intelligence/SKILL.md` — canonical skill definition (Scanner + Writer rules, Localisation Table, Markdown Syntax Contract, tier rules, date verification rules).
-- `skills/news-scan/SKILL.md` — multi-topic, multi-entity news scan over 7-90 day windows (different use case; not a single-country daily).
 
 ## Agent Reference (for debugging / inspection)
 

@@ -6,15 +6,15 @@
 
 ## 项目定位
 
-这是一个 **Claude Code 插件**（`sci-research`，当前版本 1.18.2），通过多 Agent 编排，将"主题 + 比较实体 + 输出语言"转化为高质量研究/新闻产出。插件包含六条**完全独立**的流水线，互不共享 Agent：
+这是一个 **Claude Code 插件**（`sci-research`，当前版本 1.18.2；插件名为历史遗留 — 原 Pipeline A `/sci-research`、B `/news-scan`、F `/weekly-report` 已移除，名字保留以维持 marketplace 身份与安装路径），通过多 Agent 编排产出高质量新闻情报。插件包含三条**完全独立**的流水线，互不共享 Agent：
 
-| 特性 | `/sci-research` | `/news-scan` | `/daily-news-intelligence` | `/daily-briefing` | `/reputation-track` | `/weekly-report` |
-|---|---|---|---|---|---|---|
-| **目标** | 多实体对比的科普研究文章 | 指定时间窗内的新闻简报 | 单国每日新闻简报 | 多国品牌新闻简报（SPD Bank） | 公司声誉风险监控 | 周度宏观与市场报告 |
-| **时间焦点** | 历史 + 当前 | 近 7/30/90 天 | 单日（指定日期） | 单日（读取已有报告） | 单日（指定日期） | 前 7 日滚动 |
-| **来源** | 学术论文、官方报告、权威媒体 | 通讯社、财经媒体、行业媒体 | T1-T4 分级媒体（逐 URL 日期核验） | Pipeline C 产出的各国 Markdown | News (T1-T4) + Reddit + X | Pipeline C 报告 + FRED/BOE/BOJ/yfinance 行情 |
-| **Agent 链** | researcher → comparator → fact-checker → writer | news-scanner → news-imager → news-analyst | daily-news-scanner（单 agent，顺序扫全类目） → news-verifier → daily-fact-extractor → daily-news-writer（× langs） → daily-editor（× langs） | briefing-curator → docx 脚本 → 邮件脚本 | reputation-resolver → reputation-scanner×3 → reputation-classifier → reputation-writer | weekly-news-aggregator ‖ market-data-collector → weekly-report-writer |
-| **产出** | ≤5000 字结构化文章（含 APA 引用） | 1000-3000 字简报（含事件时间线 + 图片） | 条件化 6/7 栏简报（中国 7 栏含涉华，其余 6 栏；Markdown + docx；**单/双语模式**：`--lang zh\|en\|ja` 单语 1 套文件，`--lang zh+en` 等 6 种双语组合 2 套文件 + 堆叠双语邮件正文） | 13-15 条品牌 Word 文档（含邮件投递） | 仅当命中负面时发送 HTML 邮件（inline body，无附件） | 多分节 Markdown + docx（市场事件 + Money Market + Fixed Income + FX + Commodity，可邮件投递） |
+| 特性 | `/daily-news-intelligence` | `/daily-briefing` | `/reputation-track` |
+|---|---|---|---|
+| **目标** | 单国每日新闻简报 | 多国品牌新闻简报（SPD Bank） | 公司声誉风险监控 |
+| **时间焦点** | 单日（指定日期） | 单日（读取已有报告） | 单日（指定日期） |
+| **来源** | T1-T4 分级媒体（逐 URL 日期核验） | Pipeline C 产出的各国 Markdown | News (T1-T4) + Reddit + X |
+| **Agent 链** | daily-news-scanner（单 agent，顺序扫全类目） → news-verifier → daily-fact-extractor → daily-news-writer（× langs） → daily-editor（× langs） | briefing-curator → docx 脚本 → 邮件脚本 | reputation-resolver → reputation-scanner×3 → reputation-classifier → reputation-writer |
+| **产出** | 条件化 6/7 栏简报（中国 7 栏含涉华，其余 6 栏；Markdown + docx；**单/双语模式**：`--lang zh\|en\|ja` 单语 1 套文件，`--lang zh+en` 等 6 种双语组合 2 套文件 + 堆叠双语邮件正文） | 13-15 条品牌 Word 文档（含邮件投递） | 仅当命中负面时发送 HTML 邮件（inline body，无附件） |
 
 **Pipeline C 八个结构性设计**（容易被忽视）：
 1. **China 外部视角**：`--country "China"` 时 Source Matrix 本身就是外部视角 — 不查询中国本土媒体（Xinhua / Caixin / SCMP / People's Daily / TechNode / 澎湃 等），不查询中国政府域名（`gov.cn` / `pbc.gov.cn` / `stats.gov.cn` 等）。T4 改用外部机构清单（IMF / World Bank / WTO / OECD / BIS / IEA / Treasury / USTR / State Dept / Commerce-BIS / White House / EU Commission / UK Gov / METI / MOFA Japan）。
@@ -22,13 +22,10 @@
 3. **Fact-Manifest + Editor 双层防线**（1.11.0+）：Verifier 之后插入 `daily-fact-extractor`（sonnet）抽取每条 story 的 hard_facts / quotes 的 verbatim YAML manifest；Writer 之后插入 `daily-editor`（opus）跑核查，用 `Edit` 在原文件改。**Writer 引用规则反转**：search URL 必须进 References（References = Verifier KEEP URLs ∪ {支撑了正文事实的 search URLs}）。**引号 canonical 钉死**：en `""` U+0022 / zh `""` U+201C/U+201D / ja `「」` U+300C/U+300D，hook 字符级阻断。**Editor 五道核查（1.16.0+）**：Pass 1 Verifier-locked 事实 / Pass 2 Writer-search 事实回填 / Pass 3 引语逐字 / Pass 4 引号规范化 / **Pass 5 局部通顺 + 逻辑空洞修补**（新；闭合 5 类缺陷白名单：`pass2-cut-gap` / `foreign-residue` / `inconsistent-name` / `filler-marker` / `awkward-connector`；**无 WebSearch / WebFetch**；每 story ≤ 3 Edit、全文 ≤ `2 × story_count`；动 6 个不变量任一失败立即回滚；不可恢复失败时 Pass 5 graceful abort，pipeline 不阻断）。Pass 5 永远不动 `###` 标题 / References 块 / URL / 引号内文本 / 段落数 / H1 / `##` H2。
 4. **条件化类目（1.12.0+）**：栏目集**按 `country` 派生**，不是写死 5 栏。非中国日报 6 栏（econ / politics / tech / society / **ipo_ma** / other）；中国日报 7 栏（第 5 位插入 **china_nexus**）。`china_nexus`（海外涉华财经，**仅财经口径**——投资/FDI/商业与产业政策/关税/出口管制/制裁/投资审查；纯外交归第 2 栏政治与外交）仅中国日报出现、强制跨境（中国×境外方，经济渠道）、排除中国对非洲/小型发展中经济体援助与基建贷款（关键产业例外）、关键产业优先；`ipo_ma`（企业IPO与并购）所有日报都有、聚焦本报告国公司（买方/卖方/上市主体）。**ipo_ma 重要性 3 带（1.15.0+）**：主带 IPO≥3 亿/并购≥5 亿美元（或受审或触及中国关键产业）进主池；**软带 USD 50M ≤ value < 主带门槛**写 Reserve Pool（仅 Fallback 1.5 升格）；<50M 硬 DROP。真源 = `references/language-spec.md` § Category Catalog & Selection（身份/命名/排序/编号）+ `references/rubric.md` § Conditional & Topical Categories（资格/排除/3 带门槛/Cat5↔Cat6 路由）。H2 编号随类目位置变（`ipo_ma` 非中国是第 5、中国是第 6）。格式钩子与类目数无关，不需改。
 5. **单 Scanner + 双-Pass 源模型（1.13.0+，1.17.0 合并为单 agent）**：Scanner **单一实例顺序扫全部类目**（原并行 ×N + Merger 架构因 token 消耗过大而合并）。Scanner 跑 **Pass A**（矩阵 tier 阶梯，矩阵=种子+权威标定+China 红线，非硬墙）+ **Pass B**（无 site: 自由发现，按 `references/rubric.md` § Source Legitimacy 分级：auto-accept / conditional-accept 封顶 T2 / hard-reject；付费墙原文的免费全文转载豁免为合法 Lead；ipo_ma 加 SEC EDGAR 一手申报；China 报告 Pass B 套中国本土媒体/gov denylist）。完成全类目后 Scanner 内部执行跨类去重 + Cat5↔Cat6 路由（原 Merger 职责），产出统一 Scanner Bundle（`references/schemas.md` § Scanner Bundle Schema）交 Verifier。Verifier 五检查不变（输入 Scanner Bundle，去重/路由仅验证不重做）。代价：丧失并行加速（顺序扫比并行慢），换取大幅降低 token 消耗（省去 6-7 个 Scanner subagent context + 1 个 Merger context）。**搜索词模型（1.14.0+）**：栏目检索词从写死 OR 串改为**逐词扫**——每词单发一条 query、多词短语加引号、禁 `OR` 拼接（长 OR 会退化丢尾词）；词集大幅拓宽；T4-official / T1-wire / T1-flagship 三高层**整表逐词全跑、不受 `min_per_category` 早停**（min 仅管是否下探 T2/T3）；`ipo_ma` 一手申报查询（SEC EDGAR / LSE RNS / 交易所披露 + 财经垂直）与 `china_nexus` 外部-T4 + 全球通讯社主题扫提为**永远首发渠道**（不再"低于 min 才进"）。真源 = `skills/daily-news-intelligence/agents/daily-news-scanner.md` § Step 1 + § Conditional Categories；`SKILL.md` 不再复制词表（改为指针，杜绝漂移）。
-6. **Subagent 派发 = 内置 `general-purpose` + 嵌入 `agents/*.md` body（永久模型，全 6 条流水线通用）**：**A / B / C / D / E / F 全部 stage** 一律以内置 `general-purpose` spawn，并**显式传 `model`**（`general-purpose` 不读 frontmatter `model:`，必须显式指定）。各流水线模型分配：
-   - **A**: researcher=sonnet / comparator=opus / fact-checker=sonnet / writer=opus
-   - **B**: news-scanner=sonnet / news-imager=sonnet / news-analyst=opus
+6. **Subagent 派发 = 内置 `general-purpose` + 嵌入 `agents/*.md` body（永久模型，全部流水线通用）**：**C / D / E 全部 stage** 一律以内置 `general-purpose` spawn，并**显式传 `model`**（`general-purpose` 不读 frontmatter `model:`，必须显式指定）。各流水线模型分配：
    - **C**: Scanner / Verifier / Fact-Extractor = sonnet；Writer / Editor = opus
    - **D**: briefing-curator=opus
    - **E**: reputation-resolver=opus / reputation-scanner ×3=sonnet / reputation-classifier=sonnet / reputation-writer=opus
-   - **F**: weekly-news-aggregator=sonnet / market-data-collector=sonnet / weekly-report-writer=opus
 
    **历史背景（rationale 单一真源在本条；SKILL.md 只描述流程，不再重复 rationale）**：1.16.2 之前 `agents/*.md` 放在 plugin 根目录，Claude Code 会自动注册为 `sci-research:*` 子 agent；marketplace 插件子 agent 运行时拿不到 `WebSearch`/`WebFetch`（`Grep`/`Glob`/`Bash`/MCP 也不稳），即便 frontmatter 声明也没用（Claude Code 缺陷 **anthropics/claude-code#21318，closed as "not planned"**，无上游修复；旁证 #25200 / #52055 / #46250 / #31002），那样 spawn 的插件 agent 会**静默编造 URL/日期/JSON**——只有查 `tool_uses` 才发现。1.16.2 起 `agents/` 子目录搬到各 skill 下（不再 auto-register），并把 dispatch 永久改为 "general-purpose + embed body"，**两层防线叠用**：即便将来 Claude Code 修了 #21318，这套机制也不再回退（避免每条流水线代码大改）。`agents/*.md` 一律视为**提示词模板**，编排器须 `Read` 文件→剥 frontmatter→body 当指令 prompt→注入参数+上游数据。流程细节见各 skill 的 SKILL.md § Subagent Dispatch Rule。Hooks 不受影响（PostToolUse/PreToolUse 按工具调用触发，与 agent 类型无关）。
 7. **Reserve Pool + Three-Step Coverage Fallback（1.15.0+）**：解决"当日来源稀疏 / 付费墙挤压"导致分类 < `min_per_category` 时的兜底通道。Scanner Pass B 把**通过日期门 + 红线 + Legitimacy 但卡在 authority cap 下方**的 conditional-accept 候选（T3-niche / T3-trade / 小型国家媒体）写入 `## Reserve Pool`（`Held: below-authority-cap`）而非丢弃；`ipo_ma` 软带（USD 50M ≤ value < 主带门槛）同入 Reserve Pool（`Held: below-ipo-ma-floor`）。Scanner § Step 6 同样的去重原则把 Reserve Pool 汇总到 Scanner Bundle。Verifier 的兜底从 Two-Step 升为 **Three-Step**：**Fallback 1** 放宽 impact tier→`Regional-structural`；**Fallback 1.5**（新）从 Reserve Pool 升格——按 best-first（更接近 T2、更原创、更高 impact、auto-accept 优先），promote 出来的故事标 `Origin: reserve-pool` + `Authority score: T3-extended`（仅 below-authority-cap 用），且**stop-at-floor**（够 min 即停）；Fallback 1.5 仍**revalidate Source Legitimacy**——`Illegitimate-source` 不放过；**Fallback 2** 录 gap。**永远不放宽**：日期、China 红线、Originality `Syndicated-rewrite`、Source Legitimacy `Illegitimate-source`。真源 = `references/rubric.md` § Three-Step Coverage Fallback + § Conditional & Topical Categories 三带；Scanner / Verifier 两 agent 同步实现。Output Schema 拓展：`Fallback used: fallback_1+1.5 | fallback_1+1.5+gap`；新字段 `Reserve pool input count / promotions / Reserve Pool — Held` block。
@@ -43,29 +40,11 @@ sci-research/
 ├── .claude-plugin/
 │   ├── plugin.json              # 插件元数据（name, version, author）
 │   └── marketplace.json         # 市场清单
-├── commands/                    # 6 个主命令 + 2 个工具命令
-│   ├── sci-research.md          # /sci-research 入口
-│   ├── news-scan.md             # /news-scan 入口
+├── commands/                    # 3 个主命令
 │   ├── daily-news-intelligence.md # /daily-news-intelligence 入口
 │   ├── daily-briefing.md        # /daily-briefing 入口
-│   ├── reputation-track.md      # /reputation-track 入口
-│   ├── weekly-report.md         # /weekly-report 入口
-│   ├── add-entity.md            # /add-entity 会话中加实体
-│   └── set-lang.md              # /set-lang 切换输出语言
-├── skills/                      # 六个独立 Skill 工作流；agents/*.md 作为提示词模板挂在各 skill 下（不在 plugin 根，避免 Claude Code 把它们注册成 `sci-research:*` 子 agent — 真源 § 项目定位 第 6 条）
-│   ├── sci-research/            # Pipeline A
-│   │   ├── SKILL.md
-│   │   └── agents/              # 提示词模板（非注册子 agent）
-│   │       ├── researcher.md            # 每实体多源检索
-│   │       ├── comparator.md            # 跨实体维度对比分析
-│   │       ├── fact-checker.md          # 关键论断核验
-│   │       └── writer.md                # 多语言文章合成
-│   ├── news-scan/               # Pipeline B
-│   │   ├── SKILL.md
-│   │   └── agents/
-│   │       ├── news-scanner.md          # 每实体实时新闻抓取（时间窗 7d/30d/90d，不取图）
-│   │       ├── news-imager.md           # 热点事件图片提取与校验
-│   │       └── news-analyst.md          # 去重、时间线、影响分析
+│   └── reputation-track.md      # /reputation-track 入口
+├── skills/                      # 三个独立 Skill 工作流；agents/*.md 作为提示词模板挂在各 skill 下（不在 plugin 根，避免 Claude Code 把它们注册成 `sci-research:*` 子 agent — 真源 § 项目定位 第 6 条）
 │   ├── daily-news-intelligence/ # Pipeline C
 │   │   ├── SKILL.md
 │   │   ├── agents/
@@ -92,49 +71,30 @@ sci-research/
 │   │   └── scripts/
 │   │       ├── generate-branded-docx.py # docx 生成脚本
 │   │       └── send-briefing-email.py   # 独立邮件发送脚本
-│   ├── reputation-track/        # Pipeline E（完全独立）
-│   │   ├── SKILL.md
-│   │   ├── agents/
-│   │   │   ├── reputation-resolver.md   # ticker/name → 公司 + 高管列表消歧
-│   │   │   ├── reputation-scanner.md    # 每源并行扫 News/Reddit/X（不判负面）
-│   │   │   ├── reputation-classifier.md # 逐条打分：category + severity + verbatim quote
-│   │   │   └── reputation-writer.md     # 渲染内联 HTML 邮件正文（模板固定）
-│   │   └── references/          # Pipeline E 的规范文档
-│   │       ├── entity-resolution.md     # 代码/名字消歧 + 高管抓取
-│   │       ├── source-matrix.md         # News + Reddit + X 的搜索模板
-│   │       ├── negativity-rubric.md     # 分类 + 严重度 + 可信度加权
-│   │       ├── html-template.md         # 内联 CSS HTML 邮件正文骨架
-│   │       ├── email-spec.md            # 调用 send-report-email.py 的契约
-│   │       └── schemas.md               # Resolver/Scanner/Classifier 输出格式
-│   └── weekly-report/           # Pipeline F
+│   └── reputation-track/        # Pipeline E（完全独立）
 │       ├── SKILL.md
 │       ├── agents/
-│       │   ├── weekly-news-aggregator.md # 读 7 天 Pipeline C 报告，去重 + 按国家分组
-│       │   ├── market-data-collector.md  # 并行跑 FRED / BoE / BoJ / yfinance 脚本，聚合 JSON
-│       │   └── weekly-report-writer.md   # 消费 events bundle + market data bundle，按语言本地化合成 Markdown
-│       └── (references / scripts 见 skill 目录)
-├── contexts/
-│   └── sci-research.md          # 研究模式行为上下文
+│       │   ├── reputation-resolver.md   # ticker/name → 公司 + 高管列表消歧
+│       │   ├── reputation-scanner.md    # 每源并行扫 News/Reddit/X（不判负面）
+│       │   ├── reputation-classifier.md # 逐条打分：category + severity + verbatim quote
+│       │   └── reputation-writer.md     # 渲染内联 HTML 邮件正文（模板固定）
+│       └── references/          # Pipeline E 的规范文档
+│           ├── entity-resolution.md     # 代码/名字消歧 + 高管抓取
+│           ├── source-matrix.md         # News + Reddit + X 的搜索模板
+│           ├── negativity-rubric.md     # 分类 + 严重度 + 可信度加权
+│           ├── html-template.md         # 内联 CSS HTML 邮件正文骨架
+│           ├── email-spec.md            # 调用 send-report-email.py 的契约
+│           └── schemas.md               # Resolver/Scanner/Classifier 输出格式
 ├── hooks/
-│   └── hooks.json               # 8 个质量钩子的配置
+│   └── hooks.json               # 3 个质量钩子的配置
 ├── scripts/
 │   ├── hooks/                   # 钩子实现（Node.js）
-│   │   ├── word-count-check.js          # [A] 限字（含中文字符数）
-│   │   ├── entity-coverage-check.js     # [A] 实体覆盖校验
-│   │   ├── reference-validator.js       # [A] 引用完整性校验
-│   │   ├── news-freshness-check.js      # [B] 新闻时效校验
 │   │   ├── daily-news-format-check.js   # [C] Markdown 格式硬阻断（计数/[N]连续/URL/禁用模式）
-│   │   ├── weekly-report-format-check.js # [F] 周报 Markdown 格式硬阻断
-│   │   ├── email-send-guard.js          # [C/D/E/F] 阻断 inline SMTP，强制走 send-*-email.py
-│   │   └── research-summary.js          # [A&B] 会话元数据日志
-│   └── send-report-email.py     # [C & E & F] Gmail SMTP 邮件发送脚本（支持 --body-html-file）
-├── rules/research/              # 三份质量规则
-│   ├── source-credibility.md    # [A] 学术来源分级
-│   ├── output-format.md         # [A] 文章格式规范
-│   └── news-source.md           # [B] 新闻来源分级与去重
-├── examples/                    # 完整产出样本
-│   ├── nuclear-fusion-zh.md     # 核聚变能源（中/美/EU/日本）
-│   └── mrna-vaccine-en.md       # mRNA 疫苗（US/EU/China）
+│   │   └── email-send-guard.js          # [C/D/E] 阻断 inline SMTP，强制走 send-*-email.py
+│   ├── publish-reports.sh       # [C] GitHub Pages 发布脚本
+│   └── send-report-email.py     # [C & E] Gmail SMTP 邮件发送脚本（支持 --body-html-file）
+├── rules/research/
+│   └── news-source.md           # [E] 新闻来源 T1-T4 分级（reputation-scanner 依赖；原 Pipeline B 资产，B 删除后保留）
 ├── .env.example                 # Gmail SMTP 环境变量模板
 ├── .gitignore
 ├── README.md                    # 用户文档
@@ -147,12 +107,6 @@ sci-research/
 ## 核心命令
 
 ```bash
-# 深度研究（多实体对比科普文章）
-/sci-research <topic> --entities "Entity1,Entity2,..." --lang zh|en|ja
-
-# 实时新闻简报（可带实体 / 时间窗）
-/news-scan <topic> --entities "Entity1,Entity2,..." --period 7d|30d|90d --lang zh|en|ja
-
 # 单国每日新闻情报（支持邮件投递）
 /daily-news-intelligence --country "Japan" [--date 2026-04-14] [--lang zh|en|ja|zh+en|en+zh|zh+ja|ja+zh|en+ja|ja+en] [--out-dir <path>] [--min-per-category <N>] [--email <a@x.com,b@y.com>] [--email-attach both|docx|md|none] [--email-dry-run]
 
@@ -160,62 +114,14 @@ sci-research/
 /daily-briefing [--date 2026-04-16] [--countries "中国,英国,美国,欧洲,日本,韩国"] [--total 14] [--email <a@x.com>] [--email-dry-run] [--no-wait]
 
 # 公司声誉风险监控（仅在命中负面时发 HTML 邮件）
-/reputation-track --company "<名字或股票代码>" [--date 2026-04-21] [--lang zh|en] [--sources news,reddit,x] [--severity-min low|medium|high] [--email <a@x.com>] [--email-dry-run]
-
-# 周度宏观与市场报告（读前 7 日 Pipeline C 报告 + 实时行情）
-/weekly-report [--end-date 2026-05-11] [--start-date 2026-05-05] [--countries "CN,US,UK,EU,JP,KR"] [--lang zh|en|ja] [--out-dir <path>] [--news-dir <path>] [--commodity-symbols "GC=F,SI=F,CL=F"] [--kr-bond-symbol 148070.KS] [--email <a@x.com,b@y.com>] [--email-attach both|docx|md|none] [--email-dry-run]
-
-# 会话中追加实体（Pipeline A & B）
-/add-entity "Entity3,Entity4"
-
-# 切换输出语言
-/set-lang en
+/reputation-track --company "<名字或股票代码>" [--date 2026-04-21] [--lang zh|en] [--sources news,reddit,x] [--severity-min low|medium|high] [--email <a@x.com,b@y.com>] [--email-dry-run]
 ```
 
-`--lang` 默认 `zh`，`--period` 默认 `30d`，`--min-per-category` 默认 `2`。
+`--lang` 默认 `zh`，`--min-per-category` 默认 `2`。
 
 ---
 
-## 六条流水线的 Agent 编排
-
-### Pipeline A — `/sci-research`
-
-```
-User Input (topic, entities, lang)
-  │
-  ├─→ Researcher(A) ─┐
-  ├─→ Researcher(B) ─┼─→ Comparator → Fact-Checker → Writer → Hooks → 最终文章
-  └─→ Researcher(C) ─┘   (opus)        (sonnet)      (opus)
-      (sonnet, 并行)
-```
-
-| Agent | 模型 | 工具 | 职责 |
-|---|---|---|---|
-| researcher | sonnet | Read, Grep, Glob, Bash, WebFetch, WebSearch | 每实体一个实例并行，多源检索 |
-| comparator | opus | Read, Grep, Glob | 跨实体维度选择与根因分析 |
-| fact-checker | sonnet | Read, Grep, Glob, WebFetch, WebSearch | 关键论断核验，标注置信度 |
-| writer | opus | Read, Write, Edit, Grep | 按目标语言合成最终文章 |
-
-**输出结构**：Abstract → Introduction → Core Concepts → Entity Analysis → Comparative Analysis → Trends & Outlook → Conclusion → Glossary → Source Credibility Table → References (APA 7th)
-
-### Pipeline B — `/news-scan`
-
-```
-User Input (topic, entities, period, lang)
-  │
-  ├─→ News-Scanner(A) ─┐
-  ├─→ News-Scanner(B) ─┼─→ 选出 Top 3-5 事件 → News-Imager → News-Analyst → Hooks → 简报
-  └─→ News-Scanner(C) ─┘                        (sonnet)       (opus)
-      (sonnet, 并行)
-```
-
-| Agent | 模型 | 工具 | 职责 |
-|---|---|---|---|
-| news-scanner | sonnet | WebSearch, WebFetch, Read, Grep, Glob | 每实体实时新闻抓取（不取图） |
-| news-imager | sonnet | WebFetch, Read, Grep, Glob | 为 Top 事件提取合规图片与替代文本 |
-| news-analyst | opus | Read, Write, Edit, Grep | 去重、时间线、影响矩阵、趋势信号 |
-
-**输出结构**：Key Events Summary → Full Event Timeline → Entity-by-Entity Developments → Impact Analysis → Trend Signals & Risk Alerts → Sources
+## 三条流水线的 Agent 编排
 
 ### Pipeline C — `/daily-news-intelligence`
 
@@ -227,21 +133,23 @@ User Input (country, date, lang)
       Pass A 矩阵 + Pass B 自由发现                  原创性/权威性/   抽取 hard_facts /       消费 Verifier +     五道核查
       逐 URL 日期核验 + 正版分级                      影响力/正版/去重  quotes → YAML manifest  Manifest，search    （含引号规范化
       + 跨类去重 + Cat5↔Cat6 路由（§ Step 6）        验证（输入 Scanner Bundle）  (事实锚点表)   URL 强制进 References + 通顺修补）
+
+      双语模式（--lang zh+en 等）：Scanner/Verifier/Fact-Extractor 跑 1 次；Writer × langs 并行 → Editor × langs 并行 → pandoc × langs
 ```
 
 | Agent | 模型 | 工具 | 职责 |
 |---|---|---|---|
-| daily-news-scanner | sonnet | WebSearch, WebFetch, Read, Grep, Glob | **单一实例顺序扫全部类目（1.17.0 合并）**，Pass A + Pass B per category，完成后在 § Step 6 执行跨类去重 + Cat5↔Cat6 路由（原 Merger 职责），输出统一 Scanner Bundle（`references/schemas.md` § Scanner Bundle Schema）。**Pass A**：矩阵 tier 顺序搜索（T4-official→T1-wire→T1-flagship→T2→T3）；**Pass B**：无 site: 自由发现，按 rubric § Source Legitimacy 分级（auto/conditional 封顶 T2/hard-reject），ipo_ma 加 SEC EDGAR 一手申报，China 报告对 Pass B 套中国本土媒体/gov 域名 denylist。逐 URL WebFetch 严格日期核验（必须等于 date，不接受邻近日）。**付费墙补救（Step 3.5，1.16.3+ 反转）**：硬付费墙域名（Bloomberg/FT/WSJ/Economist/Telegraph/Times/Nikkei Asia 等）**Lead-eligible**——先用 title 关键词反搜免费媒体（Reuters/AP/AFP/BBC/Guardian/Kyodo）找替代 Lead（找到→免费媒体进 Lead，付费墙挂 `Corroborated by`，`Body-source: full`）；**找不到→付费墙本身就是 Lead**，打 `Body-source: paywall-stub` 标记，由 Writer 强制跑 ≥2 次 WebSearch/WebFetch 把 body 凑到 ≥200 字（search URL 必须进 References）、Editor Pass 3 把抓不到原文的直接引语降级为间接引语。设计取舍：牺牲付费墙独家爆料的事实抽取密度，换不再丢稿；Fact-Extractor 接受稀疏 manifest，Editor Pass 1 按 `body_source` scale 期望。Verifier 透传 `Corroborated by` + `Body-source`，Writer 给每个 URL 单独发一条 APA `[N]`。**`country = China` 时**：T1-wire 只 Universal（无 Xinhua / China News Service），T1-flagship Country-of-coverage 为空（无 Caixin / People's Daily / SCMP），T3 无 Country: China 行，T4 改用外部机构清单（IMF / World Bank / WTO / OECD / BIS / IEA / Treasury / USTR / State Dept / Commerce-BIS / White House / EU Commission / UK Gov / METI / MOFA Japan）。中国政府域名永不查询。 |
+| daily-news-scanner | sonnet | WebSearch, WebFetch, Read, Grep, Glob | **单一实例顺序扫全部类目（1.17.0 合并）**，Pass A + Pass B per category，完成后在 § Step 6 执行跨类去重 + Cat5↔Cat6 路由（原 Merger 职责），输出统一 Scanner Bundle（`references/schemas.md` § Scanner Bundle Schema）。**Pass A**：矩阵 tier 顺序搜索（T4-official→T1-wire→T1-flagship→T2→T3）；**Pass B**：无 site: 自由发现，按 rubric § Source Legitimacy 分级（auto/conditional 封顶 T2/hard-reject），ipo_ma 加 SEC EDGAR 一手申报，China 报告对 Pass B 套中国本土媒体/gov 域名 denylist。逐 URL WebFetch 严格日期核验（必须等于 date，不接受邻近日）。**付费墙补救（Step 3.5，1.16.3+ 反转）**：硬付费墙域名（Bloomberg/FT/WSJ/Economist/Telegraph/Times/Nikkei Asia 等）**Lead-eligible**——先用 title 关键词反搜免费媒体（Reuters/AP/AFP/BBC/Guardian/Kyodo）找替代 Lead（找到→免费媒体进 Lead，付费墙挂 `Corroborated by`，`Body-source: full`）；**找不到→付费墙本身就是 Lead**，打 `Body-source: paywall-stub` 标记，由 Writer 强制跑 ≥2 次 WebSearch/WebFetch 把 body 凑到 ≥200 字（search URL 必须进 References）、Editor Pass 3 把抓不到原文的直接引语降级为间接引语。**`country = China` 时**：T1-wire 只 Universal（无 Xinhua / China News Service），T1-flagship Country-of-coverage 为空（无 Caixin / People's Daily / SCMP），T3 无 Country: China 行，T4 改用外部机构清单。中国政府域名永不查询。 |
 | news-verifier | sonnet | Read, Grep, Glob, WebFetch | 编辑台五检查（原创性 / 权威性 / 影响力 / **正版性** / 去重验证），输入 **Scanner Bundle**；Pass-A 源预清，Pass-B 套 rubric § Source Legitimacy（不合格 DROP `Illegitimate-source`）；去重/路由已在 Scanner § Step 6 完成，仅验证。输出 KEEP/DROP 集 |
-| daily-fact-extractor | sonnet | Read, Write, Grep | **新增（1.11.0）**：读 Verifier KEEP bundle，对每条 story 抽取 hard_facts（数字 / 命名 / 日期 / 机构 / 产品的 verbatim value + source_url + factual_excerpt 子串）+ quotes（speaker + verbatim_en + source_url），输出 YAML Fact Manifest 到 `${OUT_DIR}/fact-manifest-{country_slug}-{date}.yaml`。**不上网、不写叙事、不翻译**。Manifest 是 Writer 的"locked values"硬约束 + Editor 的事实核查 ground truth。 |
-| daily-news-writer | opus | Read, Write, Edit, Grep, WebSearch, WebFetch | 消费 Verifier KEEP + Fact Manifest，按目标语言**自由文笔**重写。Manifest 锁定的数字 / 命名 / 日期 / 引语**不可漂移**（值必须匹配 manifest）。**默认每 story 跑 1-3 次 WebSearch / WebFetch 拉背景**。**引用契约**：References = Verifier KEEP URLs ∪ {支撑了正文事实的 search URLs}——search URL 必须进 References（APA + 连续 `[N]`）。引号按 canonical 表（en `""` / zh `""` / ja `「」`）。 |
-| daily-editor | opus | Read, Edit, Grep, WebFetch, WebSearch | **新增（1.11.0），1.16.0+ 升至 5 道核查**：Writer 之后顺序跑 — **Pass 1** Verifier-locked 事实是否与 Manifest 一致（漂移即改回）；**Pass 2** Writer-search 事实是否在 References 有 URL（缺则 search 补 ref / 砍句 / 弱化）；**Pass 3** 直接引语逐字 WebFetch 对源（不一致则降级为间接引语）；**Pass 4** 引号字符规范化；**Pass 5** 局部通顺 + 逻辑空洞修补（闭合 5 类缺陷白名单：`pass2-cut-gap` 修复 Pass 2 砍句留下的桥；`foreign-residue` 翻译腔改写；`inconsistent-name` 跨故事统一人名/机构名；`filler-marker` 删 Writer 漏过的填充词（闭合白名单）；`awkward-connector` 句内连接词错位）。**只用 Edit，不 Write**；Pass 2+3 预算 2 WebSearch + 4 WebFetch / story；Pass 5 **零 web 调用**、每 story ≤ 3 Edit、全文 ≤ `2 × story_count`、6 不变量自检失败即回滚（manifest 事实保留 / References 字节相同 / 段落数不变 / 标题不变 / 引号配对平衡 / 无禁用 marker）；Pass 5 不可恢复失败时 abort 但 pipeline 不阻断；产出 stdout 报告供日志。 |
+| daily-fact-extractor | sonnet | Read, Write, Grep | 读 Verifier KEEP bundle，对每条 story 抽取 hard_facts（数字 / 命名 / 日期 / 机构 / 产品的 verbatim value + source_url + factual_excerpt 子串）+ quotes（speaker + verbatim_en + source_url），输出 YAML Fact Manifest 到 `${OUT_DIR}/fact-manifest-{country_slug}-{date}.yaml`。**不上网、不写叙事、不翻译**。Manifest 是 Writer 的"locked values"硬约束 + Editor 的事实核查 ground truth。 |
+| daily-news-writer | opus | Read, Write, Edit, Grep, WebSearch, WebFetch | 消费 Verifier KEEP + Fact Manifest，按目标语言**自由文笔**重写。Manifest 锁定的数字 / 命名 / 日期 / 引语**不可漂移**（值必须匹配 manifest）。**默认每 story 跑 1-3 次 WebSearch / WebFetch 拉背景**。**引用契约**：References = Verifier KEEP URLs ∪ {支撑了正文事实的 search URLs}——search URL 必须进 References（APA + 连续 `[N]`）。引号按 canonical 表（en `""` / zh `""` / ja `「」`）。**双语模式下每个 lang 一个独立实例，接收单 lang token + 该 lang 的 out_md 路径。** |
+| daily-editor | opus | Read, Edit, Grep, WebFetch, WebSearch | Writer 之后顺序跑五道核查 — **Pass 1** Verifier-locked 事实是否与 Manifest 一致（漂移即改回）；**Pass 2** Writer-search 事实是否在 References 有 URL（缺则 search 补 ref / 砍句 / 弱化）；**Pass 3** 直接引语逐字 WebFetch 对源（不一致则降级为间接引语）；**Pass 4** 引号字符规范化；**Pass 5** 局部通顺 + 逻辑空洞修补（闭合 5 类缺陷白名单）。**只用 Edit，不 Write**；Pass 2+3 预算 2 WebSearch + 4 WebFetch / story；Pass 5 零 web 调用、每 story ≤ 3 Edit、全文 ≤ `2 × story_count`、6 不变量自检失败即回滚；Pass 5 不可恢复失败时 abort 但 pipeline 不阻断；产出 stdout 报告供日志。**双语模式下每个 lang 一个独立实例。** |
 
 **条件化栏目（按 `country` 派生，真源见 `references/language-spec.md` § Category Catalog & Selection）**：
 - 非中国日报（6 栏）：经济与市场 → 政治与外交 → 科技与产业 → 社会与民生 → 企业IPO与并购 → 其他重要事件
 - 中国日报（7 栏，第 5 位插入涉华）：经济与市场 → 政治与外交 → 科技与产业 → 社会与民生 → 海外涉华财经 → 企业IPO与并购 → 其他重要事件
 
-**输出**：Markdown 文件 + pandoc 导出 docx，可选 Gmail SMTP 邮件投递（支持 `--email-dry-run` 预览）
+**输出**：Markdown 文件 + pandoc 导出 docx，可选 Gmail SMTP 邮件投递（支持 `--email-dry-run` 预览）；双语模式产出 2 套文件 + 堆叠双语邮件正文（见 § 项目定位 设计点 8）
 
 **外部视角中国（1.9.1+ 结构性设计）**：`/daily-news-intelligence --country "China"` 用矩阵结构本身实现外部视角，不靠条件分支或覆盖逻辑。设计点：
 - Source Matrix 里的 `Country: China` 行（T1-wire / T1-flagship / T3）已全部删除
@@ -270,6 +178,8 @@ daily-news-reports/YYYY-MM-DD/*.md  (各国已有报告)
 
 **输出**：SPD Bank 品牌 Word 文档（header 有银行 logo、footer 有装饰图案），可选邮件投递
 
+**依赖**：读取 Pipeline C 产出的当日各国报告 — 跑 D 之前当日必须已跑过 C。
+
 ### Pipeline E — `/reputation-track`
 
 ```
@@ -284,10 +194,10 @@ User Input (company name|ticker, date, lang)
 | Agent / 组件 | 模型 | 工具 | 职责 |
 |---|---|---|---|
 | reputation-resolver | opus | WebFetch, WebSearch, Read, Grep, Glob | ticker/name 消歧（Yahoo Finance/SEC/Wikipedia），抓 5-8 名高管；resolution_confidence=low 时中止 |
-| reputation-scanner (×3) | sonnet | WebSearch, WebFetch, Read, Grep, Glob, **mcp__apidirect__search_reddit**, **mcp__apidirect__search_twitter** | 每源一个实例并行。News 走 WebSearch+T1-T4；**Reddit/X 走 apidirect MCP 单次调用**（月 50 token 预算，每次 run 2 token）。只抓不判 |
+| reputation-scanner (×3) | sonnet | WebSearch, WebFetch, Read, Grep, Glob, **mcp__apidirect__search_reddit**, **mcp__apidirect__search_twitter** | 每源一个实例并行。News 走 WebSearch+T1-T4（分级规则 = `rules/research/news-source.md`）；**Reddit/X 走 apidirect MCP 单次调用**（月 50 token 预算，每次 run 2 token）。只抓不判 |
 | reputation-classifier | sonnet | Read, Grep, Glob, WebFetch | 逐条打 category + severity + 可信度；WebFetch 源文件提 verbatim quote；跨源去重；低于 severity_min 丢弃 |
 | reputation-writer | opus | Read, Write, Edit, Grep | 按 `html-template.md` 渲染内联 CSS HTML；verbatim quote 原样；生成 TL;DR |
-| send-report-email.py `--body-html-file` | — | Gmail SMTP | 扩展后支持 HTML body，multipart/alternative 自动生成 text/plain 降级 |
+| send-report-email.py `--body-html-file` | — | Gmail SMTP | 支持 HTML body，multipart/alternative 自动生成 text/plain 降级 |
 
 **关键约束**：
 - `total_items_kept == 0` → 静默退出，不写 HTML 文件，不发邮件
@@ -300,59 +210,9 @@ User Input (company name|ticker, date, lang)
 - `{out_dir}{company_display}-reputation-{date}.html`（内联 CSS，最大 600px，无外部资源）
 - 邮件主题格式：`[声誉预警] {公司} — {日期} · {N} 项负面（{最高严重度}）`
 
-### Pipeline F — `/weekly-report`
-
-```
-End Date (default: today) → 计算前 7 日窗口
-  │
-  ├─→ Weekly-News-Aggregator (Stage A) ─┐
-  │   读 daily-news-reports/ 前 7 日各国 MD                  ├─→ Weekly-Report-Writer ─→ pandoc → 邮件（可选）
-  │   去重 + 按国家分组 → WeeklyEventsBundle                  │       (opus)
-  │   (sonnet)                                              │       消费两个 bundle，按
-  │                                                          │       lang 本地化 section 标题，
-  └─→ Market-Data-Collector (Stage B) ──┘       合成 Markdown
-      并行调 FRED / BoE / BoJ / yfinance
-      聚合 JSON → MarketDataBundle
-      (sonnet)
-```
-
-| Agent / 组件 | 模型 | 工具 | 职责 |
-|---|---|---|---|
-| weekly-news-aggregator | sonnet | Read, Bash, Grep, Glob | 读 `--news-dir` 下前 7 日各国 Pipeline C 报告，**不上网**；去重相同事件，按国家分组，输出 WeeklyEventsBundle |
-| market-data-collector | sonnet | Bash, Read | 并行跑 FRED（货币市场 + 汇率）、BoE + BoJ + FRED（固收）、yfinance（KR ETF 代理 + 商品期货）脚本；不读新闻，不写报告；聚合为 MarketDataBundle |
-| weekly-report-writer | opus | Read, Write, Edit, Grep | 消费两个 bundle，按 `language-spec.md` 本地化 section 标题，按 `output-spec.md` 输出 Markdown；不上网，不调脚本，不翻译 URL / APA |
-
-**Pipeline F 分节**：Market event → Money Market → Fixed Income → FX → Commodity
-
-**关键约束**：
-- weekly-news-aggregator **绝不上网**，只读本地 Pipeline C 报告 — 因此前一周必须有 daily-news-intelligence 跑过
-- market-data-collector 不读新闻，weekly-report-writer 不上网 — 三段职责互不越界
-- `weekly-report-format-check` hook 在 PostToolUse:Write 时硬阻断格式违规
-
-**输出**：Markdown 文件 + pandoc 导出 docx，可选 Gmail SMTP 邮件投递
-
 ---
 
 ## 来源分级体系
-
-### Pipeline A（学术 + 官方）
-| 级别 | 类型 | 示例 |
-|---|---|---|
-| ★★★★★ | 同行评审期刊 | Nature, Science, The Lancet |
-| ★★★★★ | 国际组织报告 | WHO, OECD, IPCC, World Bank |
-| ★★★★☆ | 政府报告 | DOE, EU Commission, 国务院白皮书 |
-| ★★★★☆ | 通讯社 | Reuters, AP, AFP, 新华社 |
-| ★★★☆☆ | 优质新闻 | Scientific American, BBC Science |
-| ★★☆☆☆ | 预印本 | arXiv, medRxiv（标注未经同行评审） |
-
-### Pipeline B（新闻媒体）
-| 级别 | 类型 | 示例 |
-|---|---|---|
-| ★★★★★ | 通讯社 | Reuters, AP, AFP, 新华社 |
-| ★★★★☆ | 财经/商业媒体 | FT, Bloomberg, CNBC, 财新, BBC |
-| ★★★☆☆ | 行业垂直媒体 | Finextra, TechCrunch, 36氪 |
-| ★★☆☆☆ | 智库评论 | Brookings, PIIE, VoxEU |
-| ★☆☆☆☆ | 社交/博客 | 除非是经验证专家否则回避 |
 
 ### Pipeline C（T1-T4 分级，按 tier 自上而下搜索）
 | 级别 | 类型 | 示例 |
@@ -367,20 +227,17 @@ End Date (default: today) → 计算前 7 日窗口
 
 详细规则见 `skills/daily-news-intelligence/references/rubric.md`。
 
+### Pipeline E（News 源分级）
+E 的 News 路复用 `rules/research/news-source.md` 的 T1-T4 定义（该文件原属已删除的 Pipeline B，因 E 的 `reputation-scanner.md` 与 `source-matrix.md` 依赖而保留）。Reddit / X 内容按低可信度处理（见 `skills/reputation-track/references/negativity-rubric.md`）。
+
 ---
 
 ## 质量钩子（hooks/hooks.json）
 
 | Hook | 流水线 | 触发 | 行为 |
 |---|---|---|---|
-| word-count-check | A | PostToolUse:Write | 超过 5000 字 / 7500 中文字符则阻断 |
-| entity-coverage-check | A | PostToolUse:Write | 实体无专节或提及 <3 次则警告 |
-| reference-validator | A | PostToolUse:Write | 内文 `[N]` 与参考条目不一致则警告 |
-| news-freshness-check | B | PostToolUse:Write | 近 7 天内无来源则警告 |
-| **daily-news-format-check** | **C** | **PostToolUse:Write + Edit** | **Writer/Editor 输出格式违规即阻断。基础校验：blockquote 来源 / 斜体 in-text / 全局 `## 参考文献` / 缺 `[N]` / `[N]` 不连续 / 缺 URL / `### == 摘要 == **References**` 数目不符。**1.11.0 新增**：(a) 引号 canonical 字符级校验（按 H1 探测 lang，非 canonical 字符即阻断，配对不平衡即阻断；URL / APA / 代码块剥离）；(b) 引用完整性启发式（story 有引语但 0 URL → 阻断；≥5 带单位数字 + ≤1 URL → 阻断）。Edit 事件下从磁盘读文件（Edit 不带 tool_input.content）。** |
-| **weekly-report-format-check** | **F** | **PostToolUse:Write** | **Pipeline F Markdown 格式违规即阻断（参见 `skills/weekly-report/` spec）** |
-| **email-send-guard** | **C & D & E & F** | **PreToolUse:Bash** | **Bash 命令里检测到 inline `smtplib` / `email.message` / `MIMEMultipart` / `sendmail` / `mail -s` 且未调用 `send-*-email.py` → 阻断。防止 orchestrator 绕过 sanctioned 脚本导致附件 noname** |
-| research-summary | A & B | Stop | 异步记录会话元数据（非阻断） |
+| **daily-news-format-check** | **C** | **PostToolUse:Write + Edit** | **Writer/Editor 输出格式违规即阻断。基础校验：blockquote 来源 / 斜体 in-text / 全局 `## 参考文献` / 缺 `[N]` / `[N]` 不连续 / 缺 URL / `### == 摘要 == **References**` 数目不符。引号 canonical 字符级校验（按 H1 探测 lang，非 canonical 字符即阻断，配对不平衡即阻断；URL / APA / 代码块剥离）；引用完整性启发式（story 有引语但 0 URL → 阻断；≥5 带单位数字 + ≤1 URL → 阻断）。Edit 事件下从磁盘读文件（Edit 不带 tool_input.content）。** |
+| **email-send-guard** | **C & D & E** | **PreToolUse:Bash** | **Bash 命令里检测到 inline `smtplib` / `email.message` / `MIMEMultipart` / `sendmail` / `mail -s` 且未调用 `send-*-email.py` → 阻断。防止 orchestrator 绕过 sanctioned 脚本导致附件 noname** |
 
 ---
 
@@ -391,11 +248,12 @@ End Date (default: today) → 计算前 7 日窗口
 - **Command 文件**：Markdown + description frontmatter
 - **Hook 配置**：JSON，含 matcher 条件
 - **文件命名**：全小写 + 连字符（kebab-case）
-- **六条流水线完全独立**：修改一条流水线的 Agent 不影响其他流水线
-- **多语言**：默认支持 zh / en / ja，新增语言需同步更新 `writer.md`、`news-analyst.md`、`daily-news-writer.md`、`weekly-report-writer.md` 与 `set-lang.md`
+- **三条流水线完全独立**：修改一条流水线的 Agent 不影响其他流水线
+- **多语言**：Pipeline C 支持 zh / en / ja 及 6 种双语组合，新增语言需同步更新 `daily-news-writer.md` 与 `references/language-spec.md`；Pipeline E 支持 zh / en
 - **Pipeline C 规范文档**：集中在 `skills/daily-news-intelligence/references/` 目录下，修改前需通读相关 spec
-- **Pipeline F 规范文档**：集中在 `skills/weekly-report/` 目录下；F 严格依赖 Pipeline C 前一周已跑过
+- **Pipeline D 依赖 C**：D 读取 C 当日产出的各国报告，跑 D 前当日必须已跑过 C
 - **China 外部视角是结构性约定**：改动 Source Matrix 时不要为了"对称"重新加入中国本土媒体或政府域名 — 这是 Pipeline C 的结构性设计而非疏漏
+- **`rules/research/news-source.md` 是 E 的依赖**：虽然路径名像研究规则（原 Pipeline B 资产），E 的 reputation-scanner 靠它做 T1-T4 分级 — 不要删
 
 ---
 
@@ -403,12 +261,6 @@ End Date (default: today) → 计算前 7 日窗口
 
 | 目标 | 修改文件 |
 |---|---|
-| 调整 A 字数限制 | `scripts/hooks/word-count-check.js`（`WORD_LIMIT` / `CHAR_LIMIT_ZH`） |
-| 调整 B 新鲜度窗口 | `scripts/hooks/news-freshness-check.js`（7 天常量） |
-| 增加 A 对比维度 | `skills/sci-research/agents/comparator.md`（Section 1 Dimension Selection） |
-| 新增输出语言 | `skills/sci-research/agents/writer.md` + `skills/news-scan/agents/news-analyst.md` + `skills/daily-news-intelligence/agents/daily-news-writer.md` + `commands/set-lang.md` + `skills/daily-news-intelligence/references/language-spec.md` |
-| 调整 A 来源分级 | `rules/research/source-credibility.md` |
-| 调整 B 新闻来源规则 | `rules/research/news-source.md` |
 | 调整 C 来源分级与日期核验 | `skills/daily-news-intelligence/agents/daily-news-scanner.md` + `skills/daily-news-intelligence/references/rubric.md` |
 | 调整 C 付费墙补救逻辑（Step 3.5，Lead-eligibility + Body-source） | `skills/daily-news-intelligence/agents/daily-news-scanner.md` § Source Matrix § Paywall Status + § Search Process § Step 3.5 + § Output Schema（`Body-source` 字段）；同步 `references/schemas.md`（Scanner/Verifier 两段都加 Body-source）+ `agents/news-verifier.md`（透传 Body-source）+ `agents/daily-fact-extractor.md`（按 body_source scale 期望）+ `agents/daily-news-writer.md`（paywall-stub 时 ≥2 次 WebSearch 强制）+ `agents/daily-editor.md`（Pass 3 paywall-stub 引语降级） |
 | 调整 C Corroborated by 透传 | `skills/daily-news-intelligence/agents/news-verifier.md` + `skills/daily-news-intelligence/agents/daily-news-writer.md` + `skills/daily-news-intelligence/references/schemas.md`（三处必须同时改） |
@@ -430,21 +282,17 @@ End Date (default: today) → 计算前 7 日窗口
 | 调整 C 条件化类目规则（china_nexus 资格/排除/关键产业、ipo_ma 门槛、Cat5↔Cat6 路由） | `skills/daily-news-intelligence/references/rubric.md` § Conditional & Topical Categories（真源，Scanner/Verifier 引用）；搜索机制在 `skills/daily-news-intelligence/agents/daily-news-scanner.md` § Conditional Categories — Search Mechanics |
 | 调整 C 类目集（增/删栏目、改国家派生规则） | `references/language-spec.md` § Category Catalog（active 规则）+ 同步 `daily-news-scanner.md` / `news-verifier.md` / `schemas.md` / `daily-news-writer.md` / `output-spec.md` / `verification.md` / `email-spec.md` / `SKILL.md` / `commands/daily-news-intelligence.md` / `daily-fact-extractor.md`（enum） |
 | 调整 C Reference 格式校验规则 | `scripts/hooks/daily-news-format-check.js` + `skills/daily-news-intelligence/references/output-spec.md` § Self-Check Checksum |
-| 调整邮件发送守卫（禁止 inline SMTP） | `scripts/hooks/email-send-guard.js` + 四份 SKILL.md（C/D/E/F）的 email Step 里的 "Hard rule" 段 |
-| 修改 A 文章格式 | `rules/research/output-format.md` |
+| 调整邮件发送守卫（禁止 inline SMTP） | `scripts/hooks/email-send-guard.js` + 三份 SKILL.md（C/D/E）的 email Step 里的 "Hard rule" 段 |
 | 调整 D 品牌模板 | `skills/daily-briefing/template/briefing-template.docx` |
 | 调整 D 新闻筛选逻辑 | `skills/daily-briefing/agents/briefing-curator.md` |
 | 调整 D docx 生成 | `skills/daily-briefing/scripts/generate-branded-docx.py` |
 | 调整 D 邮件投递 | `skills/daily-briefing/references/email-spec.md` + `skills/daily-briefing/scripts/send-briefing-email.py` |
 | 调整 E 负面分类/严重度 | `skills/reputation-track/references/negativity-rubric.md` |
 | 调整 E 数据源（News/Reddit/X）搜索模板 | `skills/reputation-track/references/source-matrix.md` |
+| 调整 E News 源 T1-T4 分级 | `rules/research/news-source.md`（E 的 reputation-scanner 依赖） |
 | 调整 E HTML 邮件模板 | `skills/reputation-track/references/html-template.md` |
 | 调整 E 实体消歧/高管抓取 | `skills/reputation-track/references/entity-resolution.md` + `skills/reputation-track/agents/reputation-resolver.md` |
 | 调整 E 邮件投递 | `skills/reputation-track/references/email-spec.md` + `scripts/send-report-email.py`（`--body-html-file` 支持） |
-| 调整 F 行情数据采集（FRED / BoE / BoJ / yfinance） | `skills/weekly-report/agents/market-data-collector.md` + `skills/weekly-report/scripts/*.py`（如有） |
-| 调整 F 周报输出格式 / 分节 | `skills/weekly-report/references/output-spec.md`（或对应 spec） + `scripts/hooks/weekly-report-format-check.js` |
-| 调整 F 多语言本地化 | `skills/weekly-report/agents/weekly-report-writer.md` + `skills/weekly-report/references/language-spec.md`（如有） |
-| 调整 F 邮件投递 | `skills/weekly-report/references/email-spec.md`（如有） + `scripts/send-report-email.py` |
 
 ---
 
@@ -452,18 +300,17 @@ End Date (default: today) → 计算前 7 日窗口
 
 - Claude Code CLI
 - Node.js ≥ 18（运行 hook 脚本）
-- Python 3（Pipeline C / D / E / F 邮件发送脚本 + Pipeline F 行情采集脚本；仅在使用 `--email` 或 F 时需要）
-- pandoc（Pipeline C 和 F 的 docx 导出）
-- 能访问外网（供 WebSearch / WebFetch / FRED / yfinance）
-- Gmail SMTP 凭据（仅 Pipeline C / D / E / F `--email` 时需要，见 `.env.example`）
-- FRED API key / BoE / BoJ 行情接口访问（仅 Pipeline F 需要）
+- Python 3（Pipeline C / D / E 邮件发送脚本 + Pipeline D docx 生成；仅在使用 `--email` 或 D 时需要）
+- pandoc（Pipeline C 的 docx 导出）
+- 能访问外网（供 WebSearch / WebFetch）
+- Gmail SMTP 凭据（仅 Pipeline C / D / E `--email` 时需要，见 `.env.example`）
+- apidirect MCP（仅 Pipeline E 的 Reddit / X 路需要，月 50 token 免费额度）
 
 ---
 
 ## 参考文件
 
 - **README.md** — 面向最终用户的使用文档（安装、示例、自定义）
-- **examples/** — 两个完整产出样例（Pipeline A），撰写新功能时可作为格式基准
-- **.env.example** — Pipeline C / D / E / F 邮件投递所需的环境变量模板
+- **.env.example** — Pipeline C / D / E 邮件投递所需的环境变量模板
 
-Agent 链的流程图与工具表请直接看本文件的"六条流水线的 Agent 编排"段，或 README.md 的"How It Works"段 — 不再单独维护 AGENTS.md。
+Agent 链的流程图与工具表请直接看本文件的"三条流水线的 Agent 编排"段，或 README.md 的"How It Works"段。

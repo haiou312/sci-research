@@ -20,50 +20,6 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/hooks/word-count-check.js\"",
-            "timeout": 10
-          }
-        ],
-        "description": "Check article word count ≤5000 after file write"
-      },
-      {
-        "matcher": "Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/hooks/entity-coverage-check.js\"",
-            "timeout": 10
-          }
-        ],
-        "description": "Verify all specified entities have substantive content coverage"
-      },
-      {
-        "matcher": "Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/hooks/reference-validator.js\"",
-            "timeout": 10
-          }
-        ],
-        "description": "Validate all inline citations [N] have matching reference entries"
-      },
-      {
-        "matcher": "Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/hooks/news-freshness-check.js\"",
-            "timeout": 10
-          }
-        ],
-        "description": "Check news analysis reports contain sources from the last 7 days"
-      },
-      {
-        "matcher": "Write",
-        "hooks": [
-          {
-            "type": "command",
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/hooks/daily-news-format-check.js\"",
             "timeout": 10
           }
@@ -80,31 +36,6 @@
           }
         ],
         "description": "Re-validate Pipeline C format after daily-editor Edit calls (reads file from disk since Edit doesn't pass full content)"
-      },
-      {
-        "matcher": "Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/hooks/weekly-report-format-check.js\"",
-            "timeout": 10
-          }
-        ],
-        "description": "Enforce /weekly-report Markdown structure: H1 with date range, six required H2 sections in order, market tables with allowed Source labels, [Sn] tags only in Market event/Sources"
-      }
-    ],
-    "Stop": [
-      {
-        "matcher": "*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/hooks/research-summary.js\"",
-            "async": true,
-            "timeout": 10
-          }
-        ],
-        "description": "Log research session metadata (topic, entities, source count, word count)"
       }
     ]
   }

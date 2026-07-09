@@ -1,7 +1,7 @@
 {
   "name": "sci-research",
   "version": "1.18.2",
-  "description": "Claude Code plugin with six independent pipelines — deep research (/sci-research), real-time news scan (/news-scan), single-country daily news intelligence (/daily-news-intelligence), multi-country branded briefing (/daily-briefing), company reputation tracking (/reputation-track), and weekly macro & market report (/weekly-report). Multi-agent orchestration with source credibility grading, per-URL date verification, editorial-desk filtering, branded docx generation, HTML email rendering, FRED/BOE/BOJ/yfinance market data integration, and automated quality gates.",
+  "description": "Claude Code plugin with three independent pipelines — single-country daily news intelligence (/daily-news-intelligence), multi-country branded briefing (/daily-briefing), and company reputation tracking (/reputation-track). Multi-agent orchestration with source credibility grading, per-URL date verification, editorial-desk filtering, branded docx generation, HTML email rendering, and automated quality gates.",
   "author": {
     "name": "Peter Wang"
   },
@@ -10,18 +10,8 @@
   "license": "MIT",
   "keywords": [
     "claude-code",
-    "deep-research",
-    "news-scan",
     "daily-news",
     "news-intelligence",
-    "science",
-    "popular-science",
-    "comparison",
-    "multi-entity",
-    "references",
-    "agents",
-    "skills",
-    "apa-7th",
     "daily-briefing",
     "branded-docx",
     "spd-bank",
@@ -29,11 +19,9 @@
     "reputation-monitor",
     "adverse-media",
     "social-listening",
-    "weekly-report",
-    "macro",
-    "market-data",
-    "fred",
-    "yfinance",
-    "yield-curve"
+    "references",
+    "agents",
+    "skills",
+    "apa-7th"
   ]
 }

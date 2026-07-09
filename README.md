@@ -1,38 +1,41 @@
 # sci-research
 
-> A Claude Code plugin with **six independent multi-agent pipelines** for research, news intelligence, branded briefings, reputation monitoring, and weekly macro & market reports.
+> A Claude Code plugin with **three independent multi-agent pipelines** for daily news intelligence, branded briefings, and company reputation monitoring.
 
-Given a topic, a country, a company, or a date, this plugin orchestrates specialised agents to produce a polished, sourced deliverable — academic article, news briefing, branded Word document, reputational risk email, or weekly research report.
+Given a country, a company, or a date, this plugin orchestrates specialised agents to produce a polished, sourced deliverable — daily news briefing, branded Word document, or reputational risk email.
+
+*(The plugin name is a historical artifact — the original `/sci-research` deep-research pipeline has been removed; the name is kept for marketplace identity and install-path stability.)*
 
 ---
 
-## Six Pipelines
+## Three Pipelines
 
-| | `/sci-research` | `/news-scan` | `/daily-news-intelligence` | `/daily-briefing` | `/reputation-track` | `/weekly-report` |
-|---|---|---|---|---|---|---|
-| **Purpose** | Multi-entity comparison research article | Real-time news briefing | Single-country daily news briefing | Multi-country branded briefing (SPD Bank) | Company reputation risk monitor | Weekly macro & market report |
-| **Time focus** | Historical + current | Last 7/30/90 days | Single date | Single date (reads existing reports) | Single date | Trailing 7 days |
-| **Sources** | Academic, official, T1 media | Wires, financial, industry press | T1-T4 graded (per-URL date verification) | Country reports from Pipeline C | News (T1-T4) + Reddit + X | Pipeline C reports + FRED/BOE/BOJ/yfinance |
-| **Output** | ≤5000-word article with APA refs | 1000-3000-word briefing + images | Five-section Markdown + docx (+email) | 13-15-story branded Word document (+email) | Inline HTML email (only when negative) | Multi-section Markdown + docx (+email) |
-| **Default lang** | `zh` | `zh` | `zh` | `zh` | `zh` | `zh` |
-| **Languages** | zh / en / ja | zh / en / ja | zh / en / ja | zh / en | zh / en | zh / en / ja |
+| | `/daily-news-intelligence` | `/daily-briefing` | `/reputation-track` |
+|---|---|---|---|
+| **Purpose** | Single-country daily news briefing | Multi-country branded briefing (SPD Bank) | Company reputation risk monitor |
+| **Time focus** | Single date | Single date (reads existing reports) | Single date |
+| **Sources** | T1-T4 graded (per-URL date verification) | Country reports from Pipeline C | News (T1-T4) + Reddit + X |
+| **Output** | 6/7-section Markdown + docx (+email); mono- or bilingual | 13-15-story branded Word document (+email) | Inline HTML email (only when negative) |
+| **Default lang** | `zh` | `zh` | `zh` |
+| **Languages** | zh / en / ja + 6 bilingual combos (`zh+en` …) | zh / en | zh / en |
 
-All six pipelines are **completely independent** — they don't share agents and changes to one don't affect the others.
+All three pipelines are **completely independent** — they don't share agents and changes to one don't affect the others.
 
 ---
 
 ## Why This Plugin
 
-- **18 specialised agents** across six pipelines, each agent narrowly scoped
-- **Parallel retrieval** — one researcher / scanner per entity, running simultaneously
-- **Credibility-first** — three independent grading systems (academic five-star, news five-star, T1-T4 date-verified)
-- **Per-URL date verification** in `/daily-news-intelligence` and `/weekly-report` — neighbouring days are discarded
-- **Editorial second-pass filter** (`news-verifier`) for daily news — originality / authority / impact / dedup
+- **10 specialised agents** across three pipelines, each agent narrowly scoped
+- **Credibility-first** — T1-T4 date-verified source grading
+- **Per-URL date verification** in `/daily-news-intelligence` — neighbouring days are discarded
+- **Editorial second-pass filter** (`news-verifier`) for daily news — originality / authority / impact / source legitimacy / dedup
+- **Fact Manifest + 5-pass Editor** — numbers / names / dates / quotes locked to a verbatim YAML manifest, then fact-checked and style-repaired post-Writer
 - **External-view China matrix** — `/daily-news-intelligence --country "China"` uses only Western media + international organisations + external governments by structural design (no Chinese-domestic outlets, no Chinese government domains)
-- **Free-prose Writer** (1.9.0+) — daily news Writer composes explanatory prose in the target language, not a mechanical translation
+- **Free-prose Writer** — daily news Writer composes explanatory prose in the target language, not a mechanical translation
+- **Bilingual mode (1.18.0+)** — `--lang zh+en` runs upstream once, fans Writer/Editor out per language in parallel, ships one email with a stacked bilingual body + up to 4 attachments
 - **Branded Word output** via SPD Bank template (`/daily-briefing`)
-- **Gmail SMTP email delivery** built into three pipelines (daily-news-intelligence, daily-briefing, reputation-track, weekly-report)
-- **8 quality hooks** enforce word limits, entity coverage, reference integrity, news freshness, daily-news Markdown format, weekly-report format, and email-send safety
+- **Gmail SMTP email delivery** built into all three pipelines
+- **Quality hooks** enforce daily-news Markdown format and email-send safety
 - **Multilingual** — Chinese / English / Japanese output
 
 ---
@@ -70,7 +73,7 @@ You should see `sci-research` listed with its version.
 
 ### Email Delivery (optional)
 
-For pipelines C / D / E / F that support `--email`, configure Gmail SMTP via `.env`:
+For the `--email` option in any pipeline, configure Gmail SMTP via `.env`:
 
 ```bash
 cp .env.example .env
@@ -82,34 +85,6 @@ See `.env.example` for the required variables.
 ---
 
 ## Usage
-
-### Pipeline A — `/sci-research` (Deep Research Article)
-
-```
-/sci-research <topic> --entities "Entity1,Entity2,..." --lang zh|en|ja
-```
-
-```bash
-# Compare nuclear fusion progress across 4 countries
-/sci-research 核聚变能源最新进展 --entities "中国,美国,EU,日本"
-
-# mRNA vaccine landscape in English
-/sci-research mRNA vaccine technology landscape --entities "US,EU,China" --lang en
-```
-
-### Pipeline B — `/news-scan` (Real-Time News Briefing)
-
-```
-/news-scan <topic> --entities "Entity1,Entity2,..." --period 7d|30d|90d --lang zh|en|ja
-```
-
-```bash
-# Recent Open Banking news, UK and China focus, 7 days
-/news-scan 开放银行最新进展 --entities "中国,英国" --period 7d --lang zh
-
-# Broad scan without entity filter
-/news-scan AI regulation --period 90d --lang en
-```
 
 ### Pipeline C — `/daily-news-intelligence` (Single-Country Daily Briefing)
 
@@ -171,83 +146,26 @@ Resolves the company + executives, scans News + Reddit + X for adverse content, 
 /reputation-track --company "BABA" --date 2026-05-10 --severity-min low --lang en
 ```
 
-### Pipeline F — `/weekly-report` (Weekly Macro & Market Report)
-
-```
-/weekly-report [--end-date YYYY-MM-DD] [--start-date YYYY-MM-DD] \
-  [--countries "CN,US,UK,EU,JP,KR"] [--lang zh|en|ja] [--out-dir <path>] \
-  [--news-dir <path>] [--commodity-symbols "GC=F,SI=F,CL=F"] \
-  [--kr-bond-symbol 148070.KS] \
-  [--email <a@x.com,b@y.com>] [--email-attach both|docx|md|none] [--email-dry-run]
-```
-
-Aggregates the previous 7 days of `/daily-news-intelligence` reports for the Market Event section, then pulls live market data (FRED for money market & FX, BoE + BoJ + FRED for fixed income, yfinance for KR ETF proxy and commodities) for the data sections.
-
-```bash
-# Weekly report ending today
-/weekly-report --email you@gmail.com
-
-# Specific date range and country set
-/weekly-report --end-date 2026-05-11 --start-date 2026-05-05 --countries "CN,US,JP" --lang en
-```
-
-### Utility Commands
-
-```bash
-# Add more entities to an active research session (Pipeline A & B)
-/add-entity "韩国,印度"
-
-# Switch output language mid-session
-/set-lang en
-```
-
 ---
 
 ## How It Works
 
-### Pipeline A — `/sci-research`
-
-```
-User Input (topic, entities, lang)
-  │
-  ├─→ Researcher(A) ─┐
-  ├─→ Researcher(B) ─┼─→ Comparator → Fact-Checker → Writer → Hooks → Article
-  └─→ Researcher(C) ─┘    (opus)        (sonnet)      (opus)
-       (sonnet, parallel)
-```
-
-| Agent | Model | Role |
-|---|---|---|
-| `researcher` | sonnet | One instance per entity, multi-source retrieval |
-| `comparator` | opus | Cross-entity dimension selection + root-cause analysis |
-| `fact-checker` | sonnet | Claim verification with confidence labels |
-| `writer` | opus | Multilingual article synthesis with APA references |
-
-### Pipeline B — `/news-scan`
-
-```
-News-Scanner(×N) → news-imager → news-analyst → Hooks → Briefing
-   (parallel)      (sonnet)        (opus)
-```
-
-| Agent | Model | Role |
-|---|---|---|
-| `news-scanner` | sonnet | One per entity, real-time news retrieval (no image extraction) |
-| `news-imager` | sonnet | Image extraction and relevance verification for top events |
-| `news-analyst` | opus | Dedup, timeline, impact matrix, trend signals |
-
 ### Pipeline C — `/daily-news-intelligence`
 
 ```
-daily-news-scanner → news-verifier → daily-news-writer → pandoc → email (optional) → publish (optional)
-   (sonnet)            (sonnet)         (opus)
+daily-news-scanner → news-verifier → daily-fact-extractor → daily-news-writer → daily-editor → pandoc → email (optional) → publish (optional)
+   (sonnet)            (sonnet)         (sonnet)               (opus, ×langs)      (opus, ×langs)
+
+Bilingual mode (--lang zh+en …): Scanner/Verifier/Fact-Extractor run ONCE; Writer ×langs in parallel → Editor ×langs in parallel → pandoc ×langs
 ```
 
 | Agent | Model | Role |
 |---|---|---|
-| `daily-news-scanner` | sonnet | English WebSearch + per-URL date verification (T4 → T1 → T2 → T3). Paywall fallback (Step 3.5) reroutes Hard-paywall hits as Corroborated, finds free Lead. |
-| `news-verifier` | sonnet | Editorial second-pass filter: originality / authority / impact / dedup |
-| `daily-news-writer` | opus | Consumes Verifier KEEP set, composes explanatory prose in target language, emits Markdown + APA refs |
+| `daily-news-scanner` | sonnet | Single agent scanning all active categories sequentially. English WebSearch + per-URL date verification (T4 → T1 → T2 → T3), Pass A matrix + Pass B free discovery, paywall fallback (Step 3.5), then internal cross-category dedup + Cat5↔Cat6 routing (§ Step 6) → unified Scanner Bundle |
+| `news-verifier` | sonnet | Editorial second-pass filter: originality / authority / impact / source legitimacy / dedup-validation + Three-Step Coverage Fallback |
+| `daily-fact-extractor` | sonnet | Extracts every number / name / date / quote from the Verifier KEEP set into a locked-values YAML Fact Manifest (no web access) |
+| `daily-news-writer` | opus | Consumes Verifier KEEP set + Fact Manifest, composes explanatory prose in target language with 1-3 background searches per story, emits Markdown + APA refs. One instance per language in bilingual mode |
+| `daily-editor` | opus | 5-pass post-Writer editor: manifest-fact drift / search-fact backing / quote verbatim / quote-mark normalization / local fluency repair. Edit-only, never Write. One instance per language in bilingual mode |
 
 ### Pipeline D — `/daily-briefing`
 
@@ -267,44 +185,9 @@ reputation-resolver → reputation-scanner × 3 (parallel: news / reddit / x) �
 
 Silent exit when `total_items_kept == 0`. Reddit and X go through the apidirect MCP (single call per source) to avoid public-endpoint scraping blocks.
 
-### Pipeline F — `/weekly-report`
-
-```
-weekly-news-aggregator (Stage A) ─┐
-market-data-collector (Stage B) ──┼─→ weekly-report-writer → pandoc → email (optional)
-                                   ┘
-```
-
-| Agent | Model | Role |
-|---|---|---|
-| `weekly-news-aggregator` | sonnet | Reads previous 7 days of Pipeline C reports, deduplicates, groups by country |
-| `market-data-collector` | sonnet | Runs FRED / BoE / BoJ / yfinance scripts in parallel, aggregates JSON |
-| `weekly-report-writer` | opus | Localises section headings per language-spec, composes Markdown |
-
 ---
 
-## Source Credibility Systems
-
-### Pipeline A (Academic + Official)
-
-| Grade | Source Type | Examples |
-|---|---|---|
-| ★★★★★ | Peer-reviewed journals | Nature, Science, The Lancet |
-| ★★★★★ | International org reports | WHO, OECD, IPCC, World Bank |
-| ★★★★☆ | Government reports | DOE, EU Commission, 国务院白皮书 |
-| ★★★★☆ | Wire services | Reuters, AP, AFP, Xinhua |
-| ★★★☆☆ | Quality journalism | Scientific American, BBC Science |
-| ★★☆☆☆ | Preprints | arXiv, medRxiv (flagged as non-peer-reviewed) |
-
-### Pipeline B (News & Media)
-
-| Grade | Source Type | Examples |
-|---|---|---|
-| ★★★★★ | Wire services | Reuters, AP, AFP, Xinhua |
-| ★★★★☆ | Financial / business media | FT, Bloomberg, CNBC, Caixin, BBC |
-| ★★★☆☆ | Industry vertical media | Finextra, TechCrunch, 36氪 |
-| ★★☆☆☆ | Think-tank commentary | Brookings, PIIE, VoxEU |
-| ★☆☆☆☆ | Social media / blogs | Avoided unless verified expert |
+## Source Credibility System
 
 ### Pipeline C (T1-T4 Date-Verified)
 
@@ -319,9 +202,8 @@ market-data-collector (Stage B) ──┼─→ weekly-report-writer → pandoc 
 **For `country = China`**: T1-wire is Universal only (no Xinhua / China News Service); T1-flagship Country-of-coverage is empty (no Caixin / People's Daily / SCMP); T3 has no Country: China rows; T4 uses an external-institution table (IMF, World Bank, WTO, OECD, BIS, IEA, US Treasury, USTR, State Dept, US Commerce/BIS, White House, EU Commission, UK Gov, METI, MOFA Japan). Chinese government domains are never queried.
 
 Detailed rules:
-- Pipeline A: [`rules/research/source-credibility.md`](./rules/research/source-credibility.md)
-- Pipeline B: [`rules/research/news-source.md`](./rules/research/news-source.md)
 - Pipeline C: [`skills/daily-news-intelligence/references/rubric.md`](./skills/daily-news-intelligence/references/rubric.md) + [`skills/daily-news-intelligence/agents/daily-news-scanner.md`](./skills/daily-news-intelligence/agents/daily-news-scanner.md) § Source Matrix
+- Pipeline E news tiering: [`rules/research/news-source.md`](./rules/research/news-source.md)
 
 ---
 
@@ -329,14 +211,8 @@ Detailed rules:
 
 | Hook | Pipeline | Trigger | What It Does |
 |---|---|---|---|
-| `word-count-check` | A | PostToolUse:Write | Blocks if Pipeline A article >5000 words / 7500 CJK chars |
-| `entity-coverage-check` | A | PostToolUse:Write | Warns if any entity lacks dedicated section / ≥3 mentions |
-| `reference-validator` | A | PostToolUse:Write | Warns if inline `[N]` doesn't match references list |
-| `news-freshness-check` | B | PostToolUse:Write | Warns if no Pipeline B source from last 7 days |
-| `daily-news-format-check` | C | PostToolUse:Write | **Blocks** Pipeline C Markdown if format violates spec (count invariants, `[N]` continuity, URLs, no global refs section) |
-| `weekly-report-format-check` | F | PostToolUse:Write | **Blocks** Pipeline F Markdown if format violates spec |
-| `email-send-guard` | C / D / E / F | PreToolUse:Bash | **Blocks** inline `smtplib` / `MIMEMultipart` / `sendmail` Bash commands that bypass the sanctioned `send-*-email.py` scripts |
-| `research-summary` | A & B | Stop | Logs session metadata (async, non-blocking) |
+| `daily-news-format-check` | C | PostToolUse:Write + Edit | **Blocks** Pipeline C Markdown if format violates spec (count invariants, `[N]` continuity, URLs, canonical quote marks, no global refs section) |
+| `email-send-guard` | C / D / E | PreToolUse:Bash | **Blocks** inline `smtplib` / `MIMEMultipart` / `sendmail` Bash commands that bypass the sanctioned `send-*-email.py` scripts |
 
 ---
 
@@ -347,29 +223,11 @@ sci-research/
 ├── .claude-plugin/
 │   ├── plugin.json                          # Plugin metadata
 │   └── marketplace.json                     # Marketplace manifest
-├── commands/                                # 6 main + 2 utility slash commands
-│   ├── sci-research.md
-│   ├── news-scan.md
+├── commands/                                # 3 slash commands
 │   ├── daily-news-intelligence.md
 │   ├── daily-briefing.md
-│   ├── reputation-track.md
-│   ├── weekly-report.md
-│   ├── add-entity.md
-│   └── set-lang.md
-├── skills/                                  # 6 independent skill workflows; agents/*.md live under each skill as prompt templates (NOT registered as `sci-research:*` subagents — see CLAUDE.md § 项目定位 point 6)
-│   ├── sci-research/                        # Pipeline A
-│   │   ├── SKILL.md
-│   │   └── agents/
-│   │       ├── researcher.md                # Per-entity retrieval
-│   │       ├── comparator.md                # Cross-entity dimensions
-│   │       ├── fact-checker.md              # Claim verification
-│   │       └── writer.md                    # Article writer
-│   ├── news-scan/                           # Pipeline B
-│   │   ├── SKILL.md
-│   │   └── agents/
-│   │       ├── news-scanner.md              # Per-entity news (no images)
-│   │       ├── news-imager.md               # Image extraction + verify
-│   │       └── news-analyst.md              # Dedup + timeline + impact
+│   └── reputation-track.md
+├── skills/                                  # 3 independent skill workflows; agents/*.md live under each skill as prompt templates (NOT registered as `sci-research:*` subagents — see CLAUDE.md § 项目定位 point 6)
 │   ├── daily-news-intelligence/             # Pipeline C
 │   │   ├── SKILL.md
 │   │   ├── agents/
@@ -394,46 +252,29 @@ sci-research/
 │   │   └── scripts/
 │   │       ├── generate-branded-docx.py
 │   │       └── send-briefing-email.py
-│   ├── reputation-track/                    # Pipeline E
-│   │   ├── SKILL.md
-│   │   ├── agents/
-│   │   │   ├── reputation-resolver.md       # Ticker/name → exec list
-│   │   │   ├── reputation-scanner.md        # Per-source (news/reddit/x)
-│   │   │   ├── reputation-classifier.md     # Per-item negativity grader
-│   │   │   └── reputation-writer.md         # HTML email body composer
-│   │   └── references/                      # Pipeline E specs
-│   │       ├── entity-resolution.md
-│   │       ├── source-matrix.md
-│   │       ├── negativity-rubric.md
-│   │       ├── html-template.md
-│   │       ├── email-spec.md
-│   │       └── schemas.md
-│   └── weekly-report/                       # Pipeline F
+│   └── reputation-track/                    # Pipeline E
 │       ├── SKILL.md
-│       └── agents/
-│           ├── weekly-news-aggregator.md    # 7-day event aggregator
-│           ├── market-data-collector.md     # FRED/BoE/BoJ/yfinance
-│           └── weekly-report-writer.md      # Weekly report writer
-├── contexts/sci-research.md                 # Research mode behavioral context
-├── hooks/hooks.json                         # Hook configuration (8 hooks)
+│       ├── agents/
+│       │   ├── reputation-resolver.md       # Ticker/name → exec list
+│       │   ├── reputation-scanner.md        # Per-source (news/reddit/x)
+│       │   ├── reputation-classifier.md     # Per-item negativity grader
+│       │   └── reputation-writer.md         # HTML email body composer
+│       └── references/                      # Pipeline E specs
+│           ├── entity-resolution.md
+│           ├── source-matrix.md
+│           ├── negativity-rubric.md
+│           ├── html-template.md
+│           ├── email-spec.md
+│           └── schemas.md
+├── hooks/hooks.json                         # Hook configuration (3 hooks)
 ├── scripts/
 │   ├── hooks/                               # Hook implementations (Node.js)
-│   │   ├── word-count-check.js
-│   │   ├── entity-coverage-check.js
-│   │   ├── reference-validator.js
-│   │   ├── news-freshness-check.js
 │   │   ├── daily-news-format-check.js
-│   │   ├── weekly-report-format-check.js
-│   │   ├── email-send-guard.js
-│   │   └── research-summary.js
-│   └── send-report-email.py                 # Gmail SMTP (Pipelines C / E / F)
-├── rules/research/                          # 3 quality rules
-│   ├── source-credibility.md                # Pipeline A grading
-│   ├── output-format.md                     # Pipeline A format
-│   └── news-source.md                       # Pipeline B grading & dedup
-├── examples/                                # Sample outputs
-│   ├── nuclear-fusion-zh.md                 # Pipeline A (Chinese)
-│   └── mrna-vaccine-en.md                   # Pipeline A (English)
+│   │   └── email-send-guard.js
+│   ├── publish-reports.sh                   # GitHub Pages publish (Pipeline C)
+│   └── send-report-email.py                 # Gmail SMTP (Pipelines C / E)
+├── rules/research/
+│   └── news-source.md                       # T1-T4 news tiering (Pipeline E dependency)
 ├── .env.example                             # Gmail SMTP environment template
 ├── CLAUDE.md                                # Project guidance for Claude Code
 ├── README.md
@@ -446,33 +287,19 @@ sci-research/
 
 | Goal | Edit |
 |---|---|
-| Pipeline A word limit | `scripts/hooks/word-count-check.js` (`WORD_LIMIT`, `CHAR_LIMIT_ZH`) |
-| Pipeline B news-freshness window | `scripts/hooks/news-freshness-check.js` (7-day constant) |
-| Pipeline A comparison dimensions | `skills/sci-research/agents/comparator.md` § Dimension Selection |
-| Pipeline A source grading | `rules/research/source-credibility.md` |
-| Pipeline B news source rules | `rules/research/news-source.md` |
 | Pipeline C source matrix / date verification | `skills/daily-news-intelligence/agents/daily-news-scanner.md` + `skills/daily-news-intelligence/references/rubric.md` |
 | Pipeline C external-view China rules | `skills/daily-news-intelligence/agents/daily-news-scanner.md` § Source Matrix § T4-official + Step 2.1 |
 | Pipeline C output format / Markdown contract | `skills/daily-news-intelligence/references/output-spec.md` |
-| Pipeline C language localisation | `skills/daily-news-intelligence/references/language-spec.md` |
-| Pipeline C email delivery | `skills/daily-news-intelligence/references/email-spec.md` + `scripts/send-report-email.py` |
+| Pipeline C language localisation / bilingual mode | `skills/daily-news-intelligence/references/language-spec.md` (§ Bilingual Mode) |
+| Pipeline C email delivery / bilingual email | `skills/daily-news-intelligence/references/email-spec.md` + `scripts/send-report-email.py` |
 | Pipeline D brand template | `skills/daily-briefing/template/briefing-template.docx` |
 | Pipeline D curator rules | `skills/daily-briefing/agents/briefing-curator.md` |
 | Pipeline E negativity rubric | `skills/reputation-track/references/negativity-rubric.md` |
+| Pipeline E news source tiering | `rules/research/news-source.md` |
 | Pipeline E HTML email template | `skills/reputation-track/references/html-template.md` |
 | Pipeline E entity resolution | `skills/reputation-track/references/entity-resolution.md` + `skills/reputation-track/agents/reputation-resolver.md` |
-| Pipeline F market-data sources | `skills/weekly-report/agents/market-data-collector.md` |
-| New output language | `skills/sci-research/agents/writer.md` + `skills/news-scan/agents/news-analyst.md` + `skills/daily-news-intelligence/agents/daily-news-writer.md` + `commands/set-lang.md` + `skills/daily-news-intelligence/references/language-spec.md` |
+| New output language (Pipeline C) | `skills/daily-news-intelligence/agents/daily-news-writer.md` + `skills/daily-news-intelligence/references/language-spec.md` |
 | Adding hook / changing email-send guard | `scripts/hooks/email-send-guard.js` + the relevant SKILL.md email step |
-
----
-
-## Examples
-
-See the [`examples/`](./examples/) directory for complete sample outputs:
-
-- **[nuclear-fusion-zh.md](./examples/nuclear-fusion-zh.md)** — Nuclear fusion progress, China / US / EU / Japan comparison (Chinese)
-- **[mrna-vaccine-en.md](./examples/mrna-vaccine-en.md)** — mRNA vaccine technology landscape, US / EU / China comparison (English)
 
 ---
 
@@ -480,10 +307,11 @@ See the [`examples/`](./examples/) directory for complete sample outputs:
 
 - [Claude Code](https://claude.ai/code) CLI
 - Node.js ≥ 18 (for hook scripts)
-- Python 3 (for email delivery scripts; only required when `--email` is used)
-- `pandoc` (for Markdown → docx conversion in Pipelines C / F)
+- Python 3 (for email delivery scripts + Pipeline D docx generation; only required when `--email` or Pipeline D is used)
+- `pandoc` (for Markdown → docx conversion in Pipeline C)
 - Internet access (for WebSearch / WebFetch)
-- Gmail SMTP credentials (only for pipelines that support `--email`; see `.env.example`)
+- Gmail SMTP credentials (only when `--email` is used; see `.env.example`)
+- apidirect MCP (only for Pipeline E's Reddit / X sources; 50 free tokens/month)
 
 ---
 
