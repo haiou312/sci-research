@@ -1,53 +1,122 @@
 #!/usr/bin/env bash
-# Publish daily-news-reports to GitHub Pages.
+# Publish an explicitly selected report directory to a GitHub Pages repository.
 #
-# Pipeline C (/daily-news-intelligence) writes per-country md+docx into
-# ~/Desktop/github/daily-news-reports/{date}/ by default. Pipeline D
-# (/daily-briefing) writes the SPD-branded summary docx into the same
-# directory. After the day's run completes, this script commits and
-# pushes everything in one shot. The GitHub Actions workflow on the
-# remote repo (.github/workflows/update-index.yml) then refreshes
-# index.json server-side, so no local index step is needed.
+# The report pipelines write locally by default. Publishing is opt-in: the
+# caller must provide REPORTS_REPO and --source-dir <YYYY-MM-DD directory>.
+# The source contents are copied to
+# REPORTS_REPO/<date>/ before staging, committing, and pushing.
 #
 # Usage:
-#   bash scripts/publish-reports.sh                # commit & push current state
-#   bash scripts/publish-reports.sh --dry-run      # show what would be committed, do not push
+#   REPORTS_REPO=/absolute/path/to/reports-repo \
+#     bash scripts/publish-reports.sh --source-dir /absolute/path/2026-04-16
 #
-# Idempotent: exits 0 cleanly when there is nothing to publish.
+#   REPORTS_REPO=/absolute/path/to/reports-repo \
+#     bash scripts/publish-reports.sh --source-dir /absolute/path/2026-04-16 --dry-run
+#
+# Exit codes:
+#   0 success, dry run, or nothing to publish
+#   2 REPORTS_REPO missing or invalid arguments
+#   3 REPORTS_REPO is not a Git repository
+#   4 source directory invalid
+#   5 target repository already has staged changes
 
 set -euo pipefail
 
-REPO="${REPORTS_REPO:-$HOME/Desktop/github/daily-news-reports}"
-DRY_RUN="${1:-}"
+usage() {
+  echo "Usage: REPORTS_REPO=/absolute/path bash scripts/publish-reports.sh --source-dir /path/YYYY-MM-DD [--dry-run]" >&2
+}
+
+REPO="${REPORTS_REPO:-}"
+SOURCE_DIR=""
+DRY_RUN=false
+
+while (($#)); do
+  case "$1" in
+    --source-dir)
+      if [[ -z "${2:-}" ]]; then
+        echo "ERROR: --source-dir requires a directory path." >&2
+        usage
+        exit 2
+      fi
+      SOURCE_DIR="$2"
+      shift 2
+      ;;
+    --dry-run)
+      DRY_RUN=true
+      shift
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "ERROR: unknown argument: $1" >&2
+      usage
+      exit 2
+      ;;
+  esac
+done
+
+if [[ -z "$REPO" ]]; then
+  echo "ERROR: REPORTS_REPO is required. Publishing is intentionally opt-in." >&2
+  exit 2
+fi
+
+if [[ -z "$SOURCE_DIR" ]]; then
+  echo "ERROR: --source-dir is required. Publishing an arbitrary repository state is not supported." >&2
+  exit 2
+fi
 
 if [[ ! -d "$REPO/.git" ]]; then
   echo "ERROR: $REPO is not a git repository. Aborting." >&2
-  exit 1
+  exit 3
 fi
+
+SOURCE_DIR="${SOURCE_DIR%/}"
+if [[ ! -d "$SOURCE_DIR" ]]; then
+  echo "ERROR: source directory does not exist: $SOURCE_DIR" >&2
+  exit 4
+fi
+
+REPORT_DATE="$(basename "$SOURCE_DIR")"
+if [[ ! "$REPORT_DATE" =~ ^20[0-9]{2}-[0-9]{2}-[0-9]{2}$ ]]; then
+  echo "ERROR: --source-dir must end in an ISO date directory (YYYY-MM-DD): $SOURCE_DIR" >&2
+  exit 4
+fi
+TARGET_DIR="$REPO/$REPORT_DATE"
 
 cd "$REPO"
 
-# 1. Sync with remote BEFORE staging.
-#    The remote's GitHub Actions workflow auto-commits index.json after every
-#    push. If we skip the pull, local stays one commit behind, and the next
-#    push gets rejected with "fetch first". Doing the rebase up front avoids
-#    that and keeps the local clone's index.json in sync with what GitHub
-#    Pages serves. --autostash so any in-progress local edit is preserved.
+if [[ "$DRY_RUN" == true ]]; then
+  echo "would copy: $SOURCE_DIR/. -> $TARGET_DIR/"
+  echo "source files:"
+  find "$SOURCE_DIR" -maxdepth 2 -type f | sort | head -30
+  echo "current repository changes:"
+  git status --short
+  exit 0
+fi
+
+# Sync first: the remote workflow may have updated index.json after the
+# previous publishing run.
 echo "publish-reports: syncing with origin/main..."
 git pull --rebase --autostash origin main
 
-# 2. Stage everything except files matched by .gitignore
-git add -A
+if ! git diff --cached --quiet; then
+  echo "ERROR: target repository has staged changes; refusing to include them in a report publish." >&2
+  exit 5
+fi
 
-# 3. Bail out cleanly when no changes are pending
+mkdir -p "$TARGET_DIR"
+cp -pR "$SOURCE_DIR"/. "$TARGET_DIR"/
+echo "publish-reports: copied $SOURCE_DIR -> $TARGET_DIR"
+
+git add -- "$REPORT_DATE"
+
 if git diff --cached --quiet; then
   echo "publish-reports: nothing to publish ($(date -u +%FT%TZ))"
   exit 0
 fi
 
-# 4. Build a commit message that lists touched dates.
-#    `core.quotepath=false` keeps non-ASCII filenames literal (no \344\270\255 octal
-#    escapes), so the date-prefix regex can match the YYYY-MM-DD/ leading segment.
 TOUCHED_DATES=$(git -c core.quotepath=false diff --cached --name-only \
   | awk -F/ '/^20[0-9]{2}-[0-9]{2}-[0-9]{2}\// {print $1}' \
   | sort -u \
@@ -57,21 +126,8 @@ if [[ -z "$TOUCHED_DATES" ]]; then
 fi
 
 MSG="publish reports — $TOUCHED_DATES"
-
-if [[ "$DRY_RUN" == "--dry-run" ]]; then
-  echo "would commit: $MSG"
-  echo "staged files:"
-  git -c core.quotepath=false diff --cached --name-only | head -30
-  exit 0
-fi
-
-# 5. Commit
 git commit -m "$MSG"
 
-# 6. Push, with one auto-rebase retry if the remote moved.
-#    The reports repo's GitHub Actions workflow auto-commits index.json after
-#    every push, so a second run can find origin ahead. Rebase + retry handles
-#    that case without bothering the user.
 push_with_retry() {
   if git push origin main 2>&1; then
     return 0

@@ -57,7 +57,7 @@ The following markers must NOT appear anywhere in the output:
 | `**分析**` | Analysis block was removed in the new structure — body carries any "so what" inline |
 | `**Analysis**` | Same as above |
 
-The hook `scripts/hooks/daily-news-format-check.js` blocks `Write` if any of these appear.
+The hook `scripts/hooks/daily-news-format-check.js` blocks the `apply_patch` operation if any of these appear.
 
 ## Reference Format Rules (CRITICAL)
 
@@ -173,7 +173,7 @@ The ONLY URLs that may be fetched and NOT cited are ones that returned irrelevan
 
 ## Self-Check Checksum (Writer must verify before emitting)
 
-Before calling `Write`, count your own output:
+Before calling `apply_patch`, count your own output:
 
 1. `count(### ) == count(**References**)` — one `###` and one `**References**` per story.
 2. **No `**摘要**` / `**Summary**` / `**要約**` / `**分析**` / `**Analysis**` markers anywhere** — body prose follows `### title` directly.
@@ -184,6 +184,6 @@ Before calling `Write`, count your own output:
 7. No `^*\s*来源[:：]` / `^*\s*Sources?[:：]` italic in-text citation patterns.
 8. Every URL in the references block is either a Verifier KEEP URL (Lead or Corroborated by) OR a search URL that supplied a fact in body. URLs that were fetched but whose content wasn't used MUST NOT appear; URLs whose content was used MUST appear.
 
-If any check fails, regenerate. A PostToolUse hook (`scripts/hooks/daily-news-format-check.js`) enforces items 1, 2, 3, 4, 5, 6, and 7 mechanically — it will block the `Write` if any is violated.
+If any check fails, regenerate. A PostToolUse hook (`scripts/hooks/daily-news-format-check.js`) enforces items 1, 2, 3, 4, 5, 6, and 7 mechanically — it will block the `apply_patch` operation if any is violated.
 
-**Item 8 is not hook-enforced** — verifying "every URL traces to Verifier KEEP OR backed a body fact" requires the Verifier-KEEP set, which the hook does not have. Item 8 is enforced at agent time by Writer's self-check (`.codex/agents/daily-news-writer.toml` § Self-Check Before `Write`, item 10) and verified by Editor's Pass 2 audit (`.codex/agents/daily-editor.toml` § Pass 2 — Writer-search fact backing).
+**Item 8 is not hook-enforced** — verifying "every URL traces to Verifier KEEP OR backed a body fact" requires the Verifier-KEEP set, which the hook does not have. Item 8 is enforced at agent time by Writer's self-check (`.codex/agents/daily-news-writer.toml` § Self-Check Before `apply_patch`, item 10) and verified by Editor's Pass 2 audit (`.codex/agents/daily-editor.toml` § Pass 2 — Writer-search fact backing).

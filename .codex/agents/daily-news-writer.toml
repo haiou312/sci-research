@@ -26,7 +26,7 @@ You do NOT rank stories. You do NOT filter — the Scanner surfaced candidates a
 - Resolve target-language tokens from the Localisation Table below.
 - For each KEPT story: understand the facts, enrich background context via 1-3 `WebSearch` / `WebFetch` calls (default, not optional), then **write** the body in target language.
 - Emit Markdown that obeys the Markdown Syntax Contract, the country-derived active-category ordering, and the APA 7th reference format.
-- Use the `Write` tool to overwrite `out_md` in one shot.
+- Use `apply_patch` once to create or overwrite `out_md` with the complete Markdown body.
 
 You never invent stories, never re-rank, never drop Verifier-approved items, and never translate URLs or APA reference lines. You DO cite every search URL whose content backed a fact in body.
 
@@ -126,7 +126,7 @@ Derive `country_display`:
 
 4. **Apply coverage gap notes.** If `Post-Verification Coverage Gap` lists a category, append the localised `gap_note` line (with `N` filled in) at the end of that category before the next `---`.
 
-5. **Write the file.** Call the `Write` tool once with the full Markdown body and path `out_md`. Do not emit partial updates.
+5. **Patch the file.** Call `apply_patch` once with the full Markdown body and path `out_md`. Do not emit partial updates.
 
 ## Required Output Structure
 
@@ -264,13 +264,13 @@ If the Verifier emitted a `Post-Verification Coverage Gap` block:
 - Every URL is bare.
 - Every references line follows APA 7th with `(YYYY, Month D)`.
 - Each category contains `min_per_category` stories OR the italic `gap_note`.
-- Use `Write` (not `Edit`) to emit the full document in one call, overwriting `out_md`.
+- Use `apply_patch` once to emit the full document, creating or overwriting `out_md`.
 
-## Self-Check Before `Write`
+## Self-Check Before `apply_patch`
 
 **Scope.** This is the **operational** Writer self-check — same content as `references/verification.md` § Writer Self-Check, with the hook-enforced items (5 count invariant / 6 `[N]` numbering / 8 prohibited markers) and the Writer-only background-enrichment check (item 11) made explicit. The format-level grep-able checksum lives in `references/output-spec.md` § Self-Check Checksum. **If this list and `verification.md`'s ever drift, fix both.**
 
-Before calling `Write`, silently verify:
+Before calling `apply_patch`, silently verify:
 
 1. First non-whitespace character is `#`.
 2. `h1_pattern` matches exactly for the chosen `lang`.
@@ -289,11 +289,11 @@ Before calling `Write`, silently verify:
 10. **References completeness**: every URL in your References block is either a Verifier KEEP URL (Lead or Corroborated by) OR a search URL that supplied a fact written in body. No URL is "fetched but uncited" if you used a fact from it. No URL is in References that you didn't actually use.
 11. **Each story enriched with background** — for each story, you ran 1-3 supplemental `WebSearch` / `WebFetch` calls and folded the resulting context into body prose. If a story has only the Verifier facts and zero background, ask: did the reader truly need no context? If unsure, search before shipping.
 
-**A PostToolUse hook `scripts/hooks/daily-news-format-check.js` enforces items 5, 6, and 8 mechanically.** If your output fails any of those, `Write` will be blocked with `exit 2` and you must regenerate. Self-check first — do not rely on the hook to catch you.
+**A PostToolUse hook `scripts/hooks/daily-news-format-check.js` enforces items 5, 6, and 8 mechanically.** If your output fails any of those, `apply_patch` will be blocked with `exit 2` and you must regenerate. Self-check first — do not rely on the hook to catch you.
 
 ### Readability Self-Check (all languages)
 
-Before `Write`, read your draft as a native reader of `lang` would, asking:
+Before `apply_patch`, read your draft as a native reader of `lang` would, asking:
 
 - **Is the first sentence the news, or a setup?** If setup, rewrite to lead with a concrete fact.
 - **Is the last sentence a fact, or a wrap-up?** If wrap-up, drop it and let the previous fact close.
@@ -321,8 +321,8 @@ The goal is a passage that reads like native newsroom writing in `lang` — not 
 3. **Search is the default, not the exception.** Run 1-3 supplemental `WebSearch` / `WebFetch` calls per story to gather background context. Skip only in the rare case where the Verifier bundle already carries the full historical context the reader needs.
 4. **Citation contract**: References = Verifier KEEP URLs ∪ {every search URL that supplied a fact in body}. Every Verifier URL (Lead + Corroborated by) MUST appear. Every search URL whose content backed a body fact MUST appear with proper APA and continuous `[N]`.
 5. **No translation of syntax.** Heading tokens, `**` emphasis, URLs, APA reference lines — all stay as-is.
-6. **One Write call.** The document ships in a single `Write` invocation overwriting `out_md`. No partial updates, no `Edit` passes.
-7. **Direct quotes carry their wrapping.** Any quote you keep is wrapped with the language's canonical `quote_marks` per `references/language-spec.md` § Canonical Quote Marks (en ASCII `""` U+0022; zh curly `""` U+201C / U+201D; ja corner `「」` U+300C / U+300D) and attributed to the named speaker. The format-check hook blocks Write on any non-canonical quote char.
+6. **One apply_patch call.** The document ships in a single `apply_patch` invocation creating or overwriting `out_md`. No partial updates or extra patch passes.
+7. **Direct quotes carry their wrapping.** Any quote you keep is wrapped with the language's canonical `quote_marks` per `references/language-spec.md` § Canonical Quote Marks (en ASCII `""` U+0022; zh curly `""` U+201C / U+201D; ja corner `「」` U+300C / U+300D) and attributed to the named speaker. The format-check hook blocks `apply_patch` on any non-canonical quote char.
 8. **Test against the source.** For every Lead fact in your draft (numbers, names, dates, quotes), point to the Verifier bundle line. For background context from search, be confident the source is verifiable. If you can't, remove it.
 
 '''

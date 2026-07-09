@@ -1,6 +1,6 @@
 # sci-research
 
-> A **Codex plugin** (ported from Claude Code) with **three independent multi-agent pipelines** for daily news intelligence, branded briefings, and company reputation monitoring.
+> A **Codex plugin** with **three independent multi-agent pipelines** for daily news intelligence, branded briefings, and company reputation monitoring.
 
 Given a country, a company, or a date, this plugin orchestrates specialised agents to produce a polished, sourced deliverable — daily news briefing, branded Word document, or reputational risk email.
 
@@ -57,7 +57,7 @@ git clone https://github.com/haiou312/sci-research.git
 codex plugin marketplace add ./sci-research
 ```
 
-Subagents live in `.codex/agents/*.toml`; skills in `skills/*/SKILL.md`; the manifest in `.codex-plugin/plugin.json`. See `PORTING-NOTES.md` for the Claude→Codex migration state and the two verify-on-first-run unknowns.
+Subagents live in `.codex/agents/*.toml`; skills in `skills/*/SKILL.md`; the manifest is `.codex-plugin/plugin.json`. See `PORTING-NOTES.md` for current runtime-validation status.
 
 ### Verify Installation
 
@@ -87,7 +87,8 @@ See `.env.example` for the required variables.
 /daily-news-intelligence --country "<name>" [--date YYYY-MM-DD] \
   [--lang zh|en|ja|zh+en|en+zh|zh+ja|ja+zh|en+ja|ja+en] \
   [--out-dir <path>] [--min-per-category <N>] \
-  [--email <a@x.com,b@y.com>] [--email-attach both|docx|md|none] [--email-dry-run]
+  [--email <a@x.com,b@y.com>] [--email-attach both|docx|md|none] [--email-dry-run] \
+  [--publish --publish-repo <git-path>]
 ```
 
 ```bash
@@ -110,10 +111,22 @@ See `.env.example` for the required variables.
 
 ```
 /daily-briefing [--date YYYY-MM-DD] [--countries "中国,英国,美国,欧洲,日本,韩国"] [--total 14] \
-  [--source-dir <path>] [--email <a@x.com>] [--email-subject <text>] [--email-dry-run] [--no-wait]
+  [--source-dir <path>] [--out-dir <path>] [--email <a@x.com>] [--email-subject <text>] \
+  [--email-dry-run] [--no-wait] [--publish --publish-repo <git-path>]
 ```
 
 Reads existing Pipeline C reports from a directory, curates the most impactful 13-15 stories across countries, and emits a branded Word document via the SPD Bank template.
+
+By default, local output is independent of the plugin install location and any Git checkout:
+
+| Pipeline | Default location |
+|---|---|
+| C daily news | `~/.sci-research/reports/daily-news/{date}/` |
+| D source reports | `~/.sci-research/reports/daily-news/{date}/` |
+| D branded briefing | `~/.sci-research/reports/daily-briefings/{date}/` |
+| E reputation report | `~/.sci-research/reports/reputation/{date}/` |
+
+Publishing is opt-in. Pass both `--publish` and `--publish-repo /absolute/path/to/reports-repo`; the plugin copies the requested date directory into that Git repository before it commits and pushes.
 
 ```bash
 # Today's multi-country briefing with default countries and 14 stories
@@ -149,18 +162,18 @@ Resolves the company + executives, scans News + Reddit + X for adverse content, 
 
 ```
 daily-news-scanner → news-verifier → daily-fact-extractor → daily-news-writer → daily-editor → pandoc → email (optional) → publish (optional)
-   (sonnet)            (sonnet)         (sonnet)               (opus, ×langs)      (opus, ×langs)
+   (Codex low)         (Codex low)      (Codex low)            (Codex high, ×langs) (Codex high, ×langs)
 
 Bilingual mode (--lang zh+en …): Scanner/Verifier/Fact-Extractor run ONCE; Writer ×langs in parallel → Editor ×langs in parallel → pandoc ×langs
 ```
 
-| Agent | Model | Role |
+| Agent | Codex configuration | Role |
 |---|---|---|
-| `daily-news-scanner` | sonnet | Single agent scanning all active categories sequentially. English WebSearch + per-URL date verification (T4 → T1 → T2 → T3), Pass A matrix + Pass B free discovery, paywall fallback (Step 3.5), then internal cross-category dedup + Cat5↔Cat6 routing (§ Step 6) → unified Scanner Bundle |
-| `news-verifier` | sonnet | Editorial second-pass filter: originality / authority / impact / source legitimacy / dedup-validation + Three-Step Coverage Fallback |
-| `daily-fact-extractor` | sonnet | Extracts every number / name / date / quote from the Verifier KEEP set into a locked-values YAML Fact Manifest (no web access) |
-| `daily-news-writer` | opus | Consumes Verifier KEEP set + Fact Manifest, composes explanatory prose in target language with 1-3 background searches per story, emits Markdown + APA refs. One instance per language in bilingual mode |
-| `daily-editor` | opus | 5-pass post-Writer editor: manifest-fact drift / search-fact backing / quote verbatim / quote-mark normalization / local fluency repair. Edit-only, never Write. One instance per language in bilingual mode |
+| `daily-news-scanner` | gpt-5-codex / low | Single agent scanning all active categories sequentially. English WebSearch + per-URL date verification (T4 → T1 → T2 → T3), Pass A matrix + Pass B free discovery, paywall fallback (Step 3.5), then internal cross-category dedup + Cat5↔Cat6 routing (§ Step 6) → unified Scanner Bundle |
+| `news-verifier` | gpt-5-codex / low | Editorial second-pass filter: originality / authority / impact / source legitimacy / dedup-validation + Three-Step Coverage Fallback |
+| `daily-fact-extractor` | gpt-5-codex / low | Extracts every number / name / date / quote from the Verifier KEEP set into a locked-values YAML Fact Manifest (no web access) |
+| `daily-news-writer` | gpt-5-codex / high | Consumes Verifier KEEP set + Fact Manifest, composes explanatory prose in target language with 1-3 background searches per story, emits Markdown + APA refs. One instance per language in bilingual mode |
+| `daily-editor` | gpt-5-codex / high | 5-pass post-Writer editor: manifest-fact drift / search-fact backing / quote verbatim / quote-mark normalization / local fluency repair. `apply_patch`-only. One instance per language in bilingual mode |
 
 ### Pipeline D — `/daily-briefing`
 
@@ -168,17 +181,17 @@ Bilingual mode (--lang zh+en …): Scanner/Verifier/Fact-Extractor run ONCE; Wri
 daily-news-reports/YYYY-MM-DD/*.md  (existing country reports)
   │
   └─→ briefing-curator → generate-branded-docx.py → send-briefing-email.py
-      (opus)              (python-docx)              (Gmail SMTP)
+      (Codex high)        (python-docx)              (Gmail SMTP)
 ```
 
 ### Pipeline E — `/reputation-track`
 
 ```
-reputation-resolver → reputation-scanner × 3 (parallel: news / reddit / x) → reputation-classifier → reputation-writer → email (only if findings)
-   (opus)              (sonnet)                                                (sonnet)                 (opus)
+reputation-resolver → reputation-scanner × requested sources (parallel; default: news / reddit / x) → reputation-classifier → reputation-writer → email (only if findings)
+   (Codex high)        (Codex low)                                                                  (Codex low)             (Codex high)
 ```
 
-Silent exit when `total_items_kept == 0`. Reddit and X go through the apidirect MCP (single call per source) to avoid public-endpoint scraping blocks.
+Silent exit when `total_items_kept == 0`. Reddit and X use Codex WebSearch/WebFetch against publicly indexed, fetchable posts and threads. Unindexed, login-gated, or unfetchable content is recorded as a coverage gap.
 
 ---
 
@@ -206,7 +219,7 @@ Detailed rules:
 
 | Hook | Pipeline | Trigger | What It Does |
 |---|---|---|---|
-| `daily-news-format-check` | C | PostToolUse:Write + Edit | **Blocks** Pipeline C Markdown if format violates spec (count invariants, `[N]` continuity, URLs, canonical quote marks, no global refs section) |
+| `daily-news-format-check` | C | PostToolUse:apply_patch | **Blocks** Pipeline C Markdown if format violates spec (count invariants, `[N]` continuity, URLs, canonical quote marks, no global refs section) |
 | `email-send-guard` | C / D / E | PreToolUse:Bash | **Blocks** inline `smtplib` / `MIMEMultipart` / `sendmail` Bash commands that bypass the sanctioned `send-*-email.py` scripts |
 
 ---
@@ -216,7 +229,7 @@ Detailed rules:
 ```
 sci-research/
 ├── .codex-plugin/
-│   └── plugin.json                          # Codex plugin manifest (skills + hooks + mcp)
+│   └── plugin.json                          # Codex plugin manifest (skills + hooks + interface)
 ├── .agents/plugins/
 │   └── marketplace.json                     # Codex install manifest
 ├── .codex/agents/                           # Native Codex subagents (TOML — dispatched by the skills)
@@ -264,14 +277,14 @@ sci-research/
 │   ├── hooks/                               # Hook implementations (Node.js)
 │   │   ├── daily-news-format-check.js
 │   │   └── email-send-guard.js
-│   ├── publish-reports.sh                   # GitHub Pages publish (Pipeline C)
+│   ├── publish-reports.sh                   # Explicit GitHub Pages publish helper (C/D)
 │   └── send-report-email.py                 # Gmail SMTP (Pipelines C / E)
 ├── rules/research/
 │   └── news-source.md                       # T1-T4 news tiering (Pipeline E dependency)
-├── .mcp.json                                # apidirect MCP declaration (Pipeline E)
 ├── .env.example                             # Gmail SMTP environment template
+├── requirements.txt                         # Pinned Pipeline D dependency
 ├── AGENTS.md                                # Project guidance for Codex
-├── PORTING-NOTES.md                         # Claude→Codex migration state + verify-on-first-run points
+├── PORTING-NOTES.md                         # Runtime-validation status and open checks
 ├── README.md
 └── LICENSE
 ```
@@ -303,18 +316,14 @@ sci-research/
 - [Codex](https://developers.openai.com/codex) CLI
 - Node.js ≥ 18 (for hook scripts)
 - Python 3 (for email delivery scripts + Pipeline D docx generation; only required when `--email` or Pipeline D is used)
+- Pipeline D dependency (install once from the plugin root): `python3 -m pip install --user -r requirements.txt`
 - `pandoc` (for Markdown → docx conversion in Pipeline C)
 - Internet access (for WebSearch / WebFetch)
 - Gmail SMTP credentials (only when `--email` is used; see `.env.example`)
-- apidirect MCP (only for Pipeline E's Reddit / X sources; 50 free tokens/month)
+- No separate social-media MCP configuration is required. Pipeline E's Reddit/X coverage is limited to publicly indexed, fetchable content.
 
 ---
 
-## Acknowledgements
-
-Plugin structure inspired by [everything-claude-code](https://github.com/affaan-m/everything-claude-code) by Affaan Mustafa.
-
----
 
 ## License
 

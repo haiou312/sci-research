@@ -14,10 +14,10 @@ Scans News + Reddit + X for adverse content about a single company and its top e
 1. Validate params → compute derived fields → expand ~ → mkdir
 2. Launch Resolver agent → capture Resolver Output Schema
 3. IF resolution_confidence=low → STOP with clarification message
-4. Launch 3 Scanner agents IN PARALLEL (news, reddit, x) → capture 3 Scanner outputs
-5. Launch Classifier agent (all 3 Scanner outputs in prompt) → capture Classifier Output Schema
+4. Launch one Scanner agent per requested source IN PARALLEL → capture Scanner outputs
+5. Launch Classifier agent (all requested-source outputs in prompt) → capture Classifier Output Schema
 6. IF total_items_kept == 0 → print "Clean scan" and EXIT 0 (no email, no HTML file)
-7. Launch Writer agent (Classifier kept_items + params) → Writer calls Write on out_html
+7. Launch Writer agent (Classifier kept_items + params) → Writer creates or overwrites out_html with one `apply_patch` operation
 8. IF --email → invoke send-report-email.py with --body-html-file
 9. Print summary (items kept, severity breakdown, email status)
 ```
@@ -28,7 +28,7 @@ Scans News + Reddit + X for adverse content about a single company and its top e
 - **Verbatim or drop.** Every surfaced item is backed by a verbatim quote from the source URL. No paraphrase, no synthesis.
 - **Noise protection over recall.** Low-credibility claims without corroboration are dropped, not downgraded. Missing a marginal signal is preferable to crying wolf.
 - **Honest coverage disclosure.** The HTML footer states which platforms were scanned and which (Facebook, Threads) were excluded.
-- **apidirect quota discipline.** Reddit and X each consume **exactly one** `mcp__apidirect__*` call per run (2 tokens total). The free quota is 50 tokens/month → ~25 runs/month. See `references/source-matrix.md` § apidirect Quota Budget. Scanner agents must NOT retry failed calls or paginate beyond `page=1` / `pages=1`.
+- **Search-indexed social coverage.** Reddit and X use WebSearch for discovery and WebFetch for source/date verification; no API, MCP, direct scraper, or browser automation is used. Content that is not search-indexed, cannot be fetched, or lacks a retrievable timestamp is recorded as a coverage gap rather than inferred.
 
 ## Input Parameters
 
@@ -39,7 +39,7 @@ Scans News + Reddit + X for adverse content about a single company and its top e
 | `lang` | No | `zh` | HTML output language: `zh` or `en` |
 | `sources` | No | `news,reddit,x` | Comma-separated subset. MVP only supports these three |
 | `severity_min` | No | `medium` | Drop items below this severity: `low` \| `medium` \| `high` |
-| `out_dir` | No | `~/Desktop/reputation-reports/{date}/` | Output directory. `{date}` is replaced with the ISO date. `~` is expanded at runtime. Auto-created in Step 1. |
+| `out_dir` | No | `~/.sci-research/reports/reputation/{date}/` | Output directory. `{date}` is replaced with the ISO date. `~` is expanded at runtime. Auto-created in Step 1. |
 | `email` | No | empty | Comma-separated recipient email addresses. When non-empty and `total_items_kept > 0`, Step 8 emails the HTML body via Gmail SMTP. |
 | `email_subject` | No | auto | Email subject line override. Default: see `references/email-spec.md`. |
 | `email_dry_run` | No | `false` | When `true`, Step 8 prints a preview and exits without connecting to SMTP. |
@@ -73,12 +73,12 @@ Every stage runs as a **native Codex subagent** defined in `.codex/agents/<name>
 2. Pass that stage's injected parameters + the verbatim upstream output (per the handoff list below) as the spawn prompt.
 3. Wait for the subagent's result, then feed it into the next stage.
 
-Model tiering is set per-agent in the TOML (`model_reasoning_effort = high` for `reputation-resolver` / `reputation-writer`, `low` for `reputation-scanner` ×3 / `reputation-classifier`) — do NOT pass a model argument. Native Codex subagents receive their tools directly (no embed workaround).
+Model tiering is set per-agent in the TOML (`model_reasoning_effort = high` for `reputation-resolver` / `reputation-writer`, `low` for `reputation-scanner` / `reputation-classifier`) — do NOT pass a model argument. Native Codex subagents receive their tools directly (no embed workaround).
 
 The orchestrator passes data between stages via the subagent **prompt text** — not files, not environment variables. Specifically:
 
-- **Resolver → Scanner (×3)**: Include the full Resolver Output Schema verbatim in each Scanner prompt, along with `source`, `date`, `date_en`.
-- **Scanner → Classifier**: Include all three Scanner Output Schemas verbatim, plus `severity_min` and the Resolver's `executives`.
+- **Resolver → Scanner (× requested sources)**: Include the full Resolver Output Schema verbatim in each Scanner prompt, along with `source`, `date`, `date_en`.
+- **Scanner → Classifier**: Include every requested-source Scanner Output Schema verbatim, plus `severity_min` and the Resolver's `executives`.
 - **Classifier → Writer**: Include only `kept_items` from the Classifier output, plus `company_display`, `date_display`, `lang`, `sources`, `out_html`.
 
 ## Workflow
@@ -93,10 +93,9 @@ The orchestrator passes data between stages via the subagent **prompt text** —
 2. **Resolve entity.** Spawn per § Subagent Dispatch Rule (the `reputation-resolver` subagent (`.codex/agents/reputation-resolver.toml`)) with `--company` verbatim. Capture the Resolver Output Schema. Update `company_display = official_name` and recompute `out_html` with the canonical name.
    - If `resolution_confidence=low`, halt with: `Company resolution ambiguous: {resolution_notes}. Please clarify or pass the formal name / ticker explicitly.`
 
-3. **Scan sources in parallel.** Launch three Scanner instances in a **single orchestrator message** (three tool calls in parallel). Each is spawned per § Subagent Dispatch Rule (the `reputation-scanner` subagent (`.codex/agents/reputation-scanner.toml`)). Pass each instance its `source` (one of `news`, `reddit`, `x`) plus the Resolver output, `date`, `date_en`.
-   - Respect `--sources` if the user narrowed the set (e.g. only `news,reddit`).
+3. **Scan sources in parallel.** Parse and validate `--sources` as a non-empty, de-duplicated subset of `news,reddit,x`. Launch one Scanner instance per requested source in a **single orchestrator message**. Pass each instance its `source` plus the Resolver output, `date`, `date_en`.
 
-4. **Classify.** Spawn per § Subagent Dispatch Rule (the `reputation-classifier` subagent (`.codex/agents/reputation-classifier.toml`)) with all three Scanner Outputs verbatim + `severity_min` + Resolver's `executives`. Capture the Classifier Output Schema.
+4. **Classify.** Spawn per § Subagent Dispatch Rule (the `reputation-classifier` subagent (`.codex/agents/reputation-classifier.toml`)) with one Scanner Output for every requested source, plus `severity_min` and the Resolver's `executives`. For sources excluded by `--sources`, do not spawn a Scanner and do not fabricate an empty output. Capture the Classifier Output Schema.
 
 5. **Branch on findings.**
    - If `total_items_kept == 0`:
@@ -104,7 +103,7 @@ The orchestrator passes data between stages via the subagent **prompt text** —
      - Exit 0. Do NOT write `out_html`. Do NOT call the email script.
    - Else: proceed to Step 6.
 
-6. **Compose HTML.** Spawn per § Subagent Dispatch Rule (the `reputation-writer` subagent (`.codex/agents/reputation-writer.toml`)) with Classifier `kept_items` + `company_display`, `date_display`, `lang`, `sources`, `out_html`. Writer calls `Write` on `out_html`.
+6. **Compose HTML.** Spawn per § Subagent Dispatch Rule (the `reputation-writer` subagent (`.codex/agents/reputation-writer.toml`)) with Classifier `kept_items` + `company_display`, `date_display`, `lang`, `sources`, `out_html`. Writer uses one `apply_patch` operation to create or overwrite `out_html`.
 
 7. **Verify HTML integrity** (orchestrator). Read the first 200 chars of `out_html`; confirm it starts with `<!DOCTYPE html>` and contains `{company_display}` in the header area. If malformed, re-invoke the Writer once, then halt with an error rather than sending a broken email.
 
@@ -126,7 +125,7 @@ The orchestrator passes data between stages via the subagent **prompt text** —
    company: {company_display} ({ticker})
    date: {date}
    items_kept: {N} ({critical=X, high=Y, medium=Z, low=W})
-   sources: {news=A, reddit=B, x=C}
+   sources: {one count per requested source}
    out_html: {absolute path}
    email: sent|dry-run|skipped|error
    ```
@@ -136,7 +135,7 @@ The orchestrator passes data between stages via the subagent **prompt text** —
 | Stage | Dispatch (see § Subagent Dispatch Rule) | Required References |
 |---|---|---|
 | Resolver | the `reputation-resolver` subagent (`.codex/agents/reputation-resolver.toml`) | `references/entity-resolution.md`, `references/schemas.md` |
-| Scanner (×3 parallel) | the `reputation-scanner` subagent (`.codex/agents/reputation-scanner.toml`) | `references/source-matrix.md`, `references/schemas.md`, `rules/research/news-source.md` |
+| Scanner (× requested sources, parallel) | the `reputation-scanner` subagent (`.codex/agents/reputation-scanner.toml`) | `references/source-matrix.md`, `references/schemas.md`, `rules/research/news-source.md` for `news` |
 | Classifier | the `reputation-classifier` subagent (`.codex/agents/reputation-classifier.toml`) | `references/negativity-rubric.md`, `references/schemas.md` |
 | Writer | the `reputation-writer` subagent (`.codex/agents/reputation-writer.toml`) | `references/html-template.md`, `references/schemas.md` |
 | Email (Step 8) | — (Bash + `scripts/send-report-email.py`) | `references/email-spec.md` |
@@ -165,7 +164,7 @@ The orchestrator passes data between stages via the subagent **prompt text** —
 
 ## Design Limits (disclosed in the HTML footer)
 
-- **X (Twitter)**: only Google-indexed public posts; long-tail user content not reached; 1-24h indexing lag
+- **Reddit + X (Twitter)**: only public posts/threads that are search-indexed and fetchable; long-tail content is not reached, and search indexing can lag by 1-24 hours or more
 - **Facebook + Threads**: intentionally not covered in v1 — public-post discoverability via Google is too sparse to be trustworthy
 - **Single-day window**: not a streaming monitor; misses content posted after the scan completes
 - **English-source bias**: Scanner queries are primarily English; non-English regional press may be under-represented (v2 can add per-language source matrices)

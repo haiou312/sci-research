@@ -24,7 +24,7 @@
             "timeout": 10
           }
         ],
-        "description": "Enforce Pipeline C reference format after apply_patch edits (Codex has no separate Write/Edit tool; file is read from disk since apply_patch payload carries no full content)"
+        "description": "Enforce Pipeline C reference format after apply_patch operations (file is read from disk since the patch payload carries no full content)"
       }
     ]
   }

@@ -20,8 +20,8 @@ Generate a professional dated daily report for institutional readers covering a 
 - Verifier (Scanner Bundle in prompt) → Three-Step Fallback (1 impact / 1.5 reserve-pool promote / 2 gap) → Verifier Output Schema
 - Fact-Extractor (Verifier output + params) → fact-manifest YAML (single, language-agnostic — shared across bilingual halves)
 - **FAN OUT per `lang` in `langs` — PARALLEL** (concurrent Writer subagents in one orchestrator message; then concurrent Editor subagents after all Writers complete; see § Workflow Step 8 § Bilingual execution order for rationale):
-  - Writer (Verifier output + manifest path + that `lang`'s params) → `Write` Markdown to `out_md_{lang}`
-  - Editor (`writer_md_{lang}` + manifest + `verifier_bundle` + lang/date/country) → in-place `Edit` across 5 passes (1 fact / 2 search-backing / 3 quote / 4 quote-mark / 5 local fluency)
+  - Writer (Verifier output + manifest path + that `lang`'s params) → one `apply_patch` operation creating or overwriting Markdown at `out_md_{lang}`
+  - Editor (`writer_md_{lang}` + manifest + `verifier_bundle` + lang/date/country) → in-place `apply_patch` operations across 5 passes (1 fact / 2 search-backing / 3 quote / 4 quote-mark / 5 local fluency)
   - pandoc export `out_md_{lang}` → `out_docx_{lang}` (skip if pandoc missing; sequential bash loop is fine — pandoc is local + fast)
 - IF `--email` → send via `scripts/send-report-email.py` (dry-run or real). Single-lang body + 1-2 attachments. **Bilingual body (stacked primary+secondary)** + 2-4 attachments per § email-spec.md.
 - Verify: `ls` each generated `out_md_{lang}` / `out_docx_{lang}`, grep H2/H3 counts per file
@@ -54,13 +54,15 @@ Hard rules:
 | `country` | Yes | — | Single country or region, e.g. `United Kingdom`, `Japan`, `China`, `Germany` |
 | `date` | No | today | Target publication date in ISO `YYYY-MM-DD` |
 | `lang` | No | `zh` | Output language for the final report. Single: `zh` / `en` / `ja`. **Bilingual (1.18.0+)**: any two of `zh / en / ja` joined by `+` (`zh+en`, `en+zh`, `zh+ja`, `ja+zh`, `en+ja`, `ja+en`). The first token is the **primary language** (drives email subject + body lead section). 3-language combos are not supported in 1.18.0. |
-| `out_dir` | No | `~/Desktop/github/daily-news-reports/{date}/` | Output directory. `{date}` is replaced with the ISO date (e.g. `2026-04-16`). `~` is expanded at runtime. The directory is auto-created if missing (Workflow Step 8). Default writes directly into the GitHub Pages publishing repo so reports can be published with one `git push`. |
+| `out_dir` | No | `~/.sci-research/reports/daily-news/{date}/` | Output directory. `{date}` is replaced with the ISO date (e.g. `2026-04-16`). `~` is expanded at runtime. The directory is auto-created if missing (Workflow Step 8). |
 | `min_per_category` | No | `2` | Minimum stories per category |
 | `email` | No | empty | Comma-separated recipient email addresses. When non-empty, Step 10 emails the report via Gmail SMTP. |
 | `email_subject` | No | auto | Email subject line. Default is `{country_display} {title_label} — {date_display}` in `lang`. |
 | `email_body` | No | auto | Plain-text email body. Default template in `references/email-spec.md` filled with Verifier coverage counts. |
 | `email_attach` | No | `both` | Attachment selection: `both` (md + docx), `docx`, `md`, or `none`. |
 | `email_dry_run` | No | `false` | When `true`, Step 10 prints a preview and exits without connecting to SMTP. |
+| `publish` | No | `false` | When `true`, copy this date's output into `publish_repo` and commit/push it through the sanctioned publish script. |
+| `publish_repo` | Conditional | — | Absolute path or `~`-based path to the target Git repository. Required when `publish=true`. |
 
 Derived fields (`date_en`, `date_display`, `country_display`, `out_md`, `out_docx`) are computed per `lang` — see `references/language-spec.md`. **Bilingual mode (1.18.0+)** computes one set per token in `langs = lang.split('+')` — i.e. `out_md_zh` + `out_md_en`, `country_display_zh` + `country_display_en`, etc. See `references/language-spec.md` § Bilingual Mode.
 
@@ -84,7 +86,7 @@ The orchestrator passes data between stages via the subagent **prompt text** —
 - **Scanner → Verifier**: the orchestrator includes the Scanner's full Scanner Bundle verbatim in the Verifier agent's prompt.
 - **Verifier → Fact-Extractor**: The orchestrator includes the Verifier's full output verbatim plus runtime parameters (`country`, `date`, `lang`) and `out_manifest` (target YAML path, e.g. `${OUT_DIR}/fact-manifest-{country_slug}-{date}.yaml`) in the Fact-Extractor agent's prompt. The Fact-Extractor writes the manifest to `out_manifest` and returns confirmation.
 - **Verifier + Fact-Extractor → Writer (per `lang` in `langs`)**: For each `lang` the orchestrator launches a separate Writer subagent with the same Verifier full output, the same Fact Manifest content (read from `out_manifest`) or its absolute path, plus that invocation's runtime parameters: a **single `lang` token** (never the combined `zh+en` string), `out_md_{lang}` **passed into the Writer body's generically-named `out_md` parameter**, plus `country`, `date`, `min_per_category`. Single-lang: 1 Writer invocation. **Bilingual: N Writer invocations dispatched CONCURRENTLY** — emit multiple Agent tool calls in a single orchestrator message so they run in parallel. See § Workflow Step 8 § Bilingual execution order for rationale. (The Writer / Editor agent bodies are pure single-lang by design — they need no bilingual awareness; all bilingual logic lives in this orchestrator.)
-- **Writer + Fact-Extractor + Verifier → Editor (per `lang` in `langs`)**: After ALL Writers in Step 8 have completed (Editor needs `writer_md_path` on disk), the orchestrator launches a separate Editor subagent **per lang, concurrently in a single message** with `writer_md_path` = `out_md_{lang}`, `manifest_path` (single, from Step 7.5), `verifier_bundle` (same Verifier output passed verbatim, inline), plus that invocation's runtime parameters (that `lang`, `date`, `country`). Each Editor makes in-place `Edit` calls on its own `writer_md_path` and prints a structured stdout report. The format-check hook fires on every Edit and on the final state, per file — parallel hooks on different files are safe.
+- **Writer + Fact-Extractor + Verifier → Editor (per `lang` in `langs`)**: After ALL Writers in Step 8 have completed (Editor needs `writer_md_path` on disk), the orchestrator launches a separate Editor subagent **per lang, concurrently in a single message** with `writer_md_path` = `out_md_{lang}`, `manifest_path` (single, from Step 7.5), `verifier_bundle` (same Verifier output passed verbatim, inline), plus that invocation's runtime parameters (that `lang`, `date`, `country`). Each Editor makes surgical in-place `apply_patch` calls on its own `writer_md_path` and prints a structured stdout report. The format-check hook fires on every `apply_patch` and on the final state, per file — parallel hooks on different files are safe.
 
 The orchestrator must not summarise, truncate, or reformat the upstream output — pass it verbatim so downstream agents can parse the expected schema.
 
@@ -121,8 +123,15 @@ The orchestrator must not summarise, truncate, or reformat the upstream output �
    ```bash
    OUT_DIR="${out_dir/#\~/$HOME}"
    OUT_DIR="${OUT_DIR//\{date\}/$DATE}"
+   if [[ "$publish" == true ]]; then
+     if [[ -z "${publish_repo:-}" ]]; then
+       echo "ERROR: --publish requires --publish-repo <git-path>." >&2
+       exit 2
+     fi
+     PUBLISH_REPO="${publish_repo/#\~/$HOME}"
+   fi
    ```
-   Use `OUT_DIR` (expanded) in all subsequent bash commands. The default resolves to e.g. `~/Desktop/github/daily-news-reports/2026-04-16/`.
+   If `publish=true`, require a non-empty `publish_repo` and expand `~` in it to `PUBLISH_REPO`; otherwise do not run any Git command. Use `OUT_DIR` (expanded) in all subsequent bash commands. The default resolves to e.g. `~/.sci-research/reports/daily-news/2026-04-16/`.
 
 2. **Scan candidates** (Scanner stage, English only — SINGLE AGENT). Launch **ONE Scanner subagent** for the full report. **Spawn the `daily-news-scanner` subagent (`.codex/agents/daily-news-scanner.toml`) — see § Subagent Dispatch Rule.** The Scanner prompt carries **all** `active_categories` plus `country`, `date`, `min_per_category`; it processes each category sequentially (Pass A + Pass B per category), then performs cross-category dedup + routing, and returns a unified Scanner Bundle (`references/schemas.md` § Scanner Bundle Schema). Query construction is **per-term, never `OR`-joined** — see `.codex/agents/daily-news-scanner.toml` § Step 1 for the term lists (single source of truth).
 
@@ -138,7 +147,7 @@ The Scanner gathers 20-30 candidate URLs across all categories. If the Scanner B
 
 7. **Quality filter** (Verifier stage). Spawn per § Subagent Dispatch Rule (the `news-verifier` subagent (`.codex/agents/news-verifier.toml`)) with the **Scanner Bundle** (`references/schemas.md` § Scanner Bundle Schema) included verbatim in its prompt. The Verifier applies the five-check rubric in `references/rubric.md` (originality, authority, impact, **source legitimacy**, dedup-validation) plus § Source Legitimacy for Pass-B sources. Applies the **Three-Step Coverage Fallback** if any category drops below `min_per_category`: Fallback 1 relaxes impact tier (→ `Regional-structural`); Fallback 1.5 promotes from the Scanner Bundle's `## Reserve Pool` (held `below-authority-cap` candidates become `T3-extended` Leads; held `below-ipo-ma-floor` soft-band deals become Leads at their real tier) — revalidating Source Legitimacy on every promotion, never relaxing date / China red-line / originality; Fallback 2 records the gap. Hard-paywall Leads (`Body-source: paywall-stub`, admitted at Scanner Step 3.5 when no free same-event alternative existed) flow through unchanged — the Writer's mandatory ≥2 background-search obligation and Editor Pass 3's quote-downgrade rule handle the body and quote constraints downstream. Emits the Verifier Output Schema from `references/schemas.md`. The orchestrator captures this output for the next two stages (Fact-Extractor and Writer).
 
-7.5. **Extract Fact Manifest** (Fact-Extractor stage). Spawn per § Subagent Dispatch Rule (the `daily-fact-extractor` subagent (`.codex/agents/daily-fact-extractor.toml`)) with the Verifier's full output included verbatim in its prompt plus `country`, `date`, `lang`, and `out_manifest`. Resolve `out_manifest` to `${OUT_DIR}/fact-manifest-{country_slug}-{date}.yaml` where `{country_slug}` is the lowercase ASCII slug of `country` (e.g. `japan`, `united-kingdom`, `china`). The agent emits a YAML Fact Manifest — one entry per KEPT story listing every number, date, named person, institution, product, and direct quote in the Verifier's `factual_excerpt`, each anchored to its source URL with a verbatim excerpt (see `.codex/agents/daily-fact-extractor.toml` for the full schema). The Fact-Extractor calls `Write` once and returns confirmation. The orchestrator captures the manifest path for downstream stages (Writer in Step 8; Editor in the future Step 8.5).
+7.5. **Extract Fact Manifest** (Fact-Extractor stage). Spawn per § Subagent Dispatch Rule (the `daily-fact-extractor` subagent (`.codex/agents/daily-fact-extractor.toml`)) with the Verifier's full output included verbatim in its prompt plus `country`, `date`, `lang`, and `out_manifest`. Resolve `out_manifest` to `${OUT_DIR}/fact-manifest-{country_slug}-{date}.yaml` where `{country_slug}` is the lowercase ASCII slug of `country` (e.g. `japan`, `united-kingdom`, `china`). The agent emits a YAML Fact Manifest — one entry per KEPT story listing every number, date, named person, institution, product, and direct quote in the Verifier's `factual_excerpt`, each anchored to its source URL with a verbatim excerpt (see `.codex/agents/daily-fact-extractor.toml` for the full schema). The Fact-Extractor calls `apply_patch` once and returns confirmation. The orchestrator captures the manifest path for downstream stages (Writer in Step 8; Editor in the future Step 8.5).
 
 8. **Translate and write the report** (Writer stage — **fans out per `lang` in `langs`** when `is_bilingual`). Spawn per § Subagent Dispatch Rule (the `daily-news-writer` subagent (`.codex/agents/daily-news-writer.toml`)). Ensure the output directory exists:
    ```bash
@@ -153,7 +162,7 @@ The Scanner gathers 20-30 candidate URLs across all categories. If the Scanner B
 
    Each Writer invocation **runs 1-3 supplemental `WebSearch` / `WebFetch` calls per story by default** to enrich body prose with background context — what came before, broader pattern, prior policy. Each invocation generates its own background searches independently (no cross-lang sharing — keeps the prompt simple, accepts the duplicated web cost). **References = Verifier KEEP URLs ∪ {search URLs that supplied a fact in body}** — every search URL whose content backed a body fact MUST be cited with proper APA and continuous `[N]` (see `references/output-spec.md` § Cited Search URLs).
 
-   Compose narrative in `lang` per `references/language-spec.md`. Structure is `### title → body → **References**` per story — **no `**摘要**` / `**Summary**` / `**要約**` / `**分析**` / `**Analysis**` markers anywhere**. **Quote marks follow `references/language-spec.md` § Canonical Quote Marks** (en ASCII `""` / zh curly `""` / ja corner `「」` — the format-check hook blocks Write on any non-canonical char). When `lang=zh`, also comply with `references/language-spec.md` § Language-Specific Rules (official titles, country prefixes, time anchors, terminology, foreign media naming). Produce Markdown obeying `references/output-spec.md`. Use the `Write` tool to overwrite the `out_md` path it was given (= this invocation's `out_md_{lang}`).
+   Compose narrative in `lang` per `references/language-spec.md`. Structure is `### title → body → **References**` per story — **no `**摘要**` / `**Summary**` / `**要約**` / `**分析**` / `**Analysis**` markers anywhere**. **Quote marks follow `references/language-spec.md` § Canonical Quote Marks** (en ASCII `""` / zh curly `""` / ja corner `「」` — the format-check hook blocks `apply_patch` on any non-canonical char). When `lang=zh`, also comply with `references/language-spec.md` § Language-Specific Rules (official titles, country prefixes, time anchors, terminology, foreign media naming). Produce Markdown obeying `references/output-spec.md`. Use one `apply_patch` operation to create or overwrite the `out_md` path it was given (= this invocation's `out_md_{lang}`).
 
    **Bilingual execution order — PARALLEL**. Spawn both Writer subagents in a single orchestrator message (multi-Agent-tool-uses in one turn). Each Writer is independent: separate `lang`, separate `out_md_{lang}`, no shared file, no shared state. The orchestrator awaits both invocations and proceeds when both have returned.
 
@@ -162,7 +171,7 @@ The Scanner gathers 20-30 candidate URLs across all categories. If the Scanner B
    1. **Documented Claude Code pattern.** The Agent tool documentation explicitly recommends multi-agent parallelism for independent work: "When you launch multiple agents for independent work, send them in a single message with multiple tool uses so they run concurrently." Parallel subagent spawn is a first-class SDK pattern, not an unverified edge case. The historical Claude Code bug we work around (anthropics/claude-code#21318) is about marketplace-plugin subagent **tool access** — completely orthogonal to parallel scheduling.
    2. **Wall-clock win.** Sequential adds ~10 min to a typical bilingual run (Writer ~5-10 min + Editor ~3-5 min, both ×2). Parallel runs both lang chains concurrently; total wall-clock = `max(zh_chain, en_chain)` rather than `sum`.
    3. **Failure isolation preserved.** Each Writer writes to its own `out_md_{lang}`. If one fails, the other's output is still on disk. The orchestrator handles "one succeeded, one failed" per the Failure Modes table.
-   4. **Hook safety.** `daily-news-format-check` is `PostToolUse:Write` / `:Edit` and reads the specific file the tool call touched. Parallel hooks fire on different files (`out_md_zh` vs `out_md_en`) with no shared state — Node-level concurrency is not a problem.
+   4. **Hook safety.** `daily-news-format-check` is `PostToolUse:apply_patch` and reads the specific file the patch touched. Parallel hooks fire on different files (`out_md_zh` vs `out_md_en`) with no shared state — Node-level concurrency is not a problem.
 
    **Cost paid for parallel** (honest accounting, not a reason to revert):
 
@@ -179,7 +188,7 @@ The Scanner gathers 20-30 candidate URLs across all categories. If the Scanner B
    - `verifier_bundle` (same Verifier output verbatim, inline).
    - That invocation's `lang` (a SINGLE token — `zh` / `en` / `ja`, never the combined `zh+en`; the Editor's Pass 4 quote-mark table and Pass 5 foreign-residue check are keyed on a single lang), `date`, `country`.
 
-   Each Editor patches its own MD in place using `Edit` (never `Write`) across **five sequential passes**:
+   Each Editor patches its own MD in place using `apply_patch` across **five sequential passes**:
 
    | Pass | Purpose |
    |------|---------|
@@ -191,9 +200,9 @@ The Scanner gathers 20-30 candidate URLs across all categories. If the Scanner B
 
    **Budgets.** Pass 2 + Pass 3 combined ≤ 2 WebSearch + 4 WebFetch per story. Pass 5 is style-only (zero WebSearch / WebFetch) and is capped at **3 Edits / story** and **`2 × story_count` Edits / document**.
 
-   **Pass 5 rollback.** Any Pass-5 Edit that violates its six invariants is reverted: manifest facts preserved · References byte-identical · paragraph count preserved · `### title` preserved · quote-mark pairs balanced · no prohibited marker introduced. On unrecoverable failure, Pass 5 aborts gracefully and the pipeline continues with Passes 1-4's changes only.
+   **Pass 5 rollback.** Any Pass-5 patch that violates its six invariants is reverted: manifest facts preserved · References byte-identical · paragraph count preserved · `### title` preserved · quote-mark pairs balanced · no prohibited marker introduced. On unrecoverable failure, Pass 5 aborts gracefully and the pipeline continues with Passes 1-4's changes only.
 
-   **Reporting.** The Editor prints a structured stdout report (drift counts, refs added, claims cut / weakened, quote-mark fixes, per-class Pass-5 totals); the orchestrator logs it but does not gate on it. The format-check hook fires on every `Edit` and validates the post-edit state — if any Edit produces a malformed file, the hook blocks and the orchestrator surfaces the violation.
+   **Reporting.** The Editor prints a structured stdout report (drift counts, refs added, claims cut / weakened, quote-mark fixes, per-class Pass-5 totals); the orchestrator logs it but does not gate on it. The format-check hook fires on every `apply_patch` and validates the post-patch state — if any patch produces a malformed file, the hook blocks and the orchestrator surfaces the violation.
 
 9. **Export to Word** (**fans out per `lang` in `langs`** when `is_bilingual`). First verify pandoc is available:
    ```bash
@@ -211,14 +220,16 @@ The Scanner gathers 20-30 candidate URLs across all categories. If the Scanner B
 
 10. **Send email** (optional — only if `email` parameter is non-empty). Build the subject and body per `references/email-spec.md` (single-lang or bilingual variant based on `is_bilingual`), write the body to a temp file, assemble the attachment list per § Attachment Selection (bilingual doubles the file count), and invoke:
     ```bash
+    # Append --attach and its paths only when the attachment list is non-empty.
+    # For email_attach=none, send the body-only email without --attach.
     python3 "${CLAUDE_PLUGIN_ROOT}/scripts/send-report-email.py" \
       --to "{email}" \
       --subject "{email_subject}" \
       --body-file "{tmp_body_file}" \
-      --attach {attach_files} \
+      {optional_attach_args} \
       [--dry-run if email_dry_run=true]
     ```
-    Where `{attach_files}` is one of:
+    Where `{optional_attach_args}` is derived from:
     - Single-lang `email_attach=both` → `$out_md $out_docx` (2 files)
     - Single-lang `email_attach=docx` / `md` / `none` → 1 / 1 / 0 files
     - Bilingual `email_attach=both` → `$out_md_primary $out_docx_primary $out_md_secondary $out_docx_secondary` (4 files)
@@ -226,21 +237,18 @@ The Scanner gathers 20-30 candidate URLs across all categories. If the Scanner B
     - Bilingual `email_attach=md` → `$out_md_primary $out_md_secondary` (2 files)
     - Bilingual `email_attach=none` → omit `--attach`
 
-    `send-report-email.py --attach` is already `nargs="*"` — no script change needed. Handle the script's non-zero exit codes per `references/email-spec.md` § Exit Code Handling. **Email failure must never delete or modify the local `.md` or `.docx` files** — they were already delivered in Step 8-9.
+    `{optional_attach_args}` is empty for `email_attach=none`; otherwise it is `--attach` followed by the selected paths. The sender supports body-only text emails. Handle the script's non-zero exit codes per `references/email-spec.md` § Exit Code Handling. **Email failure must never delete or modify the local `.md` or `.docx` files** — they were already delivered in Step 8-9.
 
-    **⚠️ Hard rule — sanctioned script only.** The orchestrator MUST invoke `scripts/send-report-email.py` via the Bash subprocess above. **Do NOT** implement email delivery inline by importing `smtplib`, `email.message`, `email.mime`, `MIMEMultipart`, `MIMEText`, `EmailMessage`, or by shelling out to `sendmail` / `mail -s`. Inline implementations invariably skip the dual `Content-Disposition` filename encoding (RFC 2047 `filename=` + RFC 2231 `filename*=`) the sanctioned script applies — without both forms, recipients on corporate Exchange / Outlook see attachments as `noname`. A PreToolUse hook (`scripts/hooks/email-send-guard.js`) rejects Bash commands matching these inline patterns. If the script exits non-zero (codes 1-9), halt and report per the exit-code table — do NOT fall back to an inline implementation.
+    **⚠️ Hard rule — sanctioned script only.** The orchestrator MUST invoke `scripts/send-report-email.py` via the Bash subprocess above. **Do NOT** implement email delivery inline by importing `smtplib`, `email.message`, `email.mime`, `MIMEMultipart`, `MIMEText`, `EmailMessage`, or by shelling out to `sendmail` / `mail -s`. Inline implementations invariably skip the dual `Content-Disposition` filename encoding (RFC 2047 `filename=` + RFC 2231 `filename*=`) the sanctioned script applies — without both forms, recipients on corporate Exchange / Outlook see attachments as `noname`. A PreToolUse hook (`scripts/hooks/email-send-guard.js`) rejects Bash commands matching these inline patterns. If the script exits non-zero (codes 1-5 or 7-9), halt and report per the exit-code table — do NOT fall back to an inline implementation.
 
 11. **Verify delivery.** Apply the checks in `references/verification.md` § End-to-End Verification.
 
-12. **Publish to GitHub Pages.** When the default `out_dir` is used, the report lands in `~/Desktop/github/daily-news-reports/{date}/` — the working tree of the publishing repo. Hand off to the sanctioned publish script which stages, commits, and pushes:
+12. **Publish to GitHub Pages (explicit opt-in).** Skip this step unless `publish=true`. When enabled, `publish_repo` must resolve to an existing Git repository. The sanctioned script copies the generated `OUT_DIR` date directory into `PUBLISH_REPO/<date>/`, then stages, commits, and pushes:
     ```bash
-    bash "${PLUGIN_ROOT}/scripts/publish-reports.sh"
+    REPORTS_REPO="$PUBLISH_REPO" bash "${PLUGIN_ROOT}/scripts/publish-reports.sh" \
+      --source-dir "$OUT_DIR"
     ```
-    where `PLUGIN_ROOT` is the sci-research plugin root (typically `~/Desktop/sci-research`).
-
-    The script is idempotent — `nothing to publish` (exit 0) is fine. Push failures must be reported but **never** stop the run from being considered successful: the docx already exists on disk and the user can `git push` manually. The remote `update-index.yml` GitHub Actions workflow refreshes `index.json` server-side, so this skill never writes `index.json`.
-
-    **Skip this step** when `out_dir` was overridden to a path that is not a git working tree (best-effort detection: missing `${OUT_DIR%/*}/.git` or its parent — climb up at most three levels looking for a `.git` directory before deciding to skip).
+    where `PLUGIN_ROOT` is the sci-research plugin root. Publish failures must be reported but never delete or invalidate the local report files. The normal report run is successful once its local Markdown and any available docx output have been produced.
 
 ## Stage → Agent → Reference Map
 
@@ -271,9 +279,10 @@ Scattered through the Workflow above; consolidated here for quick scanning. **No
 | Editor Pass 5 unrecoverable failure (per lang) | Abort Pass 5 for that lang only. Pipeline continues with Passes 1-4's changes for that lang. Other lang(s) unaffected. Log it; do not gate the run. |
 | `pandoc` not installed | Skip docx export for ALL langs. Markdown(s) remain valid output. Report: "pandoc not found — .docx export skipped." |
 | `pandoc` exits non-zero on one lang | Report the error for that lang. Continue with the next lang. Do NOT delete any Markdown file. |
-| Email script exits non-zero (codes 1-9) | Halt and report per `references/email-spec.md` § Exit Code Handling. **Never** delete or modify any local `.md` / `.docx`. **Never** fall back to inline SMTP — the PreToolUse hook will reject it anyway. |
-| `out_dir` is not a git working tree | Skip Step 12 (publish). Best-effort detection: walk up at most three levels looking for `.git`. |
-| `git push` fails in Step 12 | Report but do not fail the run — the docx already exists on disk; the user can push manually. |
+| Email script exits non-zero (codes 1-5 or 7-9) | Halt and report per `references/email-spec.md` § Exit Code Handling. **Never** delete or modify any local `.md` / `.docx`. **Never** fall back to inline SMTP — the PreToolUse hook will reject it anyway. |
+| `publish=true` but `publish_repo` is empty | Halt before publishing and ask for an explicit Git repository path. Local report generation is unaffected when publishing is not requested. |
+| `publish_repo` is not a git working tree | Skip publishing and report the configuration error. Preserve the local report files. |
+| `git push` fails in Step 12 | Report but do not fail the local report run — the Markdown/docx already exists on disk and the user can push manually. |
 
 ## References
 

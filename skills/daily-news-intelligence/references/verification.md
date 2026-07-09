@@ -4,7 +4,7 @@ Loaded at the end of the workflow (Writer self-check + orchestrator delivery che
 
 ## Output Rules
 
-- Output only the final Markdown report to `out_md` via the `Write` tool.
+- Output only the final Markdown report to `out_md` via one `apply_patch` operation.
 - The first non-whitespace character of the file must be `#`.
 - Exactly `len(active_categories)` H2 section headings must appear (6 for a non-China report, 7 for a China report), in the country-derived order from `references/language-spec.md` § Category Catalog & Selection, before any other H2.
 - Every story title line must start with `### `.
@@ -13,11 +13,11 @@ Loaded at the end of the workflow (Writer self-check + orchestrator delivery che
 - Use `---` as the between-story separator.
 - Do not emit a trailing global sources / references list.
 - Do not include planning text, tool logs, or preamble in the Markdown file.
-- After `Write`, run the `pandoc` export command specified in the skill's Workflow.
+- After `apply_patch`, run the `pandoc` export command specified in the skill's Workflow.
 
-## Writer Self-Check (before calling `Write`)
+## Writer Self-Check (before calling `apply_patch`)
 
-**Scope.** This is the **procedure-level** self-check the Writer agent runs before invoking `Write`. The **format-level checksum** (counted invariants like `grep -c '^## '` and `[N]` continuity) lives in `references/output-spec.md` § Self-Check Checksum and is enforced by the `daily-news-format-check` hook on every Write/Edit. If the two lists ever disagree, this list defines intent and output-spec.md defines the machine check; bring them into sync rather than picking a winner.
+**Scope.** This is the **procedure-level** self-check the Writer agent runs before invoking `apply_patch`. The **format-level checksum** (counted invariants like `grep -c '^## '` and `[N]` continuity) lives in `references/output-spec.md` § Self-Check Checksum and is enforced by the `daily-news-format-check` hook on every `apply_patch`. If the two lists ever disagree, this list defines intent and output-spec.md defines the machine check; bring them into sync rather than picking a winner.
 
 Silently verify all of the following. If any check fails, fix before writing — do not ship a document that fails self-check.
 
@@ -81,7 +81,7 @@ Both files must exist. Then spot-check the Markdown:
 │  Consume Verifier KEEP set only        │
 │  Translate narrative to target lang    │
 │  Apply Markdown Syntax Contract        │
-│  Write overwrite {out_md}              │
+│  apply_patch overwrite {out_md}        │
 └──────────────────┬─────────────────────┘
                    │
                    ▼
@@ -94,7 +94,7 @@ Both files must exist. Then spot-check the Markdown:
 │  4 Quote-mark normalization            │
 │  5 Local fluency / logic-gap repair    │
 │    (5-class defect whitelist; no web)  │
-│  Edit only; rollback on invariant      │
+│  apply_patch only; rollback on invariant│
 │  failure; aborts gracefully            │
 └──────────────────┬─────────────────────┘
                    │
@@ -118,9 +118,9 @@ Both files must exist. Then spot-check the Markdown:
 | Verifier | `.codex/agents/news-verifier.toml` subagent | `sonnet` | News-desk filter encoding the five-check rubric (Originality / Authority / Impact / Source legitimacy / Dedup-validation) and the three-step coverage fallback (impact relaxation / reserve-pool promotion / gap record); consumes the Scanner Bundle including its Reserve Pool |
 | Fact-Extractor | `.codex/agents/daily-fact-extractor.toml` subagent | `sonnet` | Extracts every hard fact + direct quote from the Verifier KEEP set into a locked-values YAML manifest. Pure transformation — no web, no narrative. The manifest is the Writer's locked-values contract and the Editor's Pass-1 ground truth |
 | Writer | `.codex/agents/daily-news-writer.toml` subagent | `opus` | Daily briefing writer. Body encodes the Localisation Table, Category Catalog & country-derived active-category ordering, Markdown Syntax Contract, APA 7th format, Writing Standard, search-for-background contract, citation contract (search URLs that supplied a body fact MUST be in References), and self-check protocol |
-| Editor | `.codex/agents/daily-editor.toml` subagent | `opus` | Five-pass editor (fact verification / search-backing / quote verbatim / quote-mark normalization / local-fluency repair). Uses `Edit` only, never `Write`. Pass 5 is style-only with closed defect-class whitelist and six rollback invariants; aborts gracefully without blocking the pipeline |
+| Editor | `.codex/agents/daily-editor.toml` subagent | `opus` | Five-pass editor (fact verification / search-backing / quote verbatim / quote-mark normalization / local-fluency repair). Uses `apply_patch` only. Pass 5 is style-only with closed defect-class whitelist and six rollback invariants; aborts gracefully without blocking the pipeline |
 
-**Substitution.** Do NOT substitute any other agent's body — each body encodes stage-specific invariants (e.g., daily-news-scanner's strict single-date gate, daily-editor's no-`Write` discipline) that are not present in the closest-named alternative agents. If a body file is missing, halt and report rather than substituting.
+**Substitution.** Do NOT substitute any other agent's body — each body encodes stage-specific invariants (e.g., daily-news-scanner's strict single-date gate, daily-editor's `apply_patch`-only discipline) that are not present in the closest-named alternative agents. If a body file is missing, halt and report rather than substituting.
 
 ## Invocation Examples
 

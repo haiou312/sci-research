@@ -17,25 +17,38 @@ Designed for both interactive and **scheduled/automated** execution.
 | `date` | No | today | Target date in ISO `YYYY-MM-DD` |
 | `countries` | No | `中国,英国,美国,欧洲,日本,韩国` | Comma-separated country/region list |
 | `total` | No | `14` | Target total number of stories (13-15) |
-| `source_dir` | No | `~/Desktop/github/daily-news-reports/` | Base directory containing `YYYY-MM-DD/` subdirs (defaults to the GitHub Pages publishing repo, populated by `/daily-news-intelligence`) |
+| `source_dir` | No | `~/.sci-research/reports/daily-news/` | Base directory containing `YYYY-MM-DD/` subdirs produced by `/daily-news-intelligence` |
+| `out_dir` | No | `~/.sci-research/reports/daily-briefings/{date}/` | Directory for the generated branded docx. `{date}` is replaced with the ISO date and `~` is expanded at runtime. |
 | `email` | No | empty | Comma-separated recipient email addresses |
 | `email_subject` | No | `新闻简报 — {date_display}` | Email subject line |
 | `email_dry_run` | No | `false` | Preview email without sending |
 | `no_wait` | No | `false` | Fail immediately if source files missing |
+| `publish` | No | `false` | When `true`, copy this date's branded output into `publish_repo` and commit/push it through the sanctioned publish script. |
+| `publish_repo` | Conditional | — | Absolute path or `~`-based path to the target Git repository. Required when `publish=true`. |
 
 Derived fields:
 - `date_display` — e.g. `2026年4月16日`
 - `date_dir` — `{source_dir}/{date}/`
-- `out_docx` — `{source_dir}/{date}/{date} 简报.docx`
+- `out_docx` — `{out_dir}/{date} 简报.docx`
 
 ## Workflow
 
-1. **Validate params.** Default `date` to today (`date +%Y-%m-%d`). Parse `countries` into a comma-separated list. Expand `~` in `source_dir`. Compute derived fields:
+1. **Validate params.** Default `date` to today (`date +%Y-%m-%d`). Parse `countries` into a comma-separated list. Expand `~` and substitute `{date}` in `source_dir` / `out_dir`. Create `OUT_DIR`. If `publish=true`, require a non-empty `publish_repo` and expand `~` in it to `PUBLISH_REPO`. Compute derived fields:
    ```bash
    SOURCE_DIR="${source_dir/#\~/$HOME}"
+   OUT_DIR="${out_dir/#\~/$HOME}"
+   OUT_DIR="${OUT_DIR//\{date\}/$DATE}"
    DATE_DIR="$SOURCE_DIR/$DATE"
    DATE_DISPLAY="$(python3 -c "from datetime import date; d=date.fromisoformat('$DATE'); print(f'{d.year}年{d.month}月{d.day}日')")"
-   OUT_DOCX="$DATE_DIR/${DATE} 简报.docx"
+   mkdir -p "$OUT_DIR"
+   OUT_DOCX="$OUT_DIR/${DATE} 简报.docx"
+   if [[ "$publish" == true ]]; then
+     if [[ -z "${publish_repo:-}" ]]; then
+       echo "ERROR: --publish requires --publish-repo <git-path>." >&2
+       exit 2
+     fi
+     PUBLISH_REPO="${publish_repo/#\~/$HOME}"
+   fi
    ```
 
 2. **Check source directory.** List Markdown files:
@@ -62,11 +75,11 @@ Derived fields:
    ```
    Then STOP. Do not proceed further.
 
-5. **Ensure python-docx.** Install if missing:
+5. **Preflight python-docx.** Do **not** install dependencies during a run:
    ```bash
-   python3 -c "import docx" 2>/dev/null || pip3 install python-docx --user --quiet
+   python3 -c "import docx"
    ```
-   If `pip3 install` also fails, stop and report: "python-docx installation failed. Install manually: pip3 install python-docx"
+   If that command fails, stop before curation and report: `Pipeline D requires python-docx. Install it once outside the pipeline with: python3 -m pip install --user -r <plugin-root>/requirements.txt`. The generator prints the exact installed-plugin path in the same error message. Do not invoke `pip` or `pip3 install` from the pipeline.
 
 6. **Curate and rewrite stories.** First, list the source files for the agent:
    ```bash
@@ -84,7 +97,7 @@ Derived fields:
    Files to read (use the Read tool on each):
    {each line of MD_FILES as a full path, one per line}
    
-   Write the output to /tmp/briefing-curator-output.txt using the Write tool.
+   Create or overwrite /tmp/briefing-curator-output.txt using one `apply_patch` operation.
    
    Output format: TITLE/DATE/TOC/STORIES/REFERENCES/DISCLAIMER
    as specified in your system prompt (.codex/agents/briefing-curator.toml).
@@ -158,15 +171,12 @@ Derived fields:
    ```
    Report file path, size, and story count.
 
-10. **Publish to GitHub Pages.** After the branded docx is saved (and emailed if requested), the source dir defaults to `~/Desktop/github/daily-news-reports/` — the working tree of the publishing repo. Hand off to the sanctioned publish script which stages, commits, and pushes:
+10. **Publish to GitHub Pages (explicit opt-in).** Skip this step unless `publish=true`. When enabled, `publish_repo` must resolve to an existing Git repository. The sanctioned script copies `OUT_DIR` into `PUBLISH_REPO/<date>/`, then stages, commits, and pushes:
     ```bash
-    bash "${PLUGIN_ROOT}/scripts/publish-reports.sh"
+    REPORTS_REPO="$PUBLISH_REPO" bash "${PLUGIN_ROOT}/scripts/publish-reports.sh" \
+      --source-dir "$OUT_DIR"
     ```
-    where `PLUGIN_ROOT` is the sci-research plugin root (typically `~/Desktop/sci-research`).
-
-    The script is idempotent — exit 0 with `nothing to publish` is fine. Push failures must be reported but **never** stop the run from being considered successful: the docx already exists on disk and the user can `git push` manually. The remote `update-index.yml` GitHub Actions workflow refreshes `index.json` server-side, so this skill never writes `index.json`.
-
-    **Skip this step** when `source_dir` was overridden to a path that is not a git working tree (best-effort detection: missing `${SOURCE_DIR}/.git`).
+    Publish failures must be reported but never delete or invalidate the local docx.
 
 ## References
 

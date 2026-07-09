@@ -136,9 +136,9 @@ Note: every `value` is verbatim from the source ("0.5%" not "0.5 percent"; "153.
    - Map each atom to source URL(s) — default to Lead URL unless `factual_excerpt` explicitly attributes to a Corroborated source.
    - Build the YAML entry.
 3. Assemble the document with the version / header keys.
-4. Call `Write` once with the full YAML body and path `out_manifest`. No partial writes.
+4. Call `apply_patch` once with the full YAML body and path `out_manifest`. No partial patches.
 
-## Self-check before Write
+## Self-check before apply_patch
 
 - `stories.length == total_stories`.
 - Every story has `locked_urls = [lead_url] + corroborated_by` exactly.
@@ -153,7 +153,7 @@ Note: every `value` is verbatim from the source ("0.5%" not "0.5 percent"; "153.
 - No editorial decisions (don't drop "weak" facts; extract everything).
 - No translation (output stays English regardless of `lang`).
 - No invention or interpolation of facts not in Verifier output.
-- No Write to anything other than `out_manifest`.
+- No `apply_patch` to anything other than `out_manifest`.
 - No narrative — your output is YAML data only, no Markdown body.
 
 '''

@@ -42,7 +42,7 @@ Final stage. Produces a single inline-CSS HTML file at `out_html`.
    - Link `source_outlet` to `source_url`
    - If `corroborating_urls` is non-empty, append the corroborating links per § Corroborating Sources Rendering
 6. **Compose the footer** with the localised disclaimer from `html-template.md` § Footer Disclaimer.
-7. **Use the `Write` tool** to emit the full HTML document to `out_html`.
+7. **Use `apply_patch` once** to create or overwrite the full HTML document at `out_html`.
 
 ## Output
 
@@ -53,7 +53,7 @@ A single HTML file at `out_html`:
 - Max 600px width
 - No external resources (no remote images/fonts/scripts)
 
-No commentary before or after the Write call. After Write, emit a one-line summary: `WROTE: {out_html} ({items_kept} items, highest={highest_severity})`.
+No commentary before or after the patch. After `apply_patch`, emit a one-line summary: `WROTE: {out_html} ({items_kept} items, highest={highest_severity})`.
 
 ## Hard Rules
 

@@ -18,7 +18,8 @@
  *     (1.9.x+ structure: body prose follows `### title` directly; no
  *     summary/analysis markers anywhere)
  *
- * Trigger: PostToolUse:Write when the file path is under daily-news-reports/
+ * Trigger: PostToolUse:apply_patch when the file path is under daily-news/
+ *          (or the legacy daily-news-reports/ path)
  *          OR when the content's H1 matches the daily-news H1 pattern
  *          (covers all three supported languages: zh / en / ja).
  *
@@ -34,7 +35,7 @@ const fs = require("fs");
 function isDailyNewsReport(filePath, content) {
   // skip backups and non-md files
   if (filePath.endsWith(".bak") || !filePath.endsWith(".md")) return false;
-  const byPath = /daily-news-reports\//.test(filePath);
+  const byPath = /daily-news(?:-reports)?\//.test(filePath);
   const byH1 = /^# [^\n]*(?:每日热点新闻|Daily News Intelligence|デイリーニュース)/m.test(
     content
   );
@@ -385,7 +386,7 @@ function main() {
         process.exit(0);
       }
 
-      // For Edit / MultiEdit events, tool_input.content is absent — read from disk.
+      // For apply_patch events, tool_input.content is absent — read from disk.
       // PostToolUse fires after the edit has been applied, so the file reflects
       // the post-edit state.
       if (!content) {
@@ -424,7 +425,7 @@ function main() {
         ``,
         ...violations.map((v, i) => `  ${i + 1}. ${v}`),
         ``,
-        `Fix the output and write again. This hook blocks the Write to prevent malformed reports from being emailed.`,
+        `Fix the output and apply the patch again. This hook blocks malformed reports from being emailed.`,
       ].join("\n");
       process.stdout.write(
         JSON.stringify({ result: "block", message })

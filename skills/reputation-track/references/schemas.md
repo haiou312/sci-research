@@ -21,7 +21,7 @@ resolution_notes: <free text; required if confidence is not high>
 
 ## Scanner Output Schema (one per source)
 
-Each of the three Scanner instances (news / reddit / x) emits this:
+Each Scanner instance for a requested source (news / reddit / x) emits this:
 
 ```yaml
 source: news | reddit | x
@@ -33,8 +33,8 @@ raw_candidates:
     title_or_excerpt: <string>
     published_at: <ISO 8601 datetime>
     author_or_handle: <string>
-    date_verified: true | false
-    verification_method: webfetch | json | snippet
+    date_verified: true
+    verification_method: webfetch     # required for every emitted candidate
     raw_snippet: <string, max 1000 chars>
 coverage_notes: <free text; flag gaps, blocked fetches, etc.>
 ```
@@ -42,7 +42,7 @@ coverage_notes: <free text; flag gaps, blocked fetches, etc.>
 ## Classifier Output Schema
 
 ```yaml
-total_items_in: <int>                  # sum of raw_candidates across 3 scanners
+total_items_in: <int>                  # sum of raw_candidates across requested sources
 total_items_kept: <int>                # promoted to kept_items
 total_items_dropped: <int>             # everything else
 kept_items:

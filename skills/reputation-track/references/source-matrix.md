@@ -1,36 +1,24 @@
 # Source Matrix — News + Reddit + X (MVP)
 
-Loaded by the Scanner. Defines the three sources the reputation-track MVP covers, per-source search patterns, and date-verification methods.
+Loaded by the Scanner. Defines the three sources the reputation-track MVP covers, per-source discovery patterns, and date-verification methods.
 
 ## Coverage Scope
 
 | Source | Tool | Reliability | Coverage |
 |---|---|---|---|
 | News | WebSearch + WebFetch | ★★★★★ | T1-T4 wire + financial + industry outlets |
-| Reddit | `mcp__apidirect__search_reddit` (single call) | ★★★★☆ | Public subreddits, full content |
-| X (Twitter) | `mcp__apidirect__search_twitter` (single call) | ★★★★☆ | Full public-post stream (not just Google-indexed) |
+| Reddit | WebSearch + WebFetch | ★★☆☆☆ | Public Reddit threads that are search-indexed and fetchable |
+| X (Twitter) | WebSearch + WebFetch | ★★☆☆☆ | Public X/Twitter posts that are search-indexed and fetchable |
 
-**Out of scope (disclosed in HTML footer):** Facebook and Threads are intentionally excluded in v1 — not for tooling reasons (apidirect offers `search_facebook_*`) but to keep the alert concise; v2 may expand.
+**Out of scope (disclosed in HTML footer):** Facebook and Threads are intentionally excluded in v1. Reddit and X coverage is also limited to publicly indexed, retrievable pages; the Scanner does not use platform APIs, browser automation, direct scraping, or MCP tools.
 
-## apidirect Quota Budget
+## Social-Search Rules
 
-`mcp__apidirect__*` tools share a **50-token/month** free quota. Reputation-track's discipline:
-
-| Source | Calls per `/reputation-track` run | Tokens burned |
-|---|---|---|
-| News (WebSearch) | N (5-10 queries) | 0 (WebSearch is free) |
-| Reddit (apidirect) | **exactly 1** | 1 |
-| X (apidirect) | **exactly 1** | 1 |
-| **Per-run total** | — | **2** |
-
-At 2 tokens/run, the 50-token quota supports **~25 runs/month**. If you run daily, you exhaust the quota in ~3.5 weeks. If you run weekly, you have 6× headroom.
-
-**Hard rules** (enforced in `.codex/agents/reputation-scanner.toml`):
-- No retries on failure — if apidirect returns an error or zero results, emit empty `raw_candidates` with a `coverage_notes` line. Do not retry with a different query.
-- No pagination — always `page=1` / `pages=1`. Extra pages cost extra tokens.
-- No per-executive loop — build ONE compound query covering company + ticker + top 3 executives, ≤500 chars.
-
-If quota is exhausted, apidirect calls will start failing; Scanner should emit empty candidates for the affected sources rather than retrying.
+- Use `WebSearch` to discover candidates and `WebFetch` to inspect the canonical post/thread page.
+- Search-result snippets and their dates are discovery metadata only. They never establish a claim or publication time.
+- A social candidate enters `raw_candidates` only after `WebFetch` exposes a timestamp within the target date ±24h.
+- If a public post is not indexed, cannot be fetched, requires login, or lacks a retrievable timestamp, record the gap in `coverage_notes` and drop it.
+- Do not fabricate account age, engagement, verification status, author details, or post text that the fetched page does not show.
 
 ## News — Search Patterns
 
@@ -49,68 +37,44 @@ Each query must produce both tier-mixed results and tier-focused results. Prefer
 
 For every candidate URL: `WebFetch` and verify publication date matches target `date` (±24h for timezone) before admitting.
 
-## Reddit — `mcp__apidirect__search_reddit` (single call)
+## Reddit — Public Search-Indexed Threads
 
-Reddit's public `.json` endpoint is now blocked by Reddit's anti-bot measures for WebFetch user agents. Use `mcp__apidirect__search_reddit` instead — one call per `/reputation-track` run.
-
-**Call contract:**
+Use separate searches; do not call Reddit APIs or `.json` endpoints. Replace placeholders with Resolver data and run the most relevant 3-6:
 
 ```
-mcp__apidirect__search_reddit(
-  query: <compound string, ≤500 chars>,
-  sort_by: "most_recent",
-  page: 1
-)
+site:reddit.com "<company>" "<date_en>"
+site:reddit.com "<ticker>" "<date_en>"
+site:reddit.com "<exec_name>" "<company>" "<date_en>"
+site:reddit.com "<company>" scandal OR lawsuit OR probe OR investigation OR fine OR recall OR outage "<date_en>"
 ```
 
-**Compound query template** (fits 500-char limit for most companies):
+For every promising result:
+
+1. Keep only a canonical public Reddit thread/post URL.
+2. `WebFetch` its canonical URL.
+3. Extract the post timestamp from fetched text, structured metadata, or the permalink. It must fall within `date` ±24h.
+4. Record subreddit, author, score, and comment count only if exposed by the fetched page.
+5. Drop threads that cannot be fetched or whose timestamp cannot be verified. Explain the gap in `coverage_notes`.
+
+## X (Twitter) — Public Search-Indexed Posts
+
+Use separate searches; do not call X APIs or direct scrapers. Search `x.com` first and add `twitter.com` when a legacy permalink is useful. Replace placeholders with Resolver data and run the most relevant 3-6:
 
 ```
-"{official_name}" OR "{ticker}" OR "{exec1_name}" OR "{exec2_name}" OR "{exec3_name}"
+site:x.com "<company>" "<date_en>"
+site:x.com "<ticker>" "<date_en>"
+site:x.com "<exec_name>" "<company>" "<date_en>"
+site:x.com "<company>" scandal OR lawsuit OR probe OR investigation OR fine OR recall OR outage "<date_en>"
+site:twitter.com "<company>" "<date_en>"
 ```
 
-Executives are the top 3 from the Resolver output (typically CEO, CFO, Chair). Drop lower-seniority execs first if the query would exceed 500 chars.
+For every promising result:
 
-**Response fields to parse** (per post returned):
-- `title`, `selftext`, `url`, `permalink`
-- `created_utc` (Unix timestamp — **authoritative date** for verification)
-- `subreddit`, `author`, `score`, `num_comments`
-
-**Client-side filters at Scanner stage:**
-- `created_utc` within target `date` window (±24h UTC)
-- Drop accounts with age < 30 days (likely throwaway)
-- Drop items with `score ≤ 1` AND `num_comments == 0` (no community traction)
-- Keep `score > 50` or `num_comments > 10` as higher-signal items
-- Cap at 40 candidates
-
-## X (Twitter) — `mcp__apidirect__search_twitter` (single call)
-
-X blocks direct scraping without login, and Google's index of x.com is sparse enough to be unreliable. Use `mcp__apidirect__search_twitter` instead — one call per run.
-
-**Call contract:**
-
-```
-mcp__apidirect__search_twitter(
-  query: <same compound string as Reddit, ≤500 chars>,
-  sort_by: "most_recent",
-  pages: 1
-)
-```
-
-**Important**: `pages=1` is mandatory. Each extra page is an extra token; the quota forbids pagination loops.
-
-**Response fields to parse** (per tweet returned):
-- Tweet text, tweet ID, permalink
-- Created-at timestamp (authoritative date for verification)
-- Author handle, display name, verified status, follower count
-- Engagement (likes, retweets, replies)
-
-**Client-side filters at Scanner stage:**
-- Tweet date within target `date` window (±24h UTC)
-- Drop new/throwaway accounts (follower count < 100 AND age < 30 days if age is exposed)
-- Drop zero-engagement tweets
-- Record `verified` flag + `follower_count` for the Classifier's credibility weighting
-- Cap at 40 candidates
+1. Keep only a canonical public post URL matching `x.com/<handle>/status/<id>` or `twitter.com/<handle>/status/<id>`.
+2. `WebFetch` its canonical URL.
+3. Extract the created timestamp from fetched text, structured metadata, or a visible post timestamp. It must fall within `date` ±24h.
+4. Record handle, visible verification indicators, follower count, and engagement only if exposed by the fetched page.
+5. Drop posts that cannot be fetched or whose timestamp cannot be verified. Explain the gap in `coverage_notes`.
 
 ## Date Verification
 
@@ -119,11 +83,11 @@ Every candidate — across all three sources — must pass date verification bef
 | Source | Verification method |
 |---|---|
 | News | `WebFetch` article; parse `<meta property="article:published_time">` or visible byline date |
-| Reddit | `created_utc` in apidirect response (authoritative) |
-| X | Tweet `created_at` in apidirect response (authoritative) |
+| Reddit | `WebFetch` canonical thread/post; extract timestamp from fetched text or structured metadata |
+| X | `WebFetch` canonical post; extract created timestamp from fetched text or structured metadata |
 
 Tolerance: ±24 hours from target `date` (accommodates timezone differences). Reject anything outside this window.
 
 ## Hard Cap
 
-Scanner per source: maximum **40 raw candidates**. If more pass date verification, prefer higher-tier sources (News) and higher-signal items (Reddit score). Over-collecting inflates Classifier cost without improving coverage.
+Scanner per source: maximum **40 raw candidates**. If more pass date verification, prefer higher-tier sources (News) and higher-signal items when engagement is visible (Reddit/X). Over-collecting inflates Classifier cost without improving coverage.

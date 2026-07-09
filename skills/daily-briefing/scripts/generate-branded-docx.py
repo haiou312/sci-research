@@ -32,7 +32,12 @@ try:
     from docx.oxml.ns import qn
     from docx.oxml import OxmlElement
 except ImportError:
-    print("ERROR: python-docx not installed. Run: pip3 install python-docx", file=sys.stderr)
+    requirements = Path(__file__).resolve().parents[3] / "requirements.txt"
+    print(
+        "ERROR: python-docx is not installed. Install the pinned Pipeline D "
+        f"dependency once with:\n  python3 -m pip install --user -r {requirements}",
+        file=sys.stderr,
+    )
     sys.exit(1)
 
 

@@ -17,12 +17,12 @@ Reads credentials from environment variables:
   GOOGLE_EMAIL_START_TLS       — 'true' to use STARTTLS on port 587 (default: true)
 
 Usage:
-  # Text body + attachments (Pipelines C / D)
+  # Text body, with optional attachments (Pipelines C / D)
   send-report-email.py \\
     --to "alice@foo.com,bob@bar.com" \\
     --subject "中国每日热点新闻 — 2026年4月14日" \\
     --body-file /tmp/body.txt \\
-    --attach /path/to/report.md /path/to/report.docx \\
+    [--attach /path/to/report.md /path/to/report.docx] \\
     [--dry-run]
 
   # HTML body, no attachment (reputation-track)
@@ -39,7 +39,6 @@ Exit codes:
   3 — SMTP connection or send failure
   4 — attachment file not found
   5 — body file not found
-  6 — no content to send (neither --attach nor --body-html-file provided, when using a plain-text body)
   7 — attachment has an empty filename stem (e.g. ".docx", "   .docx")
   8 — attachment has no file extension (e.g. "briefing" with no suffix)
   9 — Content-Disposition header is missing the dual filename= / filename*= encoding (script-internal regression guard)
@@ -351,15 +350,6 @@ def main():
     )
 
     args = parser.parse_args()
-
-    if not args.attach and not args.body_html_file:
-        print(
-            "ERROR: no content to send. Provide --attach <paths> (Pipelines C/D) "
-            "or --body-html-file (reputation-track / Pipeline E). Refusing to "
-            "send an email with only a plain-text body and no attachments.",
-            file=sys.stderr,
-        )
-        sys.exit(6)
 
     cfg = load_env()
     recipients = parse_recipients(args.to)

@@ -265,12 +265,18 @@ case "$email_attach" in
   none) ATTACHMENTS=() ;;
 esac
 
-# Call the sender
+# Call the sender. Do not pass --attach when ATTACHMENTS is empty.
+if ((${#ATTACHMENTS[@]})); then
+  ATTACH_ARGS=(--attach "${ATTACHMENTS[@]}")
+else
+  ATTACH_ARGS=()
+fi
+
 python3 "${CLAUDE_PLUGIN_ROOT}/scripts/send-report-email.py" \
   --to "$email" \
   --subject "$email_subject" \
   --body-file "$BODY_FILE" \
-  ${ATTACHMENTS[@]+--attach "${ATTACHMENTS[@]}"}
+  "${ATTACH_ARGS[@]}"
 
 SEND_EXIT=$?
 rm -f "$BODY_FILE"
@@ -298,17 +304,23 @@ case "$email_attach" in
   none) ATTACHMENTS=() ;;
 esac
 
+if ((${#ATTACHMENTS[@]})); then
+  ATTACH_ARGS=(--attach "${ATTACHMENTS[@]}")
+else
+  ATTACH_ARGS=()
+fi
+
 python3 "${CLAUDE_PLUGIN_ROOT}/scripts/send-report-email.py" \
   --to "$email" \
   --subject "$email_subject" \
   --body-file "$BODY_FILE" \
-  ${ATTACHMENTS[@]+--attach "${ATTACHMENTS[@]}"}
+  "${ATTACH_ARGS[@]}"
 
 SEND_EXIT=$?
 rm -f "$BODY_FILE"
 ```
 
-`send-report-email.py --attach` is already `nargs="*"` (since 1.16.x) — no script change needed for the doubled attachment list.
+`send-report-email.py` accepts a plain-text `--body-file` with zero attachments. When `email_attach=none`, omit `--attach` entirely; the resulting email contains only the generated body.
 
 If `--email-dry-run` is set, append `--dry-run` to the Python call. The script will print a summary and exit 0 without connecting to SMTP.
 
