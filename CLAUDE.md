@@ -6,7 +6,7 @@
 
 ## 项目定位
 
-这是一个 **Claude Code 插件**（`sci-research`，当前版本 1.18.2；插件名为历史遗留 — 原 Pipeline A `/sci-research`、B `/news-scan`、F `/weekly-report` 已移除，名字保留以维持 marketplace 身份与安装路径），通过多 Agent 编排产出高质量新闻情报。插件包含三条**完全独立**的流水线，互不共享 Agent：
+这是一个 **Claude Code 插件**（`sci-research`，当前版本 1.19.0；插件名为历史遗留 — 原 Pipeline A `/sci-research`、B `/news-scan`、F `/weekly-report` 已于 1.19.0 移除，名字保留以维持 marketplace 身份与安装路径），通过多 Agent 编排产出高质量新闻情报。插件包含三条**完全独立**的流水线，互不共享 Agent：
 
 | 特性 | `/daily-news-intelligence` | `/daily-briefing` | `/reputation-track` |
 |---|---|---|---|
