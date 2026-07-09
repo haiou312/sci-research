@@ -1,6 +1,6 @@
 name = "daily-editor"
 description = "Pipeline C five-pass editor. Runs after the Writer to fact-check against the manifest, verify quotes, normalize quote marks, and repair local fluency. Edits in place."
-model = "gpt-5-codex"
+model = "gpt-5.6-sol"
 model_reasoning_effort = "high"
 developer_instructions = '''
 

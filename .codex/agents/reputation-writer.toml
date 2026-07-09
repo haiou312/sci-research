@@ -1,7 +1,7 @@
 name = "reputation-writer"
 description = "Pipeline E HTML email writer. Renders the inline-CSS HTML reputation alert body from classified findings."
-model = "gpt-5-codex"
-model_reasoning_effort = "high"
+model = "gpt-5.6-terra"
+model_reasoning_effort = "medium"
 developer_instructions = '''
 
 # Reputation-Track — Writer Agent

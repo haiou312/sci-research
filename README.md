@@ -162,18 +162,18 @@ Resolves the company + executives, scans News + Reddit + X for adverse content, 
 
 ```
 daily-news-scanner → news-verifier → daily-fact-extractor → daily-news-writer → daily-editor → pandoc → email (optional) → publish (optional)
-   (Codex low)         (Codex low)      (Codex low)            (Codex high, ×langs) (Codex high, ×langs)
+   (Luna / medium)      (Terra / high)  (5.4 mini / medium)    (Sol / high, ×langs) (Sol / high, ×langs)
 
 Bilingual mode (--lang zh+en …): Scanner/Verifier/Fact-Extractor run ONCE; Writer ×langs in parallel → Editor ×langs in parallel → pandoc ×langs
 ```
 
 | Agent | Codex configuration | Role |
 |---|---|---|
-| `daily-news-scanner` | gpt-5-codex / low | Single agent scanning all active categories sequentially. English WebSearch + per-URL date verification (T4 → T1 → T2 → T3), Pass A matrix + Pass B free discovery, paywall fallback (Step 3.5), then internal cross-category dedup + Cat5↔Cat6 routing (§ Step 6) → unified Scanner Bundle |
-| `news-verifier` | gpt-5-codex / low | Editorial second-pass filter: originality / authority / impact / source legitimacy / dedup-validation + Three-Step Coverage Fallback |
-| `daily-fact-extractor` | gpt-5-codex / low | Extracts every number / name / date / quote from the Verifier KEEP set into a locked-values YAML Fact Manifest (no web access) |
-| `daily-news-writer` | gpt-5-codex / high | Consumes Verifier KEEP set + Fact Manifest, composes explanatory prose in target language with 1-3 background searches per story, emits Markdown + APA refs. One instance per language in bilingual mode |
-| `daily-editor` | gpt-5-codex / high | 5-pass post-Writer editor: manifest-fact drift / search-fact backing / quote verbatim / quote-mark normalization / local fluency repair. `apply_patch`-only. One instance per language in bilingual mode |
+| `daily-news-scanner` | gpt-5.6-luna / medium | Single agent scanning all active categories sequentially. English WebSearch + per-URL date verification (T4 → T1 → T2 → T3), Pass A matrix + Pass B free discovery, paywall fallback (Step 3.5), then internal cross-category dedup + Cat5↔Cat6 routing (§ Step 6) → unified Scanner Bundle |
+| `news-verifier` | gpt-5.6-terra / high | Editorial second-pass filter: originality / authority / impact / source legitimacy / dedup-validation + Three-Step Coverage Fallback |
+| `daily-fact-extractor` | gpt-5.4-mini / medium | Extracts every number / name / date / quote from the Verifier KEEP set into a locked-values YAML Fact Manifest (no web access) |
+| `daily-news-writer` | gpt-5.6-sol / high | Consumes Verifier KEEP set + Fact Manifest, composes explanatory prose in target language with 1-3 background searches per story, emits Markdown + APA refs. One instance per language in bilingual mode |
+| `daily-editor` | gpt-5.6-sol / high | 5-pass post-Writer editor: manifest-fact drift / search-fact backing / quote verbatim / quote-mark normalization / local fluency repair. `apply_patch`-only. One instance per language in bilingual mode |
 
 ### Pipeline D — `/daily-briefing`
 
@@ -181,17 +181,26 @@ Bilingual mode (--lang zh+en …): Scanner/Verifier/Fact-Extractor run ONCE; Wri
 daily-news-reports/YYYY-MM-DD/*.md  (existing country reports)
   │
   └─→ briefing-curator → generate-branded-docx.py → send-briefing-email.py
-      (Codex high)        (python-docx)              (Gmail SMTP)
+      (Sol / high)          (python-docx)              (Gmail SMTP)
 ```
+
+`briefing-curator` uses gpt-5.6-sol / high.
 
 ### Pipeline E — `/reputation-track`
 
 ```
 reputation-resolver → reputation-scanner × requested sources (parallel; default: news / reddit / x) → reputation-classifier → reputation-writer → email (only if findings)
-   (Codex high)        (Codex low)                                                                  (Codex low)             (Codex high)
+   (Terra / high)      (Luna / medium)                                                              (Terra / high)          (Terra / medium)
 ```
 
 Silent exit when `total_items_kept == 0`. Reddit and X use Codex WebSearch/WebFetch against publicly indexed, fetchable posts and threads. Unindexed, login-gated, or unfetchable content is recorded as a coverage gap.
+
+| Agent | Codex configuration |
+|---|---|
+| `reputation-resolver` | gpt-5.6-terra / high |
+| `reputation-scanner` | gpt-5.6-luna / medium |
+| `reputation-classifier` | gpt-5.6-terra / high |
+| `reputation-writer` | gpt-5.6-terra / medium |
 
 ---
 

@@ -78,7 +78,7 @@ Every stage runs as a **native Codex subagent** defined in `.codex/agents/<name>
 2. Pass that stage's injected parameters + the verbatim upstream output (per the handoff list below) as the spawn prompt.
 3. Wait for the subagent's result, then feed it into the next stage.
 
-Model tiering is set per-agent in the TOML (`model_reasoning_effort = low` for Scanner / Verifier / Fact-Extractor, `high` for Writer / Editor) — do NOT pass a model argument at spawn time. Native Codex subagents receive their tools directly (no embed workaround).
+Model tiering is set per-agent in the TOML: Scanner = `gpt-5.6-luna / medium`; Verifier = `gpt-5.6-terra / high`; Fact-Extractor = `gpt-5.4-mini / medium`; Writer and Editor = `gpt-5.6-sol / high`. Do NOT pass a model argument at spawn time. Native Codex subagents receive their tools directly (no embed workaround).
 
 The orchestrator passes data between stages via the subagent **prompt text** — not files, not environment variables. Specifically:
 
@@ -168,15 +168,15 @@ The Scanner gathers 20-30 candidate URLs across all categories. If the Scanner B
 
    Rationale:
 
-   1. **Documented Claude Code pattern.** The Agent tool documentation explicitly recommends multi-agent parallelism for independent work: "When you launch multiple agents for independent work, send them in a single message with multiple tool uses so they run concurrently." Parallel subagent spawn is a first-class SDK pattern, not an unverified edge case. The historical Claude Code bug we work around (anthropics/claude-code#21318) is about marketplace-plugin subagent **tool access** — completely orthogonal to parallel scheduling.
+   1. **Native Codex parallelism.** Writer and Editor instances operate on independent language-specific paths, so the orchestrator can dispatch them concurrently and wait for all results before entering the dependent stage.
    2. **Wall-clock win.** Sequential adds ~10 min to a typical bilingual run (Writer ~5-10 min + Editor ~3-5 min, both ×2). Parallel runs both lang chains concurrently; total wall-clock = `max(zh_chain, en_chain)` rather than `sum`.
    3. **Failure isolation preserved.** Each Writer writes to its own `out_md_{lang}`. If one fails, the other's output is still on disk. The orchestrator handles "one succeeded, one failed" per the Failure Modes table.
    4. **Hook safety.** `daily-news-format-check` is `PostToolUse:apply_patch` and reads the specific file the patch touched. Parallel hooks fire on different files (`out_md_zh` vs `out_md_en`) with no shared state — Node-level concurrency is not a problem.
 
    **Cost paid for parallel** (honest accounting, not a reason to revert):
 
-   - **~$0.50 lost prompt cache benefit.** The second Writer's shared prefix (~50k = writer.md body + Verifier bundle + Manifest) would have hit the 5-min cache TTL at 0.1× input cost in the sequential mode — ~45k effective-token savings, ~$0.50 in raw Opus pricing. Parallel forfeits this. Wall-clock saving (~10 min) wins this trade.
-   - **2× concurrent web-call rate.** Each Writer makes 1-3 `WebSearch` / `WebFetch` per story over 10-14 stories at ~2-6 calls/min sustained. Parallel doubles this to ~4-12 calls/min combined — close to but under Anthropic web-tool throttling (~15-20/min observed). Individual call retries may occur; not catastrophic.
+   - **Duplicated prompt work.** Parallel language instances do not share a sequential prompt-cache opportunity. Actual cost depends on the configured GPT-5.4/GPT-5.5 model and account pricing; measure it from the run rather than relying on a fixed estimate.
+   - **Concurrent web-call rate.** Parallel Writers increase WebSearch/WebFetch concurrency. Keep the request rate within the account's current tool limits and tolerate individual retries without compromising one language's output.
 
    **Failure mode** (per the Failure Modes table): if either parallel Writer fails, the orchestrator preserves the surviving lang's output, surfaces the failed lang's error, and defaults to halting Step 8.5 + Step 10 with a clear report.
 

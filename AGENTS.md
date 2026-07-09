@@ -16,6 +16,23 @@
 - 上游输出原样传给下游 prompt；不要改成通用子 agent 或将 agent body 内嵌到 prompt。
 - 所有文件创建或修改均使用 apply_patch。不要在 prompt 中要求 Write 或 Edit 工具。
 
+## 模型分配
+
+日常流水线使用 GPT-5.6 的明确变体：Sol（最高质量）、Terra（质量/成本平衡）与 Luna（高吞吐）。`gpt-5.6` 只是 Sol 的 alias，配置中一律写明确 ID；不将慢速 Pro 变体放入固定流水线。
+
+| Agent | 模型 | effort | 取舍 |
+|---|---|---:|---|
+| daily-news-scanner | gpt-5.6-luna | medium | 高吞吐检索、日期核验与候选汇总 |
+| news-verifier | gpt-5.6-terra | high | 来源、影响力与去重规则裁决 |
+| daily-fact-extractor | gpt-5.4-mini | medium | 结构化事实与引语抽取 |
+| daily-news-writer | gpt-5.6-sol | high | 多语言新闻写作与背景整合 |
+| daily-editor | gpt-5.6-sol | high | 事实、引语、引用与局部修订 |
+| briefing-curator | gpt-5.6-sol | high | 跨国筛选与品牌化改写 |
+| reputation-resolver | gpt-5.6-terra | high | 实体消歧与高管核验 |
+| reputation-scanner | gpt-5.6-luna | medium | 高吞吐多源候选收集与日期筛选 |
+| reputation-classifier | gpt-5.6-terra | high | 保守的负面分类与证据判断 |
+| reputation-writer | gpt-5.6-terra | medium | 专业风险邮件渲染 |
+
 ## 流水线契约
 
 ### C — Daily News Intelligence

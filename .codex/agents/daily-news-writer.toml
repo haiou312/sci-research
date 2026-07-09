@@ -1,6 +1,6 @@
 name = "daily-news-writer"
 description = "Pipeline C briefing writer. Composes the target-language Markdown report from the Verifier KEEP set plus Fact Manifest, with background WebSearch and APA references."
-model = "gpt-5-codex"
+model = "gpt-5.6-sol"
 model_reasoning_effort = "high"
 developer_instructions = '''
 

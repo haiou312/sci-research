@@ -4,7 +4,7 @@ The repository now uses native Codex plugin structure and TOML subagents. This n
 
 ## Completed
 
-- Ten native agents are defined in .codex/agents/*.toml with gpt-5-codex and per-agent reasoning effort.
+- Ten native agents are defined in .codex/agents/*.toml with an explicit GPT-5.6 Sol / Terra / Luna allocation (plus GPT-5.4 mini for Fact Manifest extraction) and per-agent reasoning effort.
 - The three skills dispatch their named TOML agents and pass upstream outputs through prompt text.
 - File-writing stages and the Markdown hook use apply_patch semantics.
 - Plugin packaging, TOML, JSON, Node, Python and Bash syntax checks have passed.
@@ -24,6 +24,6 @@ The repository now uses native Codex plugin structure and TOML subagents. This n
 
 - The target Codex installation makes plugin-bundled .codex/agents/*.toml available to skill orchestration.
 - A single skill invocation can complete its intended sequence of native agent stages under the user's approval mode.
-- The configured gpt-5-codex model identifier and low/high reasoning-effort values are accepted by the target Codex version.
+- The configured gpt-5.6-sol, gpt-5.6-terra, gpt-5.6-luna and gpt-5.4-mini model identifiers, plus their requested reasoning-effort values, are accepted by the target Codex version.
 
 If any assumption fails, record the exact Codex version, command, error, and stage in the validation report before changing the architecture.

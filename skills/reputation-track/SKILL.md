@@ -73,7 +73,7 @@ Every stage runs as a **native Codex subagent** defined in `.codex/agents/<name>
 2. Pass that stage's injected parameters + the verbatim upstream output (per the handoff list below) as the spawn prompt.
 3. Wait for the subagent's result, then feed it into the next stage.
 
-Model tiering is set per-agent in the TOML (`model_reasoning_effort = high` for `reputation-resolver` / `reputation-writer`, `low` for `reputation-scanner` / `reputation-classifier`) — do NOT pass a model argument. Native Codex subagents receive their tools directly (no embed workaround).
+Model tiering is set per-agent in the TOML: Resolver = `gpt-5.6-terra / high`; Scanner = `gpt-5.6-luna / medium`; Classifier = `gpt-5.6-terra / high`; Writer = `gpt-5.6-terra / medium`. Do NOT pass a model argument. Native Codex subagents receive their tools directly (no embed workaround).
 
 The orchestrator passes data between stages via the subagent **prompt text** — not files, not environment variables. Specifically:
 

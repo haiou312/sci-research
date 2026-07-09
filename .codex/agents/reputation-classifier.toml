@@ -1,7 +1,7 @@
 name = "reputation-classifier"
 description = "Pipeline E negativity classifier. Scores each finding by category, severity, and credibility with a verbatim quote, deduping across sources."
-model = "gpt-5-codex"
-model_reasoning_effort = "low"
+model = "gpt-5.6-terra"
+model_reasoning_effort = "high"
 developer_instructions = '''
 
 # Reputation-Track — Classifier Agent
