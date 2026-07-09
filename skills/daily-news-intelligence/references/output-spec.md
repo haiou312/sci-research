@@ -186,4 +186,4 @@ Before calling `Write`, count your own output:
 
 If any check fails, regenerate. A PostToolUse hook (`scripts/hooks/daily-news-format-check.js`) enforces items 1, 2, 3, 4, 5, 6, and 7 mechanically — it will block the `Write` if any is violated.
 
-**Item 8 is not hook-enforced** — verifying "every URL traces to Verifier KEEP OR backed a body fact" requires the Verifier-KEEP set, which the hook does not have. Item 8 is enforced at agent time by Writer's self-check (`skills/daily-news-intelligence/agents/daily-news-writer.md` § Self-Check Before `Write`, item 10) and verified by Editor's Pass 2 audit (`skills/daily-news-intelligence/agents/daily-editor.md` § Pass 2 — Writer-search fact backing).
+**Item 8 is not hook-enforced** — verifying "every URL traces to Verifier KEEP OR backed a body fact" requires the Verifier-KEEP set, which the hook does not have. Item 8 is enforced at agent time by Writer's self-check (`.codex/agents/daily-news-writer.toml` § Self-Check Before `Write`, item 10) and verified by Editor's Pass 2 audit (`.codex/agents/daily-editor.toml` § Pass 2 — Writer-search fact backing).

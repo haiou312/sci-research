@@ -30,7 +30,7 @@ Silently verify all of the following. If any check fails, fix before writing —
 7. No alternative reference formats: no `来源：` blocks, no `（来源：...）` inline citations, no bullet-list URLs, no global reference section at the end.
 8. Every category either has `min_per_category` stories or carries a single italic `gap_note` line whose text comes from `references/language-spec.md` § Localisation Table.
 9. **No `**摘要**` / `**Summary**` / `**要約**` / `**分析**` / `**Analysis**` markers anywhere** — body prose follows `### title` directly. (Prohibited-marker list in `references/output-spec.md` § Markdown Syntax Contract.)
-10. Every URL in the references block traces to the Verifier KEEP set (Lead or Corroborated by) **or** to a search URL whose content supplied a body fact (per Writer's citation contract — `skills/daily-news-intelligence/agents/daily-news-writer.md` § Citation contract). Search-derived URLs that did **not** back a body fact MUST NOT appear.
+10. Every URL in the references block traces to the Verifier KEEP set (Lead or Corroborated by) **or** to a search URL whose content supplied a body fact (per Writer's citation contract — `.codex/agents/daily-news-writer.toml` § Citation contract). Search-derived URLs that did **not** back a body fact MUST NOT appear.
 
 When `lang=zh`, additionally verify that the output complies with every rule in `references/language-spec.md` § Language-Specific Rules — `lang=zh` only. That document is the single source of truth for zh-specific writing rules (quote marks, official titles, country prefixes, time anchors, terminology, foreign media naming).
 

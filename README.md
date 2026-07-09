@@ -197,7 +197,7 @@ Silent exit when `total_items_kept == 0`. Reddit and X go through the apidirect 
 **For `country = China`**: T1-wire is Universal only (no Xinhua / China News Service); T1-flagship Country-of-coverage is empty (no Caixin / People's Daily / SCMP); T3 has no Country: China rows; T4 uses an external-institution table (IMF, World Bank, WTO, OECD, BIS, IEA, US Treasury, USTR, State Dept, US Commerce/BIS, White House, EU Commission, UK Gov, METI, MOFA Japan). Chinese government domains are never queried.
 
 Detailed rules:
-- Pipeline C: [`skills/daily-news-intelligence/references/rubric.md`](./skills/daily-news-intelligence/references/rubric.md) + [`skills/daily-news-intelligence/agents/daily-news-scanner.md`](./skills/daily-news-intelligence/agents/daily-news-scanner.md) § Source Matrix
+- Pipeline C: [`skills/daily-news-intelligence/references/rubric.md`](./skills/daily-news-intelligence/references/rubric.md) + [`.codex/agents/daily-news-scanner.toml`](./.codex/agents/daily-news-scanner.toml) § Source Matrix
 - Pipeline E news tiering: [`rules/research/news-source.md`](./rules/research/news-source.md)
 
 ---
@@ -282,18 +282,18 @@ sci-research/
 
 | Goal | Edit |
 |---|---|
-| Pipeline C source matrix / date verification | `skills/daily-news-intelligence/agents/daily-news-scanner.md` + `skills/daily-news-intelligence/references/rubric.md` |
-| Pipeline C external-view China rules | `skills/daily-news-intelligence/agents/daily-news-scanner.md` § Source Matrix § T4-official + Step 2.1 |
+| Pipeline C source matrix / date verification | `.codex/agents/daily-news-scanner.toml` + `skills/daily-news-intelligence/references/rubric.md` |
+| Pipeline C external-view China rules | `.codex/agents/daily-news-scanner.toml` § Source Matrix § T4-official + Step 2.1 |
 | Pipeline C output format / Markdown contract | `skills/daily-news-intelligence/references/output-spec.md` |
 | Pipeline C language localisation / bilingual mode | `skills/daily-news-intelligence/references/language-spec.md` (§ Bilingual Mode) |
 | Pipeline C email delivery / bilingual email | `skills/daily-news-intelligence/references/email-spec.md` + `scripts/send-report-email.py` |
 | Pipeline D brand template | `skills/daily-briefing/template/briefing-template.docx` |
-| Pipeline D curator rules | `skills/daily-briefing/agents/briefing-curator.md` |
+| Pipeline D curator rules | `.codex/agents/briefing-curator.toml` |
 | Pipeline E negativity rubric | `skills/reputation-track/references/negativity-rubric.md` |
 | Pipeline E news source tiering | `rules/research/news-source.md` |
 | Pipeline E HTML email template | `skills/reputation-track/references/html-template.md` |
-| Pipeline E entity resolution | `skills/reputation-track/references/entity-resolution.md` + `skills/reputation-track/agents/reputation-resolver.md` |
-| New output language (Pipeline C) | `skills/daily-news-intelligence/agents/daily-news-writer.md` + `skills/daily-news-intelligence/references/language-spec.md` |
+| Pipeline E entity resolution | `skills/reputation-track/references/entity-resolution.md` + `.codex/agents/reputation-resolver.toml` |
+| New output language (Pipeline C) | `.codex/agents/daily-news-writer.toml` + `skills/daily-news-intelligence/references/language-spec.md` |
 | Adding hook / changing email-send guard | `scripts/hooks/email-send-guard.js` + the relevant SKILL.md email step |
 
 ---
