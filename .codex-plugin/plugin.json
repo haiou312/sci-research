@@ -1,0 +1,32 @@
+{
+  "name": "sci-research",
+  "version": "1.19.0",
+  "description": "Three independent multi-agent pipelines for daily news intelligence, multi-country branded briefings, and company reputation tracking. Codex-native port: skills orchestrate TOML subagents in .codex/agents/, with per-URL date verification, T1-T4 source grading, editorial-desk filtering, Fact Manifest discipline, and PreToolUse/PostToolUse quality hooks.",
+  "author": {
+    "name": "Peter Wang"
+  },
+  "homepage": "https://github.com/haiou312/sci-research",
+  "repository": "https://github.com/haiou312/sci-research",
+  "license": "MIT",
+  "keywords": [
+    "daily-news",
+    "news-intelligence",
+    "daily-briefing",
+    "reputation-track",
+    "adverse-media",
+    "branded-docx",
+    "references",
+    "skills",
+    "subagents"
+  ],
+  "skills": "./skills/",
+  "hooks": "./hooks/hooks.json",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Sci-Research News Intelligence",
+    "shortDescription": "Daily news intelligence, branded briefings, and reputation monitoring",
+    "longDescription": "Three independent pipelines: /daily-news-intelligence (dated single-country briefing, mono- or bilingual, T1-T4 date-verified), /daily-briefing (multi-country branded SPD Bank Word doc), and /reputation-track (company adverse-media + social monitoring, HTML email only when negative). Each skill orchestrates a chain of native TOML subagents in .codex/agents/.",
+    "developerName": "Peter Wang",
+    "category": "Productivity"
+  }
+}

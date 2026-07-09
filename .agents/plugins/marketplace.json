@@ -1,0 +1,20 @@
+{
+  "name": "sci-research-marketplace",
+  "interface": {
+    "displayName": "Sci-Research"
+  },
+  "plugins": [
+    {
+      "name": "sci-research",
+      "source": {
+        "source": "local",
+        "path": "./"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

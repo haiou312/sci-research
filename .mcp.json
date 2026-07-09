@@ -1,0 +1,9 @@
+{
+  "mcp_servers": {
+    "apidirect": {
+      "command": "TODO-verify",
+      "args": ["TODO-verify"],
+      "_note": "Pipeline E (reputation-track) uses mcp__apidirect__search_reddit and mcp__apidirect__search_twitter. Fill in your actual apidirect MCP server launch command + args here (same values you use in your Codex config.toml or Claude .mcp setup). The reputation-scanner subagent must also declare this server under [mcp_servers] in .codex/agents/reputation-scanner.toml so it can call those tools. If Pipeline E is not used, this file can be removed and the mcpServers pointer dropped from .codex-plugin/plugin.json."
+    }
+  }
+}
