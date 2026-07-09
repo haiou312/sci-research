@@ -16,7 +16,7 @@
     ],
     "PostToolUse": [
       {
-        "matcher": "Write",
+        "matcher": "apply_patch",
         "hooks": [
           {
             "type": "command",
@@ -24,18 +24,7 @@
             "timeout": 10
           }
         ],
-        "description": "Enforce Pipeline C reference format: per-story **References** with [N] numbering, block blockquote/italic/global-refs deviations"
-      },
-      {
-        "matcher": "Edit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/hooks/daily-news-format-check.js\"",
-            "timeout": 10
-          }
-        ],
-        "description": "Re-validate Pipeline C format after daily-editor Edit calls (reads file from disk since Edit doesn't pass full content)"
+        "description": "Enforce Pipeline C reference format after apply_patch edits (Codex has no separate Write/Edit tool; file is read from disk since apply_patch payload carries no full content)"
       }
     ]
   }

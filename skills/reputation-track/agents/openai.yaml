@@ -1,0 +1,4 @@
+display_name: Reputation Track
+short_description: Company reputation monitoring across News + Reddit + X; emails only when negative
+default_prompt: '--company "" --date  --lang zh'
+allow_implicit_invocation: true

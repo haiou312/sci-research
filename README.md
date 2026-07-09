@@ -1,6 +1,6 @@
 # sci-research
 
-> A Claude Code plugin with **three independent multi-agent pipelines** for daily news intelligence, branded briefings, and company reputation monitoring.
+> A **Codex plugin** (ported from Claude Code) with **three independent multi-agent pipelines** for daily news intelligence, branded briefings, and company reputation monitoring.
 
 Given a country, a company, or a date, this plugin orchestrates specialised agents to produce a polished, sourced deliverable — daily news briefing, branded Word document, or reputational risk email.
 
@@ -42,27 +42,22 @@ All three pipelines are **completely independent** — they don't share agents a
 
 ## Installation
 
-### Option 1: From GitHub Marketplace
+### Option 1: From a marketplace
 
 ```bash
-# In Claude Code, add this repo as a marketplace
-/plugin marketplace add haiou312/sci-research
-
-# Install the plugin
-/plugin install sci-research@haiou312-sci-research
+# Add this repo as a Codex plugin marketplace, then install
+codex plugin marketplace add haiou312/sci-research
+codex plugin marketplace list
 ```
 
 ### Option 2: Local Development
 
 ```bash
 git clone https://github.com/haiou312/sci-research.git
-claude --plugin-dir /path/to/sci-research
+codex plugin marketplace add ./sci-research
 ```
 
-After modifying plugin files, reload without restarting:
-```
-/reload-plugins
-```
+Subagents live in `.codex/agents/*.toml`; skills in `skills/*/SKILL.md`; the manifest in `.codex-plugin/plugin.json`. See `PORTING-NOTES.md` for the Claude→Codex migration state and the two verify-on-first-run unknowns.
 
 ### Verify Installation
 
@@ -227,7 +222,7 @@ sci-research/
 │   ├── daily-news-intelligence.md
 │   ├── daily-briefing.md
 │   └── reputation-track.md
-├── skills/                                  # 3 independent skill workflows; agents/*.md live under each skill as prompt templates (NOT registered as `sci-research:*` subagents — see CLAUDE.md § 项目定位 point 6)
+├── skills/                                  # 3 independent skill workflows; agents/*.md live under each skill as prompt templates (NOT registered as `sci-research:*` subagents — see AGENTS.md § 项目定位 point 6)
 │   ├── daily-news-intelligence/             # Pipeline C
 │   │   ├── SKILL.md
 │   │   ├── agents/
@@ -276,7 +271,7 @@ sci-research/
 ├── rules/research/
 │   └── news-source.md                       # T1-T4 news tiering (Pipeline E dependency)
 ├── .env.example                             # Gmail SMTP environment template
-├── CLAUDE.md                                # Project guidance for Claude Code
+├── AGENTS.md                                # Project guidance for Codex
 ├── README.md
 └── LICENSE
 ```
@@ -305,7 +300,7 @@ sci-research/
 
 ## Requirements
 
-- [Claude Code](https://claude.ai/code) CLI
+- [Codex](https://developers.openai.com/codex) CLI
 - Node.js ≥ 18 (for hook scripts)
 - Python 3 (for email delivery scripts + Pipeline D docx generation; only required when `--email` or Pipeline D is used)
 - `pandoc` (for Markdown → docx conversion in Pipeline C)

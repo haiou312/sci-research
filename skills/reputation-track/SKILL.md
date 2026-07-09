@@ -67,14 +67,13 @@ Self-check: the `company_display` in `out_html` must be the Resolver's `official
 
 ### Subagent Dispatch Rule (READ FIRST — applies to every stage below)
 
-Every stage spawns as the built-in **`general-purpose`** agent type with the agent body embedded as the prompt. For each stage the orchestrator MUST:
+Every stage runs as a **native Codex subagent** defined in `.codex/agents/<name>.toml`. For each stage the orchestrator MUST:
 
-1. `Read` `${CLAUDE_PLUGIN_ROOT}/skills/reputation-track/agents/<name>.md`.
-2. Strip the YAML frontmatter; use the **body** as the subagent's instruction prompt.
-3. Append that stage's injected parameters + verbatim upstream data (per the handoff list below).
-4. Spawn with `subagent_type: general-purpose` and an **explicit `model` argument** — `general-purpose` ignores frontmatter `model:`, so pass it yourself: **`opus`** for `reputation-resolver` / `reputation-writer`, **`sonnet`** for `reputation-scanner` (×3) / `reputation-classifier`.
+1. Spawn the stage's named subagent (`reputation-resolver`, `reputation-scanner`, `reputation-classifier`, `reputation-writer`) — its `developer_instructions`, `model`, and `model_reasoning_effort` come from `.codex/agents/<name>.toml`.
+2. Pass that stage's injected parameters + the verbatim upstream output (per the handoff list below) as the spawn prompt.
+3. Wait for the subagent's result, then feed it into the next stage.
 
-Rationale (why we embed bodies rather than register `sci-research:*` subagents — anthropics/claude-code#21318 history): see `CLAUDE.md` § 项目定位 point 6.
+Model tiering is set per-agent in the TOML (`model_reasoning_effort = high` for `reputation-resolver` / `reputation-writer`, `low` for `reputation-scanner` ×3 / `reputation-classifier`) — do NOT pass a model argument. Native Codex subagents receive their tools directly (no embed workaround).
 
 The orchestrator passes data between stages via the subagent **prompt text** — not files, not environment variables. Specifically:
 
@@ -91,13 +90,13 @@ The orchestrator passes data between stages via the subagent **prompt text** —
    mkdir -p "$OUT_DIR"
    ```
 
-2. **Resolve entity.** Spawn per § Subagent Dispatch Rule (`general-purpose` + embed `skills/reputation-track/agents/reputation-resolver.md` body, model `opus`) with `--company` verbatim. Capture the Resolver Output Schema. Update `company_display = official_name` and recompute `out_html` with the canonical name.
+2. **Resolve entity.** Spawn per § Subagent Dispatch Rule (the `reputation-resolver` subagent (`.codex/agents/reputation-resolver.toml`)) with `--company` verbatim. Capture the Resolver Output Schema. Update `company_display = official_name` and recompute `out_html` with the canonical name.
    - If `resolution_confidence=low`, halt with: `Company resolution ambiguous: {resolution_notes}. Please clarify or pass the formal name / ticker explicitly.`
 
-3. **Scan sources in parallel.** Launch three Scanner instances in a **single orchestrator message** (three tool calls in parallel). Each is spawned per § Subagent Dispatch Rule (`general-purpose` + embed `skills/reputation-track/agents/reputation-scanner.md` body, model `sonnet`). Pass each instance its `source` (one of `news`, `reddit`, `x`) plus the Resolver output, `date`, `date_en`.
+3. **Scan sources in parallel.** Launch three Scanner instances in a **single orchestrator message** (three tool calls in parallel). Each is spawned per § Subagent Dispatch Rule (the `reputation-scanner` subagent (`.codex/agents/reputation-scanner.toml`)). Pass each instance its `source` (one of `news`, `reddit`, `x`) plus the Resolver output, `date`, `date_en`.
    - Respect `--sources` if the user narrowed the set (e.g. only `news,reddit`).
 
-4. **Classify.** Spawn per § Subagent Dispatch Rule (`general-purpose` + embed `skills/reputation-track/agents/reputation-classifier.md` body, model `sonnet`) with all three Scanner Outputs verbatim + `severity_min` + Resolver's `executives`. Capture the Classifier Output Schema.
+4. **Classify.** Spawn per § Subagent Dispatch Rule (the `reputation-classifier` subagent (`.codex/agents/reputation-classifier.toml`)) with all three Scanner Outputs verbatim + `severity_min` + Resolver's `executives`. Capture the Classifier Output Schema.
 
 5. **Branch on findings.**
    - If `total_items_kept == 0`:
@@ -105,7 +104,7 @@ The orchestrator passes data between stages via the subagent **prompt text** —
      - Exit 0. Do NOT write `out_html`. Do NOT call the email script.
    - Else: proceed to Step 6.
 
-6. **Compose HTML.** Spawn per § Subagent Dispatch Rule (`general-purpose` + embed `skills/reputation-track/agents/reputation-writer.md` body, model `opus`) with Classifier `kept_items` + `company_display`, `date_display`, `lang`, `sources`, `out_html`. Writer calls `Write` on `out_html`.
+6. **Compose HTML.** Spawn per § Subagent Dispatch Rule (the `reputation-writer` subagent (`.codex/agents/reputation-writer.toml`)) with Classifier `kept_items` + `company_display`, `date_display`, `lang`, `sources`, `out_html`. Writer calls `Write` on `out_html`.
 
 7. **Verify HTML integrity** (orchestrator). Read the first 200 chars of `out_html`; confirm it starts with `<!DOCTYPE html>` and contains `{company_display}` in the header area. If malformed, re-invoke the Writer once, then halt with an error rather than sending a broken email.
 
@@ -136,10 +135,10 @@ The orchestrator passes data between stages via the subagent **prompt text** —
 
 | Stage | Dispatch (see § Subagent Dispatch Rule) | Required References |
 |---|---|---|
-| Resolver | `general-purpose` + embed `skills/reputation-track/agents/reputation-resolver.md` body, model `opus` | `references/entity-resolution.md`, `references/schemas.md` |
-| Scanner (×3 parallel) | `general-purpose` + embed `skills/reputation-track/agents/reputation-scanner.md` body, model `sonnet` | `references/source-matrix.md`, `references/schemas.md`, `rules/research/news-source.md` |
-| Classifier | `general-purpose` + embed `skills/reputation-track/agents/reputation-classifier.md` body, model `sonnet` | `references/negativity-rubric.md`, `references/schemas.md` |
-| Writer | `general-purpose` + embed `skills/reputation-track/agents/reputation-writer.md` body, model `opus` | `references/html-template.md`, `references/schemas.md` |
+| Resolver | the `reputation-resolver` subagent (`.codex/agents/reputation-resolver.toml`) | `references/entity-resolution.md`, `references/schemas.md` |
+| Scanner (×3 parallel) | the `reputation-scanner` subagent (`.codex/agents/reputation-scanner.toml`) | `references/source-matrix.md`, `references/schemas.md`, `rules/research/news-source.md` |
+| Classifier | the `reputation-classifier` subagent (`.codex/agents/reputation-classifier.toml`) | `references/negativity-rubric.md`, `references/schemas.md` |
+| Writer | the `reputation-writer` subagent (`.codex/agents/reputation-writer.toml`) | `references/html-template.md`, `references/schemas.md` |
 | Email (Step 8) | — (Bash + `scripts/send-report-email.py`) | `references/email-spec.md` |
 
 ## References

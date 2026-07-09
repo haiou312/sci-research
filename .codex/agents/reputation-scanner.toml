@@ -78,3 +78,10 @@ Emit the Scanner Output Schema from `references/schemas.md` for the specified so
 - If the source returns zero after exhausting query templates, emit `raw_candidates: []` with `coverage_notes` explaining why (e.g. "X: 0 Google-indexed posts for the target date; likely under-indexed").
 
 '''
+
+# Pipeline E: this subagent calls mcp__apidirect__search_reddit / search_twitter.
+# Declare the apidirect MCP server so the subagent can reach those tools.
+# VERIFY the exact per-agent mcp_servers TOML syntax + fill the real command/args.
+[mcp_servers.apidirect]
+command = "TODO-verify"
+args = ["TODO-verify"]

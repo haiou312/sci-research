@@ -72,7 +72,7 @@ Derived fields:
    ```bash
    MD_FILES=$(find "$DATE_DIR" -maxdepth 1 -name "*.md" -type f | sort)
    ```
-   Launch a `briefing-curator` Agent (opus, subagent_type: `general-purpose`, model: `opus`) with this prompt:
+   Spawn the `briefing-curator` subagent (`.codex/agents/briefing-curator.toml`; model + reasoning effort come from the TOML) with this prompt:
 
    ```
    Read all Markdown files listed below and produce a unified briefing.

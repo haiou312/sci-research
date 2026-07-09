@@ -1,0 +1,4 @@
+display_name: Daily News Intelligence
+short_description: Dated single-country daily news briefing (mono- or bilingual)
+default_prompt: '--country "" --date  --lang zh'
+allow_implicit_invocation: true

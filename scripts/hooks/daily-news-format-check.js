@@ -363,8 +363,23 @@ function main() {
   process.stdin.on("end", () => {
     try {
       const data = JSON.parse(input);
-      const filePath = data?.tool_input?.file_path || "";
-      let content = data?.tool_input?.content || "";
+      // Codex apply_patch payloads vary in shape vs Claude's tool_input.file_path.
+      // Probe the likely field names defensively so the check fires on both runtimes.
+      const ti = data?.tool_input || {};
+      const filePath =
+        ti.file_path ||
+        ti.path ||
+        ti.filename ||
+        ti.file ||
+        (Array.isArray(ti.changes) &&
+          ti.changes[0] &&
+          (ti.changes[0].path || ti.changes[0].file_path)) ||
+        data?.tool_response?.file_path ||
+        data?.file_path ||
+        "";
+      // Codex apply_patch carries no full content — the disk-read below is the
+      // primary path (content stays "" here and is populated from disk).
+      let content = ti.content || "";
 
       if (!filePath) {
         process.exit(0);

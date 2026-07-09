@@ -25,7 +25,7 @@ Example: `新闻简报 — 2026年4月16日`
 ```
 你好，
 
-附件是今日新闻简报，由 Claude Code sci-research 插件自动生成。
+附件是今日新闻简报，由 sci-research 插件自动生成。
 
 · 日期: {date}
 · 新闻条数: {story_count} 条
