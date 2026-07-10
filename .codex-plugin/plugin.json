@@ -1,6 +1,6 @@
 {
   "name": "sci-research",
-  "version": "1.20.1+codex.20260710105610",
+  "version": "1.20.1+codex.20260710113229",
   "description": "Three independent multi-agent pipelines for daily news intelligence, multi-country branded briefings, and company reputation tracking. Codex-native port: skills orchestrate TOML subagents in .codex/agents/, with per-URL date verification, T1-T4 source grading, editorial-desk filtering, Fact Manifest discipline, and PreToolUse/PostToolUse quality hooks.",
   "author": {
     "name": "Peter Wang"
