@@ -9,7 +9,7 @@ Only when **both** conditions hold:
 1. `--email` is non-empty
 2. Classifier's `total_items_kept > 0` (at least one negative finding above `--severity-min`)
 
-If `total_items_kept == 0` (clean scan) → silent exit. The orchestrator prints a terminal message and returns 0. No email is sent.
+If `total_items_kept == 0` (clean scan) → exit 0 with no terminal output. No email is sent and no HTML is written.
 
 ## Environment Variables
 
@@ -35,7 +35,7 @@ Default (override via `--email-subject`):
 ## Invocation
 
 ```bash
-python3 "${CLAUDE_PLUGIN_ROOT}/scripts/send-report-email.py" \
+python3 "$PLUGIN_ROOT/scripts/send-report-email.py" \
   --to "$email" \
   --subject "$subject" \
   --body-html-file "$out_html" \

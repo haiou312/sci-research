@@ -272,7 +272,7 @@ else
   ATTACH_ARGS=()
 fi
 
-python3 "${CLAUDE_PLUGIN_ROOT}/scripts/send-report-email.py" \
+python3 "$PLUGIN_ROOT/scripts/send-report-email.py" \
   --to "$email" \
   --subject "$email_subject" \
   --body-file "$BODY_FILE" \
@@ -310,7 +310,7 @@ else
   ATTACH_ARGS=()
 fi
 
-python3 "${CLAUDE_PLUGIN_ROOT}/scripts/send-report-email.py" \
+python3 "$PLUGIN_ROOT/scripts/send-report-email.py" \
   --to "$email" \
   --subject "$email_subject" \
   --body-file "$BODY_FILE" \

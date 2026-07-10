@@ -18,7 +18,7 @@
  *     (1.9.x+ structure: body prose follows `### title` directly; no
  *     summary/analysis markers anywhere)
  *
- * Trigger: PostToolUse:apply_patch when the file path is under daily-news/
+ * Trigger: Codex PostToolUse:apply_patch when the file path is under daily-news/
  *          (or the legacy daily-news-reports/ path)
  *          OR when the content's H1 matches the daily-news H1 pattern
  *          (covers all three supported languages: zh / en / ja).
@@ -410,12 +410,6 @@ function main() {
 
       const violations = validate(filePath, content);
       if (violations.length === 0) {
-        process.stdout.write(
-          JSON.stringify({
-            result: "pass",
-            message: `✅ daily-news format check passed: ${filePath}`,
-          })
-        );
         process.exit(0);
       }
 
@@ -427,15 +421,18 @@ function main() {
         ``,
         `Fix the output and apply the patch again. This hook blocks malformed reports from being emailed.`,
       ].join("\n");
+      process.stderr.write(`${message}\n`);
       process.stdout.write(
-        JSON.stringify({ result: "block", message })
+        JSON.stringify({
+          continue: false,
+          decision: "block",
+          reason: message,
+          hookSpecificOutput: { hookEventName: "PostToolUse" },
+        })
       );
       process.exit(2);
     } catch (e) {
       // don't block on parse/logic errors — the hook must never become a footgun
-      process.stdout.write(
-        JSON.stringify({ result: "pass", message: `daily-news-format-check internal error: ${e.message}` })
-      );
       process.exit(0);
     }
   });

@@ -68,6 +68,17 @@ Derived fields (`date_en`, `date_display`, `country_display`, `out_md`, `out_doc
 
 Email delivery reads Gmail SMTP credentials from environment variables (`GOOGLE_EMAIL_USERNAME`, `GOOGLE_EMAIL_APP_PASSWORD`, `GOOGLE_EMAIL_FROM_NAME`, `GOOGLE_EMAIL_HOST`, `GOOGLE_EMAIL_PORT`, `GOOGLE_EMAIL_START_TLS`). See `.env.example` at the repo root and `references/email-spec.md` for the full spec.
 
+## Runtime Paths
+
+Before running the workflow, set `SKILL_DIR` to the absolute directory containing this `SKILL.md`, then derive the plugin root once:
+
+```bash
+SKILL_DIR=<absolute path to skills/daily-news-intelligence>
+PLUGIN_ROOT="$(cd "$SKILL_DIR/../.." && pwd)"
+```
+
+Use these absolute paths for every bundled script. Do not rely on the current working directory or on Claude-specific environment variables.
+
 ## Data Handoff Between Stages
 
 ### Subagent Dispatch Rule (READ FIRST — applies to every stage below)
@@ -222,7 +233,7 @@ The Scanner gathers 20-30 candidate URLs across all categories. If the Scanner B
     ```bash
     # Append --attach and its paths only when the attachment list is non-empty.
     # For email_attach=none, send the body-only email without --attach.
-    python3 "${CLAUDE_PLUGIN_ROOT}/scripts/send-report-email.py" \
+    python3 "$PLUGIN_ROOT/scripts/send-report-email.py" \
       --to "{email}" \
       --subject "{email_subject}" \
       --body-file "{tmp_body_file}" \

@@ -31,10 +31,37 @@ Derived fields:
 - `date_dir` — `{source_dir}/{date}/`
 - `out_docx` — `{out_dir}/{date} 简报.docx`
 
+## Runtime Paths
+
+Before running the workflow, set `SKILL_DIR` to the absolute directory containing this `SKILL.md`, then derive the plugin root once:
+
+```bash
+SKILL_DIR=<absolute path to skills/daily-briefing>
+PLUGIN_ROOT="$(cd "$SKILL_DIR/../.." && pwd)"
+```
+
+Use these absolute paths for every bundled script. Do not rely on the current working directory.
+
 ## Workflow
 
-1. **Validate params.** Default `date` to today (`date +%Y-%m-%d`). Parse `countries` into a comma-separated list. Expand `~` and substitute `{date}` in `source_dir` / `out_dir`. Create `OUT_DIR`. If `publish=true`, require a non-empty `publish_repo` and expand `~` in it to `PUBLISH_REPO`. Compute derived fields:
+1. **Validate params and bundled resources.** Default `date` to today (`date +%Y-%m-%d`). Parse `countries` into a comma-separated list. Confirm that `SKILL_DIR` is the absolute directory containing this `SKILL.md`, derive every bundled-resource path once, then expand `~` and substitute `{date}` in `source_dir` / `out_dir`. Create `OUT_DIR`. If `publish=true`, require a non-empty `publish_repo` and expand `~` in it to `PUBLISH_REPO`. Compute derived fields:
    ```bash
+   if [[ -z "${SKILL_DIR:-}" || ! -f "$SKILL_DIR/SKILL.md" ]]; then
+     echo "ERROR: SKILL_DIR must be the absolute skills/daily-briefing directory." >&2
+     exit 2
+   fi
+   PLUGIN_ROOT="$(cd "$SKILL_DIR/../.." && pwd)"
+   GENERATOR="$SKILL_DIR/scripts/generate-branded-docx.py"
+   TEMPLATE="$SKILL_DIR/template/briefing-template.docx"
+   EMAIL_SENDER="$SKILL_DIR/scripts/send-briefing-email.py"
+   PUBLISH_SCRIPT="$PLUGIN_ROOT/scripts/publish-reports.sh"
+   for REQUIRED_PATH in "$GENERATOR" "$TEMPLATE" "$EMAIL_SENDER" "$PUBLISH_SCRIPT" "$PLUGIN_ROOT/.codex-plugin/plugin.json"; do
+     if [[ ! -f "$REQUIRED_PATH" ]]; then
+       echo "ERROR: installed sci-research bundle is incomplete: $REQUIRED_PATH" >&2
+       exit 2
+     fi
+   done
+
    SOURCE_DIR="${source_dir/#\~/$HOME}"
    OUT_DIR="${out_dir/#\~/$HOME}"
    OUT_DIR="${OUT_DIR//\{date\}/$DATE}"
@@ -67,7 +94,7 @@ Derived fields:
 
 4. **Send "no report" notification** (fallback path). If `email` is set, send a notification email per `references/email-spec.md` § Body Template (no report available):
    ```bash
-   python3 "${SKILL_DIR}/scripts/send-briefing-email.py" \
+   python3 "$EMAIL_SENDER" \
      --to "$EMAIL" \
      --subject "⚠️ 新闻简报未生成 — $DATE_DISPLAY" \
      --body "今日（$DATE）的每日新闻源文件未找到..." \
@@ -79,7 +106,7 @@ Derived fields:
    ```bash
    python3 -c "import docx"
    ```
-   If that command fails, stop before curation and report: `Pipeline D requires python-docx. Install it once outside the pipeline with: python3 -m pip install --user -r <plugin-root>/requirements.txt`. The generator prints the exact installed-plugin path in the same error message. Do not invoke `pip` or `pip3 install` from the pipeline.
+   If that command fails, stop before curation and report: `Pipeline D requires python-docx. Install or update it once outside the pipeline with: python3 -m pip install --user --upgrade -r $PLUGIN_ROOT/requirements.txt`. The generator prints the exact installed-plugin path in the same error message. Do not invoke `pip` or `pip3 install` from the pipeline.
 
 6. **Curate and rewrite stories.** First, list the source files for the agent:
    ```bash
@@ -129,8 +156,8 @@ Derived fields:
    ```bash
    CURATOR_FILE="/tmp/briefing-curator-output.txt"
    
-   python3 "${SKILL_DIR}/scripts/generate-branded-docx.py" \
-     --template "${SKILL_DIR}/template/briefing-template.docx" \
+   python3 "$GENERATOR" \
+     --template "$TEMPLATE" \
      --input "$CURATOR_FILE" \
      --output "$OUT_DOCX"
    
@@ -151,7 +178,7 @@ Derived fields:
    BODY_FILE=$(mktemp /tmp/briefing-body.XXXXXX.txt)
    # (write body to $BODY_FILE)
    
-   python3 "${SKILL_DIR}/scripts/send-briefing-email.py" \
+   python3 "$EMAIL_SENDER" \
      --to "$EMAIL" \
      --subject "$EMAIL_SUBJECT" \
      --body-file "$BODY_FILE" \
@@ -173,7 +200,7 @@ Derived fields:
 
 10. **Publish to GitHub Pages (explicit opt-in).** Skip this step unless `publish=true`. When enabled, `publish_repo` must resolve to an existing Git repository. The sanctioned script copies `OUT_DIR` into `PUBLISH_REPO/<date>/`, then stages, commits, and pushes:
     ```bash
-    REPORTS_REPO="$PUBLISH_REPO" bash "${PLUGIN_ROOT}/scripts/publish-reports.sh" \
+    REPORTS_REPO="$PUBLISH_REPO" bash "$PUBLISH_SCRIPT" \
       --source-dir "$OUT_DIR"
     ```
     Publish failures must be reported but never delete or invalidate the local docx.

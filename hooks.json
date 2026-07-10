@@ -1,0 +1,28 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ./scripts/hooks/email-send-guard.js"
+          }
+        ],
+        "description": "Block inline SMTP and require the sanctioned report-email scripts"
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "apply_patch",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ./scripts/hooks/daily-news-format-check.js"
+          }
+        ],
+        "description": "Validate Pipeline C Markdown after apply_patch"
+      }
+    ]
+  }
+}

@@ -3,8 +3,8 @@
 /**
  * Email Send Guard Hook
  *
- * PreToolUse:Bash matcher. Blocks inline SMTP / email-library implementations
- * invoked via Bash before they can send a message. Forces the orchestrator to
+ * Codex PreToolUse:Bash matcher. Blocks inline SMTP / email-library
+ * implementations invoked via Bash before they can send a message. Forces the orchestrator to
  * use the sanctioned scripts so the dual-filename Content-Disposition encoding
  * in `scripts/send-report-email.py` (and the briefing twin) is always applied.
  *
@@ -39,7 +39,8 @@ function main() {
   process.stdin.on("end", () => {
     try {
       const data = JSON.parse(input);
-      const cmd = data?.tool_input?.command || "";
+      const ti = data?.tool_input || {};
+      const cmd = ti.command || ti.cmd || "";
       if (!cmd) {
         process.exit(0);
       }
@@ -86,12 +87,12 @@ function main() {
             "Use the sanctioned scripts instead:",
             "",
             "  Pipeline C (/daily-news-intelligence) and E (/reputation-track):",
-            '    python3 "${CLAUDE_PLUGIN_ROOT}/scripts/send-report-email.py" \\',
+            '    python3 "$PLUGIN_ROOT/scripts/send-report-email.py" \\',
             '      --to "..." --subject "..." --body-file "..." \\',
             '      --attach "..." "..."    # or --body-html-file for Pipeline E',
             "",
             "  Pipeline D (/daily-briefing):",
-            '    python3 "${CLAUDE_PLUGIN_ROOT}/skills/daily-briefing/scripts/send-briefing-email.py" \\',
+            '    python3 "$SKILL_DIR/scripts/send-briefing-email.py" \\',
             '      --to "..." --subject "..." --body-file "..." --attach "..."',
             "",
             "These scripts handle env-var credentials, body encoding, " +
@@ -100,8 +101,14 @@ function main() {
             "",
             `Rejected command (truncated): ${preview}`,
           ].join("\n");
+          process.stderr.write(`${message}\n`);
           process.stdout.write(
-            JSON.stringify({ result: "block", message })
+            JSON.stringify({
+              continue: false,
+              decision: "block",
+              reason: message,
+              hookSpecificOutput: { hookEventName: "PreToolUse" },
+            })
           );
           process.exit(2);
         }

@@ -50,7 +50,7 @@
 流程：Pipeline C Markdown → briefing-curator → generate-branded-docx.py → 可选邮件。
 
 - 仅读取 Pipeline C 的 Markdown，不进行网页搜索。
-- 使用 requirements.txt 中固定的 python-docx 依赖。运行前只预检；缺少依赖时停止并给出安装命令，绝不在流水线内运行 pip install。
+- 使用 requirements.txt 中声明的最新版 python-docx 依赖。运行前只预检；缺少依赖时停止并给出安装命令，绝不在流水线内运行 pip install。
 - D 的 source_dir 与 out_dir 分离，避免将品牌 docx 写回 C 的输入目录。
 
 ### E — Reputation Track
@@ -80,7 +80,7 @@
 - 所有邮件一律通过受控脚本：C/E 使用 scripts/send-report-email.py，D 使用 skills/daily-briefing/scripts/send-briefing-email.py。
 - 不要内嵌 smtplib、sendmail 或 mail -s。email-send-guard hook 会阻断这类调用。
 - 真实邮件必须由用户明确请求；验证使用 --email-dry-run。
-- 安装 D 依赖：python3 -m pip install --user -r requirements.txt。不要自动修改用户 Python 环境。
+- 安装或更新 D 依赖：python3 -m pip install --user --upgrade -r requirements.txt。不要自动修改用户 Python 环境。
 
 ## 质量钩子
 

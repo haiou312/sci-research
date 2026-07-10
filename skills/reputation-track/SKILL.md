@@ -16,7 +16,7 @@ Scans News + Reddit + X for adverse content about a single company and its top e
 3. IF resolution_confidence=low → STOP with clarification message
 4. Launch one Scanner agent per requested source IN PARALLEL → capture Scanner outputs
 5. Launch Classifier agent (all requested-source outputs in prompt) → capture Classifier Output Schema
-6. IF total_items_kept == 0 → print "Clean scan" and EXIT 0 (no email, no HTML file)
+6. IF total_items_kept == 0 → EXIT 0 silently (no email, no HTML file)
 7. Launch Writer agent (Classifier kept_items + params) → Writer creates or overwrites out_html with one `apply_patch` operation
 8. IF --email → invoke send-report-email.py with --body-html-file
 9. Print summary (items kept, severity breakdown, email status)
@@ -24,7 +24,7 @@ Scans News + Reddit + X for adverse content about a single company and its top e
 
 ## Operating Principle
 
-- **Silent when clean.** No email on a clean scan. Log line only. Prevents recipient fatigue.
+- **Silent when clean.** A clean scan emits no terminal output, writes no HTML, and sends no email. Do not relay upstream agent output or print a summary.
 - **Verbatim or drop.** Every surfaced item is backed by a verbatim quote from the source URL. No paraphrase, no synthesis.
 - **Noise protection over recall.** Low-credibility claims without corroboration are dropped, not downgraded. Missing a marginal signal is preferable to crying wolf.
 - **Honest coverage disclosure.** The HTML footer states which platforms were scanned and which (Facebook, Threads) were excluded.
@@ -46,6 +46,17 @@ Scans News + Reddit + X for adverse content about a single company and its top e
 
 Email delivery reads Gmail SMTP credentials from the same environment variables as Pipelines C and D (`GOOGLE_EMAIL_USERNAME`, `GOOGLE_EMAIL_APP_PASSWORD`, etc.). See `.env.example` at the repo root and `references/email-spec.md`.
 
+## Runtime Paths
+
+Before running the workflow, set `SKILL_DIR` to the absolute directory containing this `SKILL.md`, then derive the plugin root once:
+
+```bash
+SKILL_DIR=<absolute path to skills/reputation-track>
+PLUGIN_ROOT="$(cd "$SKILL_DIR/../.." && pwd)"
+```
+
+Use these absolute paths for every bundled script. Do not rely on the current working directory or on Claude-specific environment variables.
+
 ## Derived Fields (computed in Step 1)
 
 - `date_display` — date in `lang`, e.g. `2026年4月21日` for zh, `April 21, 2026` for en
@@ -55,13 +66,13 @@ Email delivery reads Gmail SMTP credentials from the same environment variables 
   - Example: `Apple Inc.` → `apple-inc-reputation-2026-04-21.html`
   - Example: `腾讯控股` → `腾讯控股-reputation-2026-04-21.html`
 
-**Required derivation print** (same pattern as Pipeline C Step 1 to prevent silent slug mistakes):
+**Deferred derivation print** (same pattern as Pipeline C Step 1 to prevent silent slug mistakes):
 
 ```
 DERIVED: company_display=<value>  date_display=<value>  out_html=<absolute path>  sources=<comma list>  severity_min=<level>
 ```
 
-Self-check: the `company_display` in `out_html` must be the Resolver's `official_name` (or its safe_slug form), **never** the raw `--company` input if that input was a ticker. If `lang=zh` and `company_display` is ASCII-only for a Chinese-listed company, regenerate.
+Do not emit this line before Step 5. If `total_items_kept == 0`, exit silently without printing it. Self-check: the `company_display` in `out_html` must be the Resolver's `official_name` (or its safe_slug form), **never** the raw `--company` input if that input was a ticker. If `lang=zh` and `company_display` is ASCII-only for a Chinese-listed company, regenerate.
 
 ## Data Handoff Between Stages
 
@@ -99,9 +110,8 @@ The orchestrator passes data between stages via the subagent **prompt text** —
 
 5. **Branch on findings.**
    - If `total_items_kept == 0`:
-     - Print: `Clean scan: {company_display} / {date} — no negative findings at or above severity:{severity_min}. Sources scanned: {sources}.`
-     - Exit 0. Do NOT write `out_html`. Do NOT call the email script.
-   - Else: proceed to Step 6.
+     - Exit 0 with **no terminal output**. Do NOT relay upstream output, write `out_html`, or call the email script.
+   - Else: emit the deferred `DERIVED` line above, then proceed to Step 6.
 
 6. **Compose HTML.** Spawn per § Subagent Dispatch Rule (the `reputation-writer` subagent (`.codex/agents/reputation-writer.toml`)) with Classifier `kept_items` + `company_display`, `date_display`, `lang`, `sources`, `out_html`. Writer uses one `apply_patch` operation to create or overwrite `out_html`.
 
@@ -109,7 +119,7 @@ The orchestrator passes data between stages via the subagent **prompt text** —
 
 8. **Send email** (only if `email` is non-empty). Compose subject per `references/email-spec.md`:
    ```bash
-   python3 "${CLAUDE_PLUGIN_ROOT}/scripts/send-report-email.py" \
+   python3 "$PLUGIN_ROOT/scripts/send-report-email.py" \
      --to "$email" \
      --subject "$subject" \
      --body-html-file "$out_html" \

@@ -281,7 +281,7 @@ sci-research/
 │           ├── html-template.md
 │           ├── email-spec.md
 │           └── schemas.md
-├── hooks/hooks.json                         # Hook config (PreToolUse Bash + PostToolUse apply_patch)
+├── hooks.json                               # Codex hook config (PreToolUse Bash + PostToolUse apply_patch)
 ├── scripts/
 │   ├── hooks/                               # Hook implementations (Node.js)
 │   │   ├── daily-news-format-check.js
@@ -291,7 +291,7 @@ sci-research/
 ├── rules/research/
 │   └── news-source.md                       # T1-T4 news tiering (Pipeline E dependency)
 ├── .env.example                             # Gmail SMTP environment template
-├── requirements.txt                         # Pinned Pipeline D dependency
+├── requirements.txt                         # Pipeline D dependency (latest at install time)
 ├── AGENTS.md                                # Project guidance for Codex
 ├── PORTING-NOTES.md                         # Runtime-validation status and open checks
 ├── README.md
@@ -325,7 +325,7 @@ sci-research/
 - [Codex](https://developers.openai.com/codex) CLI
 - Node.js ≥ 18 (for hook scripts)
 - Python 3 (for email delivery scripts + Pipeline D docx generation; only required when `--email` or Pipeline D is used)
-- Pipeline D dependency (install once from the plugin root): `python3 -m pip install --user -r requirements.txt`
+- Pipeline D dependency (install or update from the plugin root): `python3 -m pip install --user --upgrade -r requirements.txt`
 - `pandoc` (for Markdown → docx conversion in Pipeline C)
 - Internet access (for WebSearch `search` / `open_page`)
 - Gmail SMTP credentials (only when `--email` is used; see `.env.example`)
