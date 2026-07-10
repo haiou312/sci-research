@@ -62,7 +62,7 @@
 - --sources 是 news,reddit,x 的非空子集；仅启动被请求的 Scanner。
 - total_items_kept == 0 时静默退出，不写 HTML、不发邮件。
 
-## 默认目录与发布
+## 默认目录
 
 | 用途 | 默认路径 |
 |---|---|
@@ -72,8 +72,6 @@
 | E 声誉报告 | ~/.sci-research/reports/reputation/{date}/ |
 
 - 输出目录可被相应的 --out-dir 或 --source-dir 覆盖。
-- GitHub Pages 发布默认关闭。只有显式传入 --publish --publish-repo <git-path> 时，C 或 D 才调用 scripts/publish-reports.sh。
-- 发布脚本要求 REPORTS_REPO 与一个以 ISO 日期命名的 --source-dir；只暂存该日期目录。测试中不得执行真实发布。
 
 ## 邮件、依赖与安全
 
@@ -107,7 +105,7 @@
 ## 验证顺序
 
 1. 静态检查：TOML、JSON、Python、Node、Bash 语法与 git diff --check。
-2. C 最小首跑：无邮件、无发布，确认原生 agent 发现与串联、apply_patch、hook 和 pandoc 输出。
+2. C 最小首跑：无邮件，确认原生 agent 发现与串联、apply_patch、hook 和 pandoc 输出。
 3. D 验证：先安装 requirements.txt，使用 C 产出的样例 Markdown，邮件只做 dry-run。
 4. E 验证：测试 News、Reddit、X 的 WebSearch `search` / `open_page` 路径、干净结果静默退出与邮件 dry-run。
 

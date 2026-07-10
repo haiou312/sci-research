@@ -87,8 +87,7 @@ See `.env.example` for the required variables.
 /daily-news-intelligence --country "<name>" [--date YYYY-MM-DD] \
   [--lang zh|en|ja|zh+en|en+zh|zh+ja|ja+zh|en+ja|ja+en] \
   [--out-dir <path>] [--min-per-category <N>] \
-  [--email <a@x.com,b@y.com>] [--email-attach both|docx|md|none] [--email-dry-run] \
-  [--publish --publish-repo <git-path>]
+  [--email <a@x.com,b@y.com>] [--email-attach both|docx|md|none] [--email-dry-run]
 ```
 
 ```bash
@@ -112,7 +111,7 @@ See `.env.example` for the required variables.
 ```
 /daily-briefing [--date YYYY-MM-DD] [--countries "中国,英国,美国,欧洲,日本,韩国"] [--total 14] \
   [--source-dir <path>] [--out-dir <path>] [--email <a@x.com>] [--email-subject <text>] \
-  [--email-dry-run] [--no-wait] [--publish --publish-repo <git-path>]
+  [--email-dry-run] [--no-wait]
 ```
 
 Reads existing Pipeline C reports from a directory, curates the most impactful 13-15 stories across countries, and emits a branded Word document via the SPD Bank template.
@@ -125,8 +124,6 @@ By default, local output is independent of the plugin install location and any G
 | D source reports | `~/.sci-research/reports/daily-news/{date}/` |
 | D branded briefing | `~/.sci-research/reports/daily-briefings/{date}/` |
 | E reputation report | `~/.sci-research/reports/reputation/{date}/` |
-
-Publishing is opt-in. Pass both `--publish` and `--publish-repo /absolute/path/to/reports-repo`; the plugin copies the requested date directory into that Git repository before it commits and pushes.
 
 ```bash
 # Today's multi-country briefing with default countries and 14 stories
@@ -161,7 +158,7 @@ Resolves the company + executives, scans News + Reddit + X for adverse content, 
 ### Pipeline C — `/daily-news-intelligence`
 
 ```
-daily-news-scanner → news-verifier → daily-fact-extractor → daily-news-writer → daily-editor → pandoc → email (optional) → publish (optional)
+daily-news-scanner → news-verifier → daily-fact-extractor → daily-news-writer → daily-editor → pandoc → email (optional)
    (Luna / medium)      (Terra / high)  (5.4 mini / medium)    (Sol / high, ×langs) (Sol / high, ×langs)
 
 Bilingual mode (--lang zh+en …): Scanner/Verifier/Fact-Extractor run ONCE; Writer ×langs in parallel → Editor ×langs in parallel → pandoc ×langs
@@ -286,7 +283,6 @@ sci-research/
 │   ├── hooks/                               # Hook implementations (Node.js)
 │   │   ├── daily-news-format-check.js
 │   │   └── email-send-guard.js
-│   ├── publish-reports.sh                   # Explicit GitHub Pages publish helper (C/D)
 │   └── send-report-email.py                 # Gmail SMTP (Pipelines C / E)
 ├── rules/research/
 │   └── news-source.md                       # T1-T4 news tiering (Pipeline E dependency)

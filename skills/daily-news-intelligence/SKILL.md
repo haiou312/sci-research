@@ -61,8 +61,6 @@ Hard rules:
 | `email_body` | No | auto | Plain-text email body. Default template in `references/email-spec.md` filled with Verifier coverage counts. |
 | `email_attach` | No | `both` | Attachment selection: `both` (md + docx), `docx`, `md`, or `none`. |
 | `email_dry_run` | No | `false` | When `true`, Step 10 prints a preview and exits without connecting to SMTP. |
-| `publish` | No | `false` | When `true`, copy this date's output into `publish_repo` and commit/push it through the sanctioned publish script. |
-| `publish_repo` | Conditional | — | Absolute path or `~`-based path to the target Git repository. Required when `publish=true`. |
 
 Derived fields (`date_en`, `date_display`, `country_display`, `out_md`, `out_docx`) are computed per `lang` — see `references/language-spec.md`. **Bilingual mode (1.18.0+)** computes one set per token in `langs = lang.split('+')` — i.e. `out_md_zh` + `out_md_en`, `country_display_zh` + `country_display_en`, etc. See `references/language-spec.md` § Bilingual Mode.
 
@@ -134,15 +132,8 @@ The orchestrator must not summarise, truncate, or reformat the upstream output �
    ```bash
    OUT_DIR="${out_dir/#\~/$HOME}"
    OUT_DIR="${OUT_DIR//\{date\}/$DATE}"
-   if [[ "$publish" == true ]]; then
-     if [[ -z "${publish_repo:-}" ]]; then
-       echo "ERROR: --publish requires --publish-repo <git-path>." >&2
-       exit 2
-     fi
-     PUBLISH_REPO="${publish_repo/#\~/$HOME}"
-   fi
    ```
-   If `publish=true`, require a non-empty `publish_repo` and expand `~` in it to `PUBLISH_REPO`; otherwise do not run any Git command. Use `OUT_DIR` (expanded) in all subsequent bash commands. The default resolves to e.g. `~/.sci-research/reports/daily-news/2026-04-16/`.
+   Use `OUT_DIR` (expanded) in all subsequent bash commands. The default resolves to e.g. `~/.sci-research/reports/daily-news/2026-04-16/`.
 
 2. **Scan candidates** (Scanner stage, English only — SINGLE AGENT). Launch **ONE Scanner subagent** for the full report. **Spawn the `daily-news-scanner` subagent (`.codex/agents/daily-news-scanner.toml`) — see § Subagent Dispatch Rule.** The Scanner prompt carries **all** `active_categories` plus `country`, `date`, `min_per_category`; it processes each category sequentially (Pass A + Pass B per category), then performs cross-category dedup + routing, and returns a unified Scanner Bundle (`references/schemas.md` § Scanner Bundle Schema). Query construction is **per-term, never `OR`-joined** — see `.codex/agents/daily-news-scanner.toml` § Step 1 for the term lists (single source of truth).
 
@@ -254,13 +245,6 @@ The Scanner gathers 20-30 candidate URLs across all categories. If the Scanner B
 
 11. **Verify delivery.** Apply the checks in `references/verification.md` § End-to-End Verification.
 
-12. **Publish to GitHub Pages (explicit opt-in).** Skip this step unless `publish=true`. When enabled, `publish_repo` must resolve to an existing Git repository. The sanctioned script copies the generated `OUT_DIR` date directory into `PUBLISH_REPO/<date>/`, then stages, commits, and pushes:
-    ```bash
-    REPORTS_REPO="$PUBLISH_REPO" bash "${PLUGIN_ROOT}/scripts/publish-reports.sh" \
-      --source-dir "$OUT_DIR"
-    ```
-    where `PLUGIN_ROOT` is the sci-research plugin root. Publish failures must be reported but never delete or invalidate the local report files. The normal report run is successful once its local Markdown and any available docx output have been produced.
-
 ## Stage → Agent → Reference Map
 
 | Stage | Recommended Agent | Required References |
@@ -291,9 +275,6 @@ Scattered through the Workflow above; consolidated here for quick scanning. **No
 | `pandoc` not installed | Skip docx export for ALL langs. Markdown(s) remain valid output. Report: "pandoc not found — .docx export skipped." |
 | `pandoc` exits non-zero on one lang | Report the error for that lang. Continue with the next lang. Do NOT delete any Markdown file. |
 | Email script exits non-zero (codes 1-5 or 7-9) | Halt and report per `references/email-spec.md` § Exit Code Handling. **Never** delete or modify any local `.md` / `.docx`. **Never** fall back to inline SMTP — the PreToolUse hook will reject it anyway. |
-| `publish=true` but `publish_repo` is empty | Halt before publishing and ask for an explicit Git repository path. Local report generation is unaffected when publishing is not requested. |
-| `publish_repo` is not a git working tree | Skip publishing and report the configuration error. Preserve the local report files. |
-| `git push` fails in Step 12 | Report but do not fail the local report run — the Markdown/docx already exists on disk and the user can push manually. |
 
 ## References
 

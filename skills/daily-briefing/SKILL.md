@@ -23,8 +23,6 @@ Designed for both interactive and **scheduled/automated** execution.
 | `email_subject` | No | `新闻简报 — {date_display}` | Email subject line |
 | `email_dry_run` | No | `false` | Preview email without sending |
 | `no_wait` | No | `false` | Fail immediately if source files missing |
-| `publish` | No | `false` | When `true`, copy this date's branded output into `publish_repo` and commit/push it through the sanctioned publish script. |
-| `publish_repo` | Conditional | — | Absolute path or `~`-based path to the target Git repository. Required when `publish=true`. |
 
 Derived fields:
 - `date_display` — e.g. `2026年4月16日`
@@ -44,7 +42,7 @@ Use these absolute paths for every bundled script. Do not rely on the current wo
 
 ## Workflow
 
-1. **Validate params and bundled resources.** Default `date` to today (`date +%Y-%m-%d`). Parse `countries` into a comma-separated list. Confirm that `SKILL_DIR` is the absolute directory containing this `SKILL.md`, derive every bundled-resource path once, then expand `~` and substitute `{date}` in `source_dir` / `out_dir`. Create `OUT_DIR`. If `publish=true`, require a non-empty `publish_repo` and expand `~` in it to `PUBLISH_REPO`. Compute derived fields:
+1. **Validate params and bundled resources.** Default `date` to today (`date +%Y-%m-%d`). Parse `countries` into a comma-separated list. Confirm that `SKILL_DIR` is the absolute directory containing this `SKILL.md`, derive every bundled-resource path once, then expand `~` and substitute `{date}` in `source_dir` / `out_dir`. Create `OUT_DIR`. Compute derived fields:
    ```bash
    if [[ -z "${SKILL_DIR:-}" || ! -f "$SKILL_DIR/SKILL.md" ]]; then
      echo "ERROR: SKILL_DIR must be the absolute skills/daily-briefing directory." >&2
@@ -54,8 +52,7 @@ Use these absolute paths for every bundled script. Do not rely on the current wo
    GENERATOR="$SKILL_DIR/scripts/generate-branded-docx.py"
    TEMPLATE="$SKILL_DIR/template/briefing-template.docx"
    EMAIL_SENDER="$SKILL_DIR/scripts/send-briefing-email.py"
-   PUBLISH_SCRIPT="$PLUGIN_ROOT/scripts/publish-reports.sh"
-   for REQUIRED_PATH in "$GENERATOR" "$TEMPLATE" "$EMAIL_SENDER" "$PUBLISH_SCRIPT" "$PLUGIN_ROOT/.codex-plugin/plugin.json"; do
+   for REQUIRED_PATH in "$GENERATOR" "$TEMPLATE" "$EMAIL_SENDER" "$PLUGIN_ROOT/.codex-plugin/plugin.json"; do
      if [[ ! -f "$REQUIRED_PATH" ]]; then
        echo "ERROR: installed sci-research bundle is incomplete: $REQUIRED_PATH" >&2
        exit 2
@@ -69,13 +66,6 @@ Use these absolute paths for every bundled script. Do not rely on the current wo
    DATE_DISPLAY="$(python3 -c "from datetime import date; d=date.fromisoformat('$DATE'); print(f'{d.year}年{d.month}月{d.day}日')")"
    mkdir -p "$OUT_DIR"
    OUT_DOCX="$OUT_DIR/${DATE} 简报.docx"
-   if [[ "$publish" == true ]]; then
-     if [[ -z "${publish_repo:-}" ]]; then
-       echo "ERROR: --publish requires --publish-repo <git-path>." >&2
-       exit 2
-     fi
-     PUBLISH_REPO="${publish_repo/#\~/$HOME}"
-   fi
    ```
 
 2. **Check source directory.** List Markdown files:
@@ -197,13 +187,6 @@ Use these absolute paths for every bundled script. Do not rely on the current wo
    ls -la "$OUT_DOCX"
    ```
    Report file path, size, and story count.
-
-10. **Publish to GitHub Pages (explicit opt-in).** Skip this step unless `publish=true`. When enabled, `publish_repo` must resolve to an existing Git repository. The sanctioned script copies `OUT_DIR` into `PUBLISH_REPO/<date>/`, then stages, commits, and pushes:
-    ```bash
-    REPORTS_REPO="$PUBLISH_REPO" bash "$PUBLISH_SCRIPT" \
-      --source-dir "$OUT_DIR"
-    ```
-    Publish failures must be reported but never delete or invalidate the local docx.
 
 ## References
 

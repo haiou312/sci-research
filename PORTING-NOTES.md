@@ -11,12 +11,11 @@ The repository now uses native Codex plugin structure and TOML subagents. This n
 - The plugin has been installed successfully in isolated Codex homes.
 - Pipeline E social discovery uses WebSearch `search` / `open_page` for publicly indexed Reddit and X content. No MCP configuration, credentials or platform API is required.
 - Pipeline C and E default to user-level output directories; Pipeline D has separate input and output directories.
-- GitHub Pages publishing is explicit opt-in and requires a user-provided target repository.
 - Pipeline D declares python-docx in requirements.txt and no longer installs packages during a run.
 
 ## Remaining runtime validation
 
-1. Run a minimal Pipeline C invocation without email or publishing. Confirm native agent discovery, sequential handoff, apply_patch hook behavior, and pandoc output.
+1. Run a minimal Pipeline C invocation without email. Confirm native agent discovery, sequential handoff, apply_patch hook behavior, and pandoc output.
 2. Install requirements.txt, then run Pipeline D against Pipeline C sample Markdown. Verify branded docx generation and email dry-run.
 3. Run Pipeline E with News, Reddit and X enabled. Verify date handling, social coverage gaps, clean-scan silence, and email dry-run.
 
