@@ -14,7 +14,7 @@ aliases:
 executives:
   - name: <full name>
     title: <CEO | CFO | COO | Chair | CTO | President | ...>
-    source_url: <URL that was WebFetched>
+    source_url: <URL opened with WebSearch open_page>
 resolution_confidence: high | medium | low
 resolution_notes: <free text; required if confidence is not high>
 ```
@@ -34,7 +34,7 @@ raw_candidates:
     published_at: <ISO 8601 datetime>
     author_or_handle: <string>
     date_verified: true
-    verification_method: webfetch     # required for every emitted candidate
+    verification_method: open_page    # required for every emitted candidate
     raw_snippet: <string, max 1000 chars>
 coverage_notes: <free text; flag gaps, blocked fetches, etc.>
 ```

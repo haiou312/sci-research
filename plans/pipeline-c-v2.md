@@ -17,7 +17,7 @@ User-reported failure modes on Pipeline C output:
 
 ## 2. Constraint
 
-**Writer keeps WebSearch + WebFetch.** Narrative logical coherence depends on Writer's ability to pull background context. Removing search degrades the dimension the user values most.
+**Writer keeps WebSearch actions (`search` + `open_page`).** Narrative logical coherence depends on Writer's ability to pull background context. Removing search degrades the dimension the user values most.
 
 ## 3. Solution overview
 
@@ -215,9 +215,9 @@ This is a **single-rule reversal** plus surrounding edits to keep the spec coher
 **Citation contract**: References = Verifier KEEP URLs ∪ {every search URL that supplied a fact you wrote in body}.
 
 - Every URL the Verifier delivered (Lead + every Corroborated by URL) MUST appear in References.
-- Every search URL you fetched to support a body fact MUST appear in References — with proper APA format, the next continuous `[N]` counter, and the original outlet name. This includes URLs you fetched only for background context, as long as a number / name / date / quote / institution you wrote in body traces to that URL.
-- The ONLY URLs you may fetch and NOT cite are ones that returned irrelevant content, that you didn't use any fact from, or that duplicate a fact already covered by a cited URL. When in doubt, cite.
-- Cap: prefer 1-3 search URLs per story. If you find yourself citing 5+ search URLs for one story, you're over-fetching — pick the strongest 2-3 and cut the rest of the background that depended on the weaker ones.
+- Every search URL you opened to support a body fact MUST appear in References — with proper APA format, the next continuous `[N]` counter, and the original outlet name. This includes URLs you opened only for background context, as long as a number / name / date / quote / institution you wrote in body traces to that URL.
+- The ONLY URLs you may open and NOT cite are ones that returned irrelevant content, that you didn't use any fact from, or that duplicate a fact already covered by a cited URL. When in doubt, cite.
+- Cap: prefer 1-3 search URLs per story. If you find yourself citing 5+ search URLs for one story, you're over-opening — pick the strongest 2-3 and cut the rest of the background that depended on the weaker ones.
 ```
 
 #### 5.2.4 output-spec.md diffs
@@ -231,7 +231,7 @@ Add a new section "**Cited Search URLs**" near the end of "Reference Format Rule
 ```markdown
 ### Cited Search URLs
 
-Writer runs supplemental WebSearch/WebFetch per story for background context. Any URL that supplied a fact written in body prose is treated as a first-class citation:
+Writer runs supplemental WebSearch `search` + `open_page` actions per story for background context. Any URL that supplied a fact written in body prose is treated as a first-class citation:
 
 - It appears in the story's `**References**` block as an APA reference line with the next continuous `[N]` counter.
 - Outlet name comes from the URL's actual publisher.
@@ -248,7 +248,7 @@ Verifier-delivered URLs (Lead + every Corroborated by URL) always appear in Refe
 [daily-news-writer.md:235] — the "Self-Check Before Write" list. Replace item 10 ("No search-derived URLs in References") with:
 
 ```
-10. **References completeness**: every URL in your References block is either a Verifier KEEP URL (Lead or Corroborated by) OR a search URL that supplied a fact in this story's body. No URL is "fetched but uncited" if you used a fact from it. No URL is in References that you didn't actually use.
+10. **References completeness**: every URL in your References block is either a Verifier KEEP URL (Lead or Corroborated by) OR a search URL that supplied a fact in this story's body. No URL is "opened but uncited" if you used a fact from it. No URL is in References that you didn't actually use.
 ```
 
 #### 5.2.6 Tests for PR #2
@@ -407,7 +407,7 @@ Add to [daily-news-writer.md](../skills/daily-news-intelligence/agents/daily-new
 3. **Fact Manifest YAML** (path provided by the caller, format: `daily-fact-extractor`'s output schema). Treat it as a "locked values" reference:
    - For any number / date / named person / named institution / named product / direct quote you write in body that corresponds to a `hard_facts[]` or `quotes[]` entry in the manifest, the value you write MUST match the manifest's `value` (or, for quotes, faithfully translate `verbatim_en` into `lang`).
    - You may rephrase, omit, reorder, contextualize — but you may not substitute a different number/date/name/quote substance for a manifest-locked one.
-   - Background facts you discover via your own WebSearch / WebFetch are NOT in the manifest. Those are governed by the citation contract: cite their URLs in References (PR #2 rule).
+   - Background facts you discover via your own WebSearch `search` / `open_page` actions are NOT in the manifest. Those are governed by the citation contract: cite their URLs in References (PR #2 rule).
 ```
 
 #### 5.3.5 Tests for PR #3
@@ -428,7 +428,7 @@ Manual: pick a past Verifier bundle (or rerun Verifier in dry-run). Feed to Fact
 ---
 name: daily-editor
 description: Daily news fact-check and reference completeness editor. Runs after Writer. Reads Writer's draft Markdown plus the Fact Manifest and Verifier KEEP bundle. Performs four sequential passes — Verifier-locked fact verification, Writer-search fact backing, quote verbatim check, quote-mark normalization — and patches violations in place using the Edit tool. Never invents facts; cuts or weakens unverifiable claims. Never overwrites with Write — only Edit. Preserves Writer's narrative voice, sentence rhythm, paragraph structure, headlines, and emphasis.
-tools: ["Read", "Edit", "Grep", "WebFetch", "WebSearch"]
+tools: ["Read", "Edit", "Grep", "WebSearch"]
 model: opus
 ---
 
@@ -488,14 +488,14 @@ For each story:
    - Examine the story's References block. Is there a URL whose outlet/title plausibly supports this claim?
      - "yen rate" claim + Reuters URL on BoJ → plausible
      - "Toyota Q3 sales" claim + Bloomberg URL on Toyota → plausible
-   - If plausible URL exists: WebFetch that URL. Grep for the claim's value (English form). If found → leave alone, log as verified.
-   - If no plausible URL exists OR fetch grep returns no match: try WebSearch with claim keywords + outlet domains from `site:reuters.com OR site:apnews.com OR site:ft.com OR site:bloomberg.com OR site:bbc.com` (T1-T3 only). WebFetch top result.
+   - If plausible URL exists: use WebSearch `open_page` on that URL. Grep for the claim's value (English form). If found → leave alone, log as verified.
+   - If no plausible URL exists OR opened-page grep returns no match: try WebSearch with claim keywords + outlet domains from `site:reuters.com OR site:apnews.com OR site:ft.com OR site:bloomberg.com OR site:bbc.com` (T1-T3 only). Open the top result with `open_page`.
      - If verified: `Edit` the story's References block to append an APA reference line for the new URL with the next continuous `[N]` counter. Renumber all subsequent `[N]` references in the document.
-     - If not verifiable in 1 WebSearch + 1 WebFetch: `Edit` the body to either cut the sentence or weaken to a verifiable form. Examples:
+     - If not verifiable in 1 WebSearch `search` + 1 `open_page`: `Edit` the body to either cut the sentence or weaken to a verifiable form. Examples:
        - "USD/JPY +80 bps within 30 minutes" → "USD/JPY 走高数十个基点" (if direction verifiable but exact bps unverifiable)
        - "第三次连续维持" → "再次维持" (if continuity count unverifiable)
        - If the entire sentence is built on the unverifiable claim: cut the sentence.
-3. Budget per story: max 2 WebSearch calls + 4 WebFetch calls. Beyond budget, default to cutting/weakening.
+3. Budget per story: max 2 WebSearch `search` actions + 4 `open_page` actions. Beyond budget, default to cutting/weakening.
 4. Log: `[Pass 2] story=<story_id> claim=<short> verified_via=<URL> | added_ref=<URL> | cut | weakened_to=<X>`.
 
 ### Pass 3 — Quote verbatim check (for body quotes not already verified in Pass 1)
@@ -505,11 +505,11 @@ Goal: every direct quote in body matches the verbatim source.
 For each direct quote in body (between canonical quote marks):
 1. Skip if Pass 1 already verified it (quote is in Manifest `quotes[]`).
 2. Otherwise, identify the most likely source URL from References (closest outlet match, closest semantic proximity).
-3. WebFetch that URL.
+3. Open that URL with WebSearch `open_page`.
 4. Grep for distinctive keywords from the quote (3-5 unusual content words).
 5. If found: leave alone.
 6. If not found:
-   - Try ONE WebSearch with the quote's distinctive phrase + speaker name. WebFetch top T1-T3 result.
+   - Try ONE WebSearch `search` with the quote's distinctive phrase + speaker name. Open the top T1-T3 result with `open_page`.
    - If verified: leave the quote, add source URL to References if not already present (renumber `[N]`).
    - If not verified: `Edit` to downgrade — remove the quote marks, restructure as indirect speech, preserve attribution.
 
@@ -546,7 +546,7 @@ Use multiple `Edit` calls — one per substitution — to keep changes auditable
 - Do not invent facts. Unverifiable claims get cut or weakened — never synthesized.
 - Do not add stories or remove stories. Verifier already decided what runs.
 - Do not modify URL strings themselves (only add new ones or renumber `[N]`).
-- Do not run more than 2 WebSearch per story or 4 WebFetch per story (budget cap).
+- Do not run more than 2 WebSearch `search` actions per story or 4 `open_page` actions per story (budget cap).
 
 ## Self-check before returning
 
@@ -584,7 +584,7 @@ Print to stdout a structured summary:
       - Replacements: <N>
       - Pair-balance fixes: <N>
 
-    Budget used: <X> WebSearch / <Y> WebFetch across <Z> stories.
+    Budget used: <X> WebSearch `search` / <Y> `open_page` across <Z> stories.
 
 If total edits == 0: print "No edits needed — Writer output clean."
 ```
@@ -702,11 +702,11 @@ Per Pipeline C run, end-to-end:
 | Verifier | ~$0.15 | ~$0.15 | — |
 | **Fact-Extractor (new)** | — | ~$0.05 | +$0.05 |
 | Writer | ~$0.60 | ~$0.60 | — |
-| **Editor (new)** | — | ~$0.40-0.80 (variable on edits + WebFetch) | +$0.40-0.80 |
+| **Editor (new)** | — | ~$0.40-0.80 (variable on edits + `open_page`) | +$0.40-0.80 |
 | pandoc/email | trivial | trivial | — |
 | **Total** | ~$1.05 | ~$1.50-2.00 | **+40-90%** |
 
-Worth it given the user values output quality. If cost becomes painful: Editor's budget caps (2 WebSearch / 4 WebFetch per story) directly bound the upper end.
+Worth it given the user values output quality. If cost becomes painful: Editor's budget caps (2 WebSearch `search` / 4 `open_page` per story) directly bound the upper end.
 
 ### 6.2 Latency impact
 
@@ -714,7 +714,7 @@ Worth it given the user values output quality. If cost becomes painful: Editor's
 |---|---|---|
 | End-to-end wall time | ~3-5 min | ~5-8 min |
 
-Fact-Extractor is fast (sonnet, no web). Editor's WebFetch calls are the dominant new latency. Acceptable — Pipeline C is not user-blocking; it runs in background or scheduled.
+Fact-Extractor is fast (sonnet, no web). Editor's `open_page` actions are the dominant new latency. Acceptable — Pipeline C is not user-blocking; it runs in background or scheduled.
 
 ### 6.3 Backward compatibility
 

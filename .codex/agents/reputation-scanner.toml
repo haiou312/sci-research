@@ -21,35 +21,39 @@ Single-source scan. The orchestrator launches independent instances for the requ
 - `skills/reputation-track/references/schemas.md` — Scanner Output Schema
 - `rules/research/news-source.md` (only when `source=news`) — T1-T4 tier definitions
 
+## Web tool semantics
+
+Use the single WebSearch tool: `search` discovers candidates, `open_page` reads every canonical URL, and `find_in_page` helps locate a timestamp.
+
 ## Procedure
 
 ### When `source=news`
 
 1. Generate queries per `source-matrix.md` § News. Use `official_name`, `ticker`, aliases, and every executive name from the Resolver output.
 2. Run `WebSearch` on each query.
-3. For each promising URL, `WebFetch` and verify publication date matches `date` (±24h).
+3. For each promising URL, use `open_page` and verify publication date matches `date` (±24h).
 4. Assign tier per `rules/research/news-source.md`.
 5. Cap at 40 candidates; prefer higher-tier outlets.
 
 ### When `source=reddit`
 
-Use **only** `WebSearch` and `WebFetch`; do not call an MCP server, Reddit API, browser automation, or a direct `.json` endpoint.
+Use only WebSearch `search` / `open_page` / `find_in_page`; do not call an MCP server, Reddit API, browser automation, or a direct `.json` endpoint.
 
 1. Run 3-6 separate `site:reddit.com` searches using the query patterns in `source-matrix.md` § Reddit. Cover the official name, ticker when present, and up to three senior executives. Include one adverse-topic query.
-2. Keep only canonical public Reddit thread/post URLs. Fetch every promising URL with `WebFetch`.
-3. Extract the post timestamp from fetched page text, structured metadata, or an embedded permalink timestamp. The fetched timestamp must fall within the target `date` ±24h window. A WebSearch result date is discovery metadata only — it never proves the date.
+2. Keep only canonical public Reddit thread/post URLs. Open every promising URL with `open_page`.
+3. Extract the post timestamp from opened-page text, structured metadata, or an embedded permalink timestamp. The opened timestamp must fall within the target `date` ±24h window. A WebSearch result date is discovery metadata only — it never proves the date.
 4. When visible, record subreddit, author, and engagement; do not infer missing account age or engagement values. De-duplicate identical URLs within this source.
-5. Cap at 40 date-verified candidates. If no post can be fetched and date-verified, emit an empty list and state whether the gap was no search hits, inaccessible pages, or missing timestamps.
+5. Cap at 40 date-verified candidates. If no post can be opened and date-verified, emit an empty list and state whether the gap was no search hits, inaccessible pages, or missing timestamps.
 
 ### When `source=x`
 
-Use **only** `WebSearch` and `WebFetch`; do not call an MCP server, X API, browser automation, or a direct scraper.
+Use only WebSearch `search` / `open_page` / `find_in_page`; do not call an MCP server, X API, browser automation, or a direct scraper.
 
 1. Run 3-6 separate searches using the query patterns in `source-matrix.md` § X. Search both `site:x.com` and, where useful, `site:twitter.com` for legacy permalinks. Cover the official name, ticker when present, and up to three senior executives. Include one adverse-topic query.
-2. Keep only canonical public post URLs (`x.com/<handle>/status/<id>` or `twitter.com/<handle>/status/<id>`). Fetch every promising URL with `WebFetch`.
-3. Extract the post's created timestamp from fetched page text, structured metadata, or a visible post timestamp. The fetched timestamp must fall within the target `date` ±24h window. A WebSearch result date is discovery metadata only — it never proves the date.
-4. Record the handle, visible verification indicator, follower count, and engagement only when the fetched page exposes them. Do not infer missing values. De-duplicate identical URLs within this source.
-5. Cap at 40 date-verified candidates. If no post can be fetched and date-verified, emit an empty list and state whether the gap was no search hits, inaccessible pages, sparse indexing, or missing timestamps.
+2. Keep only canonical public post URLs (`x.com/<handle>/status/<id>` or `twitter.com/<handle>/status/<id>`). Open every promising URL with `open_page`.
+3. Extract the post's created timestamp from opened-page text, structured metadata, or a visible post timestamp. The opened timestamp must fall within the target `date` ±24h window. A WebSearch result date is discovery metadata only — it never proves the date.
+4. Record the handle, visible verification indicator, follower count, and engagement only when the opened page exposes them. Do not infer missing values. De-duplicate identical URLs within this source.
+5. Cap at 40 date-verified candidates. If no post can be opened and date-verified, emit an empty list and state whether the gap was no search hits, inaccessible pages, sparse indexing, or missing timestamps.
 
 ## Output
 
@@ -59,9 +63,9 @@ Emit the Scanner Output Schema from `references/schemas.md` for the specified so
 
 - **Do NOT classify negativity.** Emit every date-verified candidate. The Classifier is responsible for sentiment and severity.
 - **Do NOT deduplicate across sources.** The Classifier handles cross-source dedup.
-- **Do NOT fabricate.** Only emit items you actually retrieved. If `WebFetch` failed, record the failure in `coverage_notes`.
-- **Date-verify or drop.** Every candidate must have `date_verified: true` and `verification_method: webfetch` before it enters `raw_candidates`.
-- **Search indexing is a coverage limit.** Reddit/X posts not indexed by the search engine, blocked from `WebFetch`, or missing a retrievable timestamp are outside this run's coverage and must not be inferred from snippets.
+- **Do NOT fabricate.** Only emit items you actually retrieved. If `open_page` failed, record the failure in `coverage_notes`.
+- **Date-verify or drop.** Every candidate must have `date_verified: true` and `verification_method: open_page` before it enters `raw_candidates`.
+- **Search indexing is a coverage limit.** Reddit/X posts not indexed by the search engine, blocked from `open_page`, or missing a retrievable timestamp are outside this run's coverage and must not be inferred from snippets.
 - If the source returns zero after the query templates, emit `raw_candidates: []` with precise `coverage_notes`.
 
 '''

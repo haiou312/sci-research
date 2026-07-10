@@ -28,7 +28,7 @@ Scans News + Reddit + X for adverse content about a single company and its top e
 - **Verbatim or drop.** Every surfaced item is backed by a verbatim quote from the source URL. No paraphrase, no synthesis.
 - **Noise protection over recall.** Low-credibility claims without corroboration are dropped, not downgraded. Missing a marginal signal is preferable to crying wolf.
 - **Honest coverage disclosure.** The HTML footer states which platforms were scanned and which (Facebook, Threads) were excluded.
-- **Search-indexed social coverage.** Reddit and X use WebSearch for discovery and WebFetch for source/date verification; no API, MCP, direct scraper, or browser automation is used. Content that is not search-indexed, cannot be fetched, or lacks a retrievable timestamp is recorded as a coverage gap rather than inferred.
+- **Search-indexed social coverage.** Reddit and X use WebSearch `search` for discovery and `open_page` for source/date verification; no API, MCP, direct scraper, or browser automation is used. Content that is not search-indexed, cannot be opened, or lacks a retrievable timestamp is recorded as a coverage gap rather than inferred.
 
 ## Input Parameters
 
@@ -164,7 +164,7 @@ The orchestrator passes data between stages via the subagent **prompt text** —
 
 ## Design Limits (disclosed in the HTML footer)
 
-- **Reddit + X (Twitter)**: only public posts/threads that are search-indexed and fetchable; long-tail content is not reached, and search indexing can lag by 1-24 hours or more
+- **Reddit + X (Twitter)**: only public posts/threads that are search-indexed and openable; long-tail content is not reached, and search indexing can lag by 1-24 hours or more
 - **Facebook + Threads**: intentionally not covered in v1 — public-post discoverability via Google is too sparse to be trustworthy
 - **Single-day window**: not a streaming monitor; misses content posted after the scan completes
 - **English-source bias**: Scanner queries are primarily English; non-English regional press may be under-represented (v2 can add per-language source matrices)

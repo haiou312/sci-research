@@ -57,7 +57,7 @@
 
 流程：Resolver → Scanner × requested sources → Classifier → Writer → 可选邮件。
 
-- News 使用 T1–T4；Reddit 与 X 使用 WebSearch 发现、WebFetch 核验公开且可抓取的原帖或线程。
+- News 使用 T1–T4；Reddit 与 X 使用 WebSearch `search` 发现、`open_page` 核验公开且可打开的原帖或线程。
 - 不使用 MCP、平台 API、浏览器自动化或直接抓取。未被索引、需登录、无法抓取或无法核验日期的社交内容必须记录为 coverage gap。
 - --sources 是 news,reddit,x 的非空子集；仅启动被请求的 Scanner。
 - total_items_kept == 0 时静默退出，不写 HTML、不发邮件。
@@ -109,6 +109,6 @@
 1. 静态检查：TOML、JSON、Python、Node、Bash 语法与 git diff --check。
 2. C 最小首跑：无邮件、无发布，确认原生 agent 发现与串联、apply_patch、hook 和 pandoc 输出。
 3. D 验证：先安装 requirements.txt，使用 C 产出的样例 Markdown，邮件只做 dry-run。
-4. E 验证：测试 News、Reddit、X 的 WebSearch/WebFetch 路径、干净结果静默退出与邮件 dry-run。
+4. E 验证：测试 News、Reddit、X 的 WebSearch `search` / `open_page` 路径、干净结果静默退出与邮件 dry-run。
 
 当前只完成了静态与安装打包验证；三条流水线的真实端到端首跑仍待执行。

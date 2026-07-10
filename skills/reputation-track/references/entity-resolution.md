@@ -17,7 +17,7 @@ The `--company` argument can be:
 If input matches the ticker regex, resolve via Yahoo Finance:
 
 ```
-WebFetch https://finance.yahoo.com/quote/<TICKER>
+Use WebSearch `open_page` on https://finance.yahoo.com/quote/<TICKER>
 ```
 
 Extract:
@@ -28,7 +28,7 @@ Extract:
 If Yahoo returns 404, try:
 
 ```
-WebFetch https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=<TICKER>&type=&dateb=&owner=include&count=10
+Use WebSearch `open_page` on https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=<TICKER>&type=&dateb=&owner=include&count=10
 ```
 
 ### Step 2 — Name path
@@ -39,14 +39,14 @@ If input is not a ticker, search for the company's canonical identifier:
 WebSearch "<input>" official site investor relations
 ```
 
-The first result is usually the company's IR page. `WebFetch` it to confirm the official name and derive a ticker if listed.
+The first result is usually the company's IR page. Open it with WebSearch `open_page` to confirm the official name and derive a ticker if listed.
 
 ### Step 3 — Executive list
 
 Primary source (for listed companies): Yahoo Finance profile page.
 
 ```
-WebFetch https://finance.yahoo.com/quote/<TICKER>/profile
+Use WebSearch `open_page` on https://finance.yahoo.com/quote/<TICKER>/profile
 ```
 
 Contains a "Key Executives" table with 5-8 named officers (Name, Title, Pay, Age). Extract at minimum:
@@ -61,14 +61,14 @@ Contains a "Key Executives" table with 5-8 named officers (Name, Title, Pay, Age
 Fallback 1 — Wikipedia infobox:
 
 ```
-WebFetch https://en.wikipedia.org/wiki/<Company>
+Use WebSearch `open_page` on https://en.wikipedia.org/wiki/<Company>
 ```
 
 Fallback 2 — company website Leadership / About page (derive URL from Step 2 IR search result).
 
 ## Output Schema
 
-Emit the Resolver Output Schema from `references/schemas.md`. Every `executives[].source_url` must be a URL that was actually fetched — do not include unverified names.
+Emit the Resolver Output Schema from `references/schemas.md`. Every `executives[].source_url` must be a URL that was actually opened with WebSearch `open_page` — do not include unverified names.
 
 ## Halt Conditions
 

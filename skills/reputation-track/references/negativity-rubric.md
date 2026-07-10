@@ -63,7 +63,7 @@ confidence: high | medium | low
 
 ## Hard Rules
 
-1. **Verbatim quote required.** If the Classifier cannot extract a quote after `WebFetch`-ing the source, drop with reason `no_verbatim_quote`.
+1. **Verbatim quote required.** If the Classifier cannot extract a quote after opening the source with WebSearch `open_page`, drop with reason `no_verbatim_quote`.
 2. **No fabrication.** Every field must trace to the source URL. When in doubt, drop.
 3. **Dedup across sources.** When two or more items describe the same event, keep the highest-tier source as primary and list the rest as `corroborating_urls`.
 4. **Neutral is silent.** Neutral items go into `dropped_items` with reason `neutral`; they never surface in `kept_items`.

@@ -18,6 +18,7 @@ node_modules/
 # Generated output files (produced by the plugin at runtime).
 # These patterns intentionally match user-facing report outputs.
 # Source files in plugin subdirectories are whitelisted below.
+.test-output/
 *-research-*.md
 *-news-*.md
 *.pdf

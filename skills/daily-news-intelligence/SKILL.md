@@ -30,9 +30,9 @@ Generate a professional dated daily report for institutional readers covering a 
 
 Evidence priority order:
 
-1. Articles whose publication date matches `date` exactly, verified by `web_fetch` on the canonical URL (primary truth).
+1. Articles whose publication date matches `date` exactly, verified by WebSearch `open_page` on the canonical URL (primary truth).
 2. `web_search` is only used to surface candidate URLs — never standalone evidence.
-3. Model inference is permitted only when directly supported by the fetched article text.
+3. Model inference is permitted only when directly supported by the opened article text.
 
 Apply a two-stage filter before anything reaches the Writer:
 
@@ -160,7 +160,7 @@ The Scanner gathers 20-30 candidate URLs across all categories. If the Scanner B
    - The same Fact Manifest (path or content) — the **locked-fact contract**.
    - That invocation's runtime parameters: **`lang` = a SINGLE token** (`zh` / `en` / `ja` — NEVER the combined `zh+en` string; the Writer's Localisation Table has no combined column and would break), **`out_md` = the value of `out_md_{lang}`** (the Writer body's parameter is literally named `out_md`; pass this invocation's per-lang path into that slot), plus `country`, `date`, `min_per_category`. The Writer derives `country_display` / `date_display` itself from `lang` via the Localisation Table — by construction this matches the `country_display_{lang}` the orchestrator used to build `out_md_{lang}`, so the H1 and the filename agree.
 
-   Each Writer invocation **runs 1-3 supplemental `WebSearch` / `WebFetch` calls per story by default** to enrich body prose with background context — what came before, broader pattern, prior policy. Each invocation generates its own background searches independently (no cross-lang sharing — keeps the prompt simple, accepts the duplicated web cost). **References = Verifier KEEP URLs ∪ {search URLs that supplied a fact in body}** — every search URL whose content backed a body fact MUST be cited with proper APA and continuous `[N]` (see `references/output-spec.md` § Cited Search URLs).
+   Each Writer invocation **runs 1-3 supplemental WebSearch `search` actions per story by default and `open_page` for every result used in body prose** to enrich background context — what came before, broader pattern, prior policy. Each invocation generates its own background searches independently (no cross-lang sharing — keeps the prompt simple, accepts the duplicated web cost). **References = Verifier KEEP URLs ∪ {search URLs that supplied a fact in body}** — every search URL whose content backed a body fact MUST be cited with proper APA and continuous `[N]` (see `references/output-spec.md` § Cited Search URLs).
 
    Compose narrative in `lang` per `references/language-spec.md`. Structure is `### title → body → **References**` per story — **no `**摘要**` / `**Summary**` / `**要約**` / `**分析**` / `**Analysis**` markers anywhere**. **Quote marks follow `references/language-spec.md` § Canonical Quote Marks** (en ASCII `""` / zh curly `""` / ja corner `「」` — the format-check hook blocks `apply_patch` on any non-canonical char). When `lang=zh`, also comply with `references/language-spec.md` § Language-Specific Rules (official titles, country prefixes, time anchors, terminology, foreign media naming). Produce Markdown obeying `references/output-spec.md`. Use one `apply_patch` operation to create or overwrite the `out_md` path it was given (= this invocation's `out_md_{lang}`).
 
@@ -176,7 +176,7 @@ The Scanner gathers 20-30 candidate URLs across all categories. If the Scanner B
    **Cost paid for parallel** (honest accounting, not a reason to revert):
 
    - **Duplicated prompt work.** Parallel language instances do not share a sequential prompt-cache opportunity. Actual cost depends on the configured GPT-5.4/GPT-5.5 model and account pricing; measure it from the run rather than relying on a fixed estimate.
-   - **Concurrent web-call rate.** Parallel Writers increase WebSearch/WebFetch concurrency. Keep the request rate within the account's current tool limits and tolerate individual retries without compromising one language's output.
+   - **Concurrent web-call rate.** Parallel Writers increase WebSearch `search` / `open_page` concurrency. Keep the request rate within the account's current tool limits and tolerate individual retries without compromising one language's output.
 
    **Failure mode** (per the Failure Modes table): if either parallel Writer fails, the orchestrator preserves the surviving lang's output, surfaces the failed lang's error, and defaults to halting Step 8.5 + Step 10 with a clear report.
 
@@ -198,7 +198,7 @@ The Scanner gathers 20-30 candidate URLs across all categories. If the Scanner B
    | 4 | Quote-mark normalization (canonical per `references/language-spec.md`) |
    | 5 | Local-fluency / logic-gap repair under closed five-class defect whitelist: `pass2-cut-gap` · `foreign-residue` · `inconsistent-name` · `filler-marker` · `awkward-connector` |
 
-   **Budgets.** Pass 2 + Pass 3 combined ≤ 2 WebSearch + 4 WebFetch per story. Pass 5 is style-only (zero WebSearch / WebFetch) and is capped at **3 Edits / story** and **`2 × story_count` Edits / document**.
+   **Budgets.** Pass 2 + Pass 3 combined ≤ 2 WebSearch `search` + 4 `open_page` actions per story. Pass 5 is style-only (zero web-search actions) and is capped at **3 Edits / story** and **`2 × story_count` Edits / document**.
 
    **Pass 5 rollback.** Any Pass-5 patch that violates its six invariants is reverted: manifest facts preserved · References byte-identical · paragraph count preserved · `### title` preserved · quote-mark pairs balanced · no prohibited marker introduced. On unrecoverable failure, Pass 5 aborts gracefully and the pipeline continues with Passes 1-4's changes only.
 

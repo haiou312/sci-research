@@ -59,7 +59,8 @@ Both files must exist. Then spot-check the Markdown:
 │ Step 2: Scanner (single agent, all     │
 │  active categories sequentially)       │
 │  Pass A matrix ladder + Pass B free    │
-│  WebFetch → per-URL date verification  │
+│  WebSearch open_page → per-URL date    │
+│  verification                           │
 │  § Step 6 cross-category dedup +       │
 │  china_nexus↔ipo_ma routing            │
 │  Emit one unified Scanner Bundle       │
@@ -114,7 +115,7 @@ Both files must exist. Then spot-check the Markdown:
 
 | Stage | Dispatch | Model | Rationale (the embedded body encodes this) |
 |-------|----------|-------|--------------------------------------------|
-| Scanner (single agent, all active categories sequentially) | `.codex/agents/daily-news-scanner.toml` subagent | `gpt-5.6-luna / medium` | Single-date scanner across all active categories. Pass A walks tier order (T4-official → T1-wire → T1-flagship → T2 → T3); Pass B is free discovery under § Source Legitimacy. Strict per-URL WebFetch date verification — publication date must equal `date` exactly, no neighbouring days. § Step 6 performs cross-category dedup + `china_nexus`↔`ipo_ma` routing internally before emitting the Scanner Bundle |
+| Scanner (single agent, all active categories sequentially) | `.codex/agents/daily-news-scanner.toml` subagent | `gpt-5.6-luna / medium` | Single-date scanner across all active categories. Pass A walks tier order (T4-official → T1-wire → T1-flagship → T2 → T3); Pass B is free discovery under § Source Legitimacy. Strict per-URL WebSearch `open_page` date verification — publication date must equal `date` exactly, no neighbouring days. § Step 6 performs cross-category dedup + `china_nexus`↔`ipo_ma` routing internally before emitting the Scanner Bundle |
 | Verifier | `.codex/agents/news-verifier.toml` subagent | `gpt-5.6-terra / high` | News-desk filter encoding the five-check rubric (Originality / Authority / Impact / Source legitimacy / Dedup-validation) and the three-step coverage fallback (impact relaxation / reserve-pool promotion / gap record); consumes the Scanner Bundle including its Reserve Pool |
 | Fact-Extractor | `.codex/agents/daily-fact-extractor.toml` subagent | `gpt-5.4-mini / medium` | Extracts every hard fact + direct quote from the Verifier KEEP set into a locked-values YAML manifest. Pure transformation — no web, no narrative. The manifest is the Writer's locked-values contract and the Editor's Pass-1 ground truth |
 | Writer | `.codex/agents/daily-news-writer.toml` subagent | `gpt-5.6-sol / high` | Daily briefing writer. Body encodes the Localisation Table, Category Catalog & country-derived active-category ordering, Markdown Syntax Contract, APA 7th format, Writing Standard, search-for-background contract, citation contract (search URLs that supplied a body fact MUST be in References), and self-check protocol |

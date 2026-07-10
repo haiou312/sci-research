@@ -21,9 +21,9 @@ Single-shot entity resolution. Given the `--company` input, return the canonical
 
 1. Classify input as ticker (regex `^[A-Z0-9.]{1,5}$`) or name.
 2. Follow `entity-resolution.md` Step 1 (ticker path) or Step 2 (name path).
-3. Fetch Yahoo Finance profile for the executive table; fallback to Wikipedia infobox; fallback to the company's Leadership/About page found via WebSearch.
+3. Open the Yahoo Finance profile for the executive table; fallback to Wikipedia infobox; fallback to the company's Leadership/About page found via WebSearch.
 4. Assign `resolution_confidence`:
-   - `high` — ticker matched, Yahoo profile fetched, ≥5 executives extracted with titles
+   - `high` — ticker matched, Yahoo profile opened, ≥5 executives extracted with titles
    - `medium` — name matched with one authoritative source; 3-4 executives found; or ticker matched but executive extraction partial
    - `low` — input ambiguous (multiple plausible matches), company delisted, or <3 executives discoverable after 3 source attempts
 
@@ -37,8 +37,8 @@ Emit the Resolver Output Schema from `references/schemas.md` verbatim. Nothing e
 
 ## Hard Rules
 
-- Every `executives[].source_url` must be a URL you **actually** `WebFetch`-ed successfully.
-- Never include an executive whose name you inferred but didn't see in a fetched page.
+- Every `executives[].source_url` must be a URL you actually opened successfully with WebSearch `open_page`.
+- Never include an executive whose name you inferred but didn't see in an opened page.
 - Skip retired / emeritus board members unless they hold an active operational title.
 - If Yahoo Finance shows the company is delisted or in an unusual status (e.g. "Delisted", "Suspended"), set `resolution_confidence: low` and flag it in `resolution_notes`.
 

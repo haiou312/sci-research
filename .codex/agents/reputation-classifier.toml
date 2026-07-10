@@ -23,7 +23,7 @@ Second-pass filter. Consumes one Scanner Output Schema for every requested sourc
 
 1. **Load all candidates** across the provided source outputs into a single working list. Treat an omitted source as intentionally not scanned, not as an empty source.
 2. **For each candidate**:
-   - `WebFetch` the `url` and locate the specific negative claim (if any). Prefer the source page over search snippet text.
+   - Use WebSearch `open_page` on the `url`, then `find_in_page` to locate the specific negative claim (if any). Prefer the source page over search snippet text.
    - Extract a **verbatim quote** (≤500 chars). If no quote can be cleanly extracted, drop with reason `no_verbatim_quote`.
    - Classify into exactly one `category` per `negativity-rubric.md` § Categories.
    - Assign `severity` per § Severity Levels.
@@ -46,7 +46,7 @@ Classifier Output Schema per `references/schemas.md`. Include both `kept_items` 
 
 ## Hard Rules
 
-- **Verbatim or drop.** Never paraphrase. If you cannot locate the claim in the source after `WebFetch`, drop it.
+- **Verbatim or drop.** Never paraphrase. If you cannot locate the claim in the source after `open_page`, drop it.
 - **No fabrication.** Every field traces to the source URL. When in doubt, drop.
 - **Neutral is silent.** Neutral items appear only in `dropped_items` — never in `kept_items`.
 - **High/Critical on low-tier sources** require corroboration from T1-T3. Without corroboration, either downgrade to `low` with a note in the quote, or drop if the claim is implausible (e.g. "CEO arrested" with no news match).

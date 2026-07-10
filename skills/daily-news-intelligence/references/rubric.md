@@ -127,10 +127,10 @@ Mark `Fallback used: fallback_1+1.5+gap` (or `fallback_1+gap` if 1.5 did not nee
 
 ## Date Verification Rules
 
-- Every candidate URL must pass a `web_fetch` round trip.
+- Every candidate URL must pass a WebSearch `open_page` round trip.
 - The extracted publication date must equal `date` in either the outlet's local timezone or UTC — one match is sufficient.
 - Neighbouring days do not qualify. Do not relax the window.
-- If the article displays only a relative date (e.g. "2 hours ago") and no absolute date can be recovered from the fetched HTML, drop the candidate.
+- If the article displays only a relative date (e.g. "2 hours ago") and no absolute date can be recovered from the opened page, drop the candidate.
 - If the page is an index, topic hub, or tag listing rather than a single article, drop it.
 
 ## Category Coverage Rules

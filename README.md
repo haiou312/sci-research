@@ -193,7 +193,7 @@ reputation-resolver → reputation-scanner × requested sources (parallel; defau
    (Terra / high)      (Luna / medium)                                                              (Terra / high)          (Terra / medium)
 ```
 
-Silent exit when `total_items_kept == 0`. Reddit and X use Codex WebSearch/WebFetch against publicly indexed, fetchable posts and threads. Unindexed, login-gated, or unfetchable content is recorded as a coverage gap.
+Silent exit when `total_items_kept == 0`. Reddit and X use Codex WebSearch `search` to discover publicly indexed posts and `open_page` to inspect canonical threads. Unindexed, login-gated, or unopenable content is recorded as a coverage gap.
 
 | Agent | Codex configuration |
 |---|---|
@@ -327,9 +327,9 @@ sci-research/
 - Python 3 (for email delivery scripts + Pipeline D docx generation; only required when `--email` or Pipeline D is used)
 - Pipeline D dependency (install once from the plugin root): `python3 -m pip install --user -r requirements.txt`
 - `pandoc` (for Markdown → docx conversion in Pipeline C)
-- Internet access (for WebSearch / WebFetch)
+- Internet access (for WebSearch `search` / `open_page`)
 - Gmail SMTP credentials (only when `--email` is used; see `.env.example`)
-- No separate social-media MCP configuration is required. Pipeline E's Reddit/X coverage is limited to publicly indexed, fetchable content.
+- No separate social-media MCP configuration is required. Pipeline E's Reddit/X coverage is limited to publicly indexed, openable content.
 
 ---
 

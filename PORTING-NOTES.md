@@ -9,7 +9,7 @@ The repository now uses native Codex plugin structure and TOML subagents. This n
 - File-writing stages and the Markdown hook use apply_patch semantics.
 - Plugin packaging, TOML, JSON, Node, Python and Bash syntax checks have passed.
 - The plugin has been installed successfully in isolated Codex homes.
-- Pipeline E social discovery uses WebSearch/WebFetch for publicly indexed Reddit and X content. No MCP configuration, credentials or platform API is required.
+- Pipeline E social discovery uses WebSearch `search` / `open_page` for publicly indexed Reddit and X content. No MCP configuration, credentials or platform API is required.
 - Pipeline C and E default to user-level output directories; Pipeline D has separate input and output directories.
 - GitHub Pages publishing is explicit opt-in and requires a user-provided target repository.
 - Pipeline D declares its pinned python-docx dependency in requirements.txt and no longer installs packages during a run.
