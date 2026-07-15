@@ -1,6 +1,6 @@
 # News Source Rules
 
-These rules define the T1-T4 news source tiering used by `/reputation-track`'s news scanner (`skills/reputation-track/agents/reputation-scanner.md` and `references/source-matrix.md`). (Originally authored for the now-removed `/news-scan` pipeline; retained as a Pipeline E dependency.)
+These rules define the T1-T4 news source tiering used by `$sci-research:reputation-track`'s news scanner (`.codex/agents/sci-research-reputation-scanner.toml` and `references/source-matrix.md`).
 
 ## Source Credibility Hierarchy
 

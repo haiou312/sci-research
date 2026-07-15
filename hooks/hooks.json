@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node ./scripts/hooks/email-send-guard.js"
+            "command": "node \"$PLUGIN_ROOT/scripts/hooks/email-send-guard.js\""
           }
         ],
         "description": "Block inline SMTP and require the sanctioned report-email scripts"
@@ -18,7 +18,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node ./scripts/hooks/daily-news-format-check.js"
+            "command": "node \"$PLUGIN_ROOT/scripts/hooks/daily-news-format-check.js\""
           }
         ],
         "description": "Validate Pipeline C Markdown after apply_patch"

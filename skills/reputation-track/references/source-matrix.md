@@ -22,7 +22,7 @@ Loaded by the Scanner. Defines the three sources the reputation-track MVP covers
 
 ## News — Search Patterns
 
-Use the T1-T4 tier hierarchy from `rules/research/news-source.md`. Query templates (substitute `<company>` with `official_name`, `<ticker>`, or an alias; `<exec_name>` for each executive from the Resolver; `<date_en>` with e.g. `"April 21, 2026"`):
+Use the T1-T4 tier hierarchy from `references/news-source.md`. Query templates (substitute `<company>` with `official_name`, `<ticker>`, or an alias; `<exec_name>` for each executive from the Resolver; `<date_en>` with e.g. `"April 21, 2026"`):
 
 ```
 "<company>" <date_en>

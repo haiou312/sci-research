@@ -1,7 +1,7 @@
 {
   "name": "sci-research",
-  "version": "1.20.1+codex.20260715083833",
-  "description": "Three independent multi-agent pipelines for daily news intelligence, multi-country branded briefings, and company reputation tracking. Codex-native port: skills orchestrate TOML subagents in .codex/agents/, with per-URL date verification, T1-T4 source grading, editorial-desk filtering, Fact Manifest discipline, and PreToolUse/PostToolUse quality hooks.",
+  "version": "1.20.1+codex.20260715102944",
+  "description": "Three independent multi-agent news pipelines plus a project-scoped Codex runtime setup. Skills orchestrate namespaced TOML custom agents with date verification, source grading, editorial filtering, Fact Manifest discipline, and lifecycle quality hooks.",
   "author": {
     "name": "Peter Wang"
   },
@@ -17,13 +17,14 @@
     "branded-docx",
     "references",
     "skills",
-    "subagents"
+    "subagents",
+    "runtime-setup"
   ],
   "skills": "./skills/",
   "interface": {
     "displayName": "Sci-Research News Intelligence",
     "shortDescription": "Daily news intelligence, branded briefings, and reputation monitoring",
-    "longDescription": "Three independent pipelines: /daily-news-intelligence (dated single-country briefing, mono- or bilingual, T1-T4 date-verified), /daily-briefing (multi-country branded SPD Bank Word doc), and /reputation-track (company adverse-media + social monitoring, HTML email only when negative). Each skill orchestrates a chain of native TOML subagents in .codex/agents/.",
+    "longDescription": "Three independent pipelines: daily-news-intelligence (dated single-country briefing, mono- or bilingual, T1-T4 date-verified), daily-briefing (multi-country branded SPD Bank Word doc), and reputation-track (company adverse-media + social monitoring, HTML email only when negative). A setup skill installs the namespaced TOML custom agents into the active project before first run.",
     "developerName": "Peter Wang",
     "category": "Productivity",
     "capabilities": [
@@ -34,7 +35,8 @@
     "defaultPrompt": [
       "Generate a daily news intelligence report for Japan",
       "Create a branded briefing from daily news reports",
-      "Monitor a company for reputational risk"
+      "Monitor a company for reputational risk",
+      "Set up the Sci-Research runtime in this workspace"
     ]
   }
 }

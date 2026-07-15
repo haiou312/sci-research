@@ -1,6 +1,6 @@
 # Email Spec — Daily Briefing Email Delivery
 
-Independent email specification for the `/daily-briefing` pipeline.
+Independent email specification for the `$sci-research:daily-briefing` pipeline.
 
 ## When This Step Runs
 

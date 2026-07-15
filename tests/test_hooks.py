@@ -1,0 +1,89 @@
+from __future__ import annotations
+
+import json
+from pathlib import Path
+import subprocess
+import tempfile
+import unittest
+
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+EMAIL_GUARD = REPO_ROOT / "scripts/hooks/email-send-guard.js"
+FORMAT_CHECK = REPO_ROOT / "scripts/hooks/daily-news-format-check.js"
+
+
+class HookTests(unittest.TestCase):
+    def run_hook(
+        self, script: Path, payload: dict[str, object]
+    ) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            ["node", str(script)],
+            input=json.dumps(payload),
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+
+    def test_email_guard_denies_inline_smtp(self) -> None:
+        result = self.run_hook(
+            EMAIL_GUARD,
+            {"hook_event_name": "PreToolUse", "tool_input": {"cmd": "python3 -c 'import smtplib'"}},
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        output = json.loads(result.stdout)
+        decision = output["hookSpecificOutput"]
+        self.assertEqual(decision["hookEventName"], "PreToolUse")
+        self.assertEqual(decision["permissionDecision"], "deny")
+
+    def test_email_guard_allows_sanctioned_script(self) -> None:
+        result = self.run_hook(
+            EMAIL_GUARD,
+            {
+                "hook_event_name": "PreToolUse",
+                "tool_input": {
+                    "cmd": 'python3 "$PLUGIN_ROOT/scripts/send-report-email.py" --help'
+                },
+            },
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout, "")
+
+    def test_format_hook_finds_apply_patch_freeform_path(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            project_root = Path(temp_dir)
+            report = project_root / "daily-news/report.md"
+            report.parent.mkdir(parents=True)
+            report.write_text("# Japan Daily News Intelligence\n", encoding="utf-8")
+            patch = f"*** Begin Patch\n*** Update File: {report}\n*** End Patch"
+            result = self.run_hook(
+                FORMAT_CHECK,
+                {
+                    "hook_event_name": "PostToolUse",
+                    "cwd": str(project_root),
+                    "tool_input": patch,
+                },
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            output = json.loads(result.stdout)
+            self.assertIn("daily-news format check FAILED", output["systemMessage"])
+            self.assertEqual(
+                output["hookSpecificOutput"]["hookEventName"], "PostToolUse"
+            )
+
+    def test_direct_format_check_fails_invalid_report(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            report = Path(temp_dir) / "daily-news/report.md"
+            report.parent.mkdir(parents=True)
+            report.write_text("# Japan Daily News Intelligence\n", encoding="utf-8")
+            result = subprocess.run(
+                ["node", str(FORMAT_CHECK), "--file", str(report)],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("daily-news format check FAILED", result.stderr)
+
+
+if __name__ == "__main__":
+    unittest.main()

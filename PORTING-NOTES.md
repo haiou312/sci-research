@@ -4,9 +4,10 @@ The repository now uses native Codex plugin structure and TOML subagents. This n
 
 ## Completed
 
-- Ten native agents are defined in .codex/agents/*.toml with an explicit GPT-5.6 Sol / Terra / Luna allocation (plus GPT-5.4 mini for Fact Manifest extraction) and per-agent reasoning effort.
-- The three skills dispatch their named TOML agents and pass upstream outputs through prompt text.
-- File-writing stages and the Markdown hook use apply_patch semantics.
+- Ten namespaced native agents are defined in `.codex/agents/sci-research-*.toml` with an explicit GPT-5.6 Sol / Terra / Luna allocation (plus GPT-5.4 mini for Fact Manifest extraction) and per-agent reasoning effort.
+- Marketplace installation is treated as bundle distribution, not agent registration. `$sci-research:setup-sci-research-runtime` installs and verifies the agent payload under the active project's `.codex/agents/` with dry-run, backup, conflict protection, hashes, and uninstall support.
+- The three pipeline skills select exact named custom-agent roles with `fork_turns="none"`, pass absolute runtime paths, and pass upstream outputs through prompt text.
+- File-writing stages use `apply_patch`; the PostToolUse Markdown hook reports the resulting invalid state, and a direct pre-delivery check hard-stops export/email until it is corrected.
 - Plugin packaging, TOML, JSON, Node, Python and Bash syntax checks have passed.
 - The plugin has been installed successfully in isolated Codex homes.
 - Pipeline E social discovery uses WebSearch `search` / `open_page` for publicly indexed Reddit and X content. No MCP configuration, credentials or platform API is required.
@@ -15,13 +16,14 @@ The repository now uses native Codex plugin structure and TOML subagents. This n
 
 ## Remaining runtime validation
 
-1. Run a minimal Pipeline C invocation without email. Confirm native agent discovery, sequential handoff, apply_patch hook behavior, and pandoc output.
-2. Install requirements.txt, then run Pipeline D against Pipeline C sample Markdown. Verify branded docx generation and email dry-run.
-3. Run Pipeline E with News, Reddit and X enabled. Verify date handling, social coverage gaps, clean-scan silence, and email dry-run.
+1. In a new task opened after runtime setup, spawn each `sci-research-*` role with a no-op contract probe. Confirm the custom-agent selector and the configured model/reasoning metadata on the child thread.
+2. Run a minimal Pipeline C invocation without email. Confirm sequential handoff, PostToolUse feedback, the direct format gate, and pandoc output.
+3. Install requirements.txt, then run Pipeline D against Pipeline C sample Markdown. Verify branded docx generation and email dry-run.
+4. Run Pipeline E with News, Reddit and X enabled. Verify date handling, social coverage gaps, clean-scan silence, and email dry-run.
 
 ## Runtime assumptions to confirm
 
-- The target Codex installation makes plugin-bundled .codex/agents/*.toml available to skill orchestration.
+- The target Codex App/CLI surface exposes a custom-agent selector that can start the project-installed `sci-research-*` roles. File presence alone is not accepted as proof.
 - A single skill invocation can complete its intended sequence of native agent stages under the user's approval mode.
 - The configured gpt-5.6-sol, gpt-5.6-terra, gpt-5.6-luna and gpt-5.4-mini model identifiers, plus their requested reasoning-effort values, are accepted by the target Codex version.
 

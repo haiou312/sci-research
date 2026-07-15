@@ -19,7 +19,7 @@
  *   - `send-report-email.py`      (Pipelines C, E)
  *   - `send-briefing-email.py`    (Pipeline D)
  *
- * Blocklist (command contains any of these without allowlist match → exit 2):
+ * Blocklist (command contains any of these without allowlist match → Codex deny):
  *   - `import smtplib` / `from smtplib`
  *   - `import email.mime|message` / `from email.mime|message`
  *   - `MIMEMultipart(` / `MIMEText(` / `MIMEBase(`
@@ -27,9 +27,8 @@
  *   - `smtplib.SMTP(` / `smtp.SMTP(`
  *   - Unix `sendmail -[stif]` / `mail -s `
  *
- * Exit codes:
- *   0 — pass
- *   2 — block (message surfaced to orchestrator so it retries with the script)
+ * Exit code:
+ *   0 — pass, or return a structured PreToolUse permission denial
  */
 
 function main() {
@@ -86,12 +85,12 @@ function main() {
             "",
             "Use the sanctioned scripts instead:",
             "",
-            "  Pipeline C (/daily-news-intelligence) and E (/reputation-track):",
+            "  Pipelines C and E:",
             '    python3 "$PLUGIN_ROOT/scripts/send-report-email.py" \\',
             '      --to "..." --subject "..." --body-file "..." \\',
             '      --attach "..." "..."    # or --body-html-file for Pipeline E',
             "",
-            "  Pipeline D (/daily-briefing):",
+            "  Pipeline D:",
             '    python3 "$SKILL_DIR/scripts/send-briefing-email.py" \\',
             '      --to "..." --subject "..." --body-file "..." --attach "..."',
             "",
@@ -104,13 +103,14 @@ function main() {
           process.stderr.write(`${message}\n`);
           process.stdout.write(
             JSON.stringify({
-              continue: false,
-              decision: "block",
-              reason: message,
-              hookSpecificOutput: { hookEventName: "PreToolUse" },
+              hookSpecificOutput: {
+                hookEventName: "PreToolUse",
+                permissionDecision: "deny",
+                permissionDecisionReason: message,
+              },
             })
           );
-          process.exit(2);
+          process.exit(0);
         }
       }
 

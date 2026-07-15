@@ -114,7 +114,7 @@ Mark `Fallback used: fallback_1` in the Verifier report header.
 
 ### Fallback 1.5 — Relax authority cap from Reserve Pool
 
-If Fallback 1 still leaves the category below `min_per_category`, draw from the Scanner Bundle's `## Reserve Pool` (the holding zone defined in `references/schemas.md` § Scanner Bundle Schema and `.codex/agents/daily-news-scanner.toml` § Pass B). The reserve pool contains date-verified candidates that passed the Geographic Scope Gate, China red-line denylist, and Source Legitimacy rubric but were held back at the Scanner stage for **one of two reasons**:
+If Fallback 1 still leaves the category below `min_per_category`, draw from the Scanner Bundle's `## Reserve Pool` (the holding zone defined in `references/schemas.md` § Scanner Bundle Schema and `.codex/agents/sci-research-daily-news-scanner.toml` § Pass B). The reserve pool contains date-verified candidates that passed the Geographic Scope Gate, China red-line denylist, and Source Legitimacy rubric but were held back at the Scanner stage for **one of two reasons**:
 
 - **`held: below-authority-cap`** — Pass-B `conditional-accept` outlets whose real tier is at or below the cap (T3 trade / niche / smaller national outlets — e.g. The Register, UKTN, Sifted, Tech.eu, Electronics Weekly, City A.M. tech section, niche industry trades). The cap is the floor for ordinary KEEP eligibility; these candidates are admissible only via this fallback.
 - **`held: below-ipo-ma-floor`** — `ipo_ma` deals that satisfy the **soft band** of the materiality scale (USD 50M ≤ value < primary floor) per § Conditional & Topical Categories below. Below USD 50M still hard-DROP at the Scanner.

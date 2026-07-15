@@ -1,8 +1,6 @@
 ---
 name: daily-briefing
-description: "Generate a branded SPD Bank Word document (新闻简报, daily briefing, branded docx) from per-country daily news reports. Reads Markdown files from daily-news-reports directory, curates 13-15 top stories across multiple countries, generates branded docx with header logo and footer decoration, and emails the attachment. Supports scheduled/automated execution."
-metadata:
-  origin: sci-research-plugin
+description: "Generate a branded SPD Bank Word document (新闻简报, daily briefing, branded docx) from per-country Pipeline C Markdown reports. Curates 13-15 top stories across multiple countries, generates a branded docx with header logo and footer decoration, and optionally emails the attachment. Supports scheduled/automated execution."
 ---
 
 # Daily Briefing (Multi-Country Branded 新闻简报)
@@ -18,7 +16,7 @@ Designed for both interactive and **scheduled/automated** execution.
 | `date` | No | today | Target date in ISO `YYYY-MM-DD` |
 | `countries` | No | `中国,英国,美国,欧洲,日本,韩国` | Comma-separated country/region list |
 | `total` | No | `14` | Target total number of stories (13-15) |
-| `source_dir` | No | `~/.sci-research/reports/daily-news/` | Base directory containing `YYYY-MM-DD/` subdirs produced by `/daily-news-intelligence` |
+| `source_dir` | No | `~/.sci-research/reports/daily-news/` | Base directory containing `YYYY-MM-DD/` subdirs produced by `$sci-research:daily-news-intelligence` |
 | `out_dir` | No | `~/.sci-research/reports/daily-briefings/{date}/` | Directory for the generated branded docx. `{date}` is replaced with the ISO date and `~` is expanded at runtime. |
 | `email` | No | empty | Comma-separated recipient email addresses |
 | `email_subject` | No | `新闻简报 — {date_display}` | Email subject line |
@@ -37,9 +35,16 @@ Before running the workflow, set `SKILL_DIR` to the absolute directory containin
 ```bash
 SKILL_DIR=<absolute path to skills/daily-briefing>
 PLUGIN_ROOT="$(cd "$SKILL_DIR/../.." && pwd)"
+RUNTIME_SYNC="$PLUGIN_ROOT/skills/setup-sci-research-runtime/scripts/sync_runtime.py"
 ```
 
-Use these absolute paths for every bundled script. Do not rely on the current working directory.
+Use these absolute paths for every bundled script. Do not rely on the current working directory. Before Step 1, run `python3 "$RUNTIME_SYNC" --project-root "$PWD" --check`. If it fails, stop and tell the user to run `$sci-research:setup-sci-research-runtime` in this workspace, then start a new Codex task.
+
+## Subagent Dispatch Rule
+
+Pipeline D uses the installed `sci-research-briefing-curator` custom agent. Select that exact role through the spawn tool's agent-type/role selector; `task_name` is only a thread label. Set `fork_turns="none"`, do not pass model or reasoning overrides, and start the prompt with absolute `plugin_root: {PLUGIN_ROOT}` and `skill_root: {SKILL_DIR}`.
+
+If the active Codex surface exposes no custom-agent selector, rejects the role as unknown, or cannot start it with `fork_turns="none"`, halt. Do not substitute a generic agent or embed the curator TOML instructions in the prompt.
 
 ## Workflow
 
@@ -53,12 +58,14 @@ Use these absolute paths for every bundled script. Do not rely on the current wo
    GENERATOR="$SKILL_DIR/scripts/generate-branded-docx.py"
    TEMPLATE="$SKILL_DIR/template/briefing-template.docx"
    EMAIL_SENDER="$SKILL_DIR/scripts/send-briefing-email.py"
-   for REQUIRED_PATH in "$GENERATOR" "$TEMPLATE" "$EMAIL_SENDER" "$PLUGIN_ROOT/.codex-plugin/plugin.json"; do
+   RUNTIME_SYNC="$PLUGIN_ROOT/skills/setup-sci-research-runtime/scripts/sync_runtime.py"
+   for REQUIRED_PATH in "$GENERATOR" "$TEMPLATE" "$EMAIL_SENDER" "$RUNTIME_SYNC" "$PLUGIN_ROOT/.codex-plugin/plugin.json"; do
      if [[ ! -f "$REQUIRED_PATH" ]]; then
        echo "ERROR: installed sci-research bundle is incomplete: $REQUIRED_PATH" >&2
        exit 2
      fi
    done
+   python3 "$RUNTIME_SYNC" --project-root "$PWD" --check || exit 2
 
    SOURCE_DIR="${source_dir/#\~/$HOME}"
    OUT_DIR="${out_dir/#\~/$HOME}"
@@ -103,9 +110,12 @@ Use these absolute paths for every bundled script. Do not rely on the current wo
    ```bash
    MD_FILES=$(find "$DATE_DIR" -maxdepth 1 -name "*.md" -type f | sort)
    ```
-   Spawn the `briefing-curator` subagent (`.codex/agents/briefing-curator.toml`; model + reasoning effort come from the TOML) with this prompt:
+   Spawn `sci-research-briefing-curator` (`.codex/agents/sci-research-briefing-curator.toml`) per § Subagent Dispatch Rule with this prompt:
 
    ```
+   plugin_root: {PLUGIN_ROOT}
+   skill_root: {SKILL_DIR}
+
    Read all Markdown files listed below and produce a unified briefing.
    
    Countries: {countries}
@@ -118,12 +128,12 @@ Use these absolute paths for every bundled script. Do not rely on the current wo
    Create or overwrite /tmp/briefing-curator-output.txt using one `apply_patch` operation.
    
    Output format: TITLE/DATE/TOC/STORIES/REFERENCES/DISCLAIMER
-   as specified in your system prompt (.codex/agents/briefing-curator.toml).
+   as specified in your custom-agent instructions (.codex/agents/sci-research-briefing-curator.toml).
    ```
 
    The Agent reads each MD file via the Read tool, selects and rewrites stories, then writes its structured output to a temp file. The orchestrator uses this file as input to Step 7.
    
-   Expected output schema (see `.codex/agents/briefing-curator.toml` for full spec):
+   Expected output schema (see `.codex/agents/sci-research-briefing-curator.toml` for full spec):
    ```
    TITLE: 新闻简报
    DATE: {YYYY年M月D日}
@@ -193,7 +203,7 @@ Use these absolute paths for every bundled script. Do not rely on the current wo
 
 | File | Contents |
 |------|----------|
-| `.codex/agents/briefing-curator.toml` (repo root) | Curator agent definition: selection criteria, writing style, output format schema |
+| `.codex/agents/sci-research-briefing-curator.toml` (plugin payload; installed project-locally by setup) | Curator agent definition: selection criteria, writing style, output format schema |
 | `references/email-spec.md` | Email subject/body templates, exit code handling |
 | `template/briefing-template.docx` | SPD Bank branded docx template (header logo + footer decoration) |
 | `scripts/generate-branded-docx.py` | Docx generation from curator output (exit codes 0-4) |
@@ -202,9 +212,9 @@ Use these absolute paths for every bundled script. Do not rely on the current wo
 ## Invocation Examples
 
 ```
-/daily-briefing --email "you@gmail.com"
-/daily-briefing --date 2026-04-16 --email "you@gmail.com"
-/daily-briefing --date 2026-04-16 --countries "中国,英国,美国,欧洲" --total 12 --email "you@gmail.com"
-/daily-briefing --date 2026-04-16 --email "a@x.com,b@y.com" --email-dry-run
-/daily-briefing --date 2026-04-16 --email "you@gmail.com" --no-wait
+$sci-research:daily-briefing --email "you@gmail.com"
+$sci-research:daily-briefing --date 2026-04-16 --email "you@gmail.com"
+$sci-research:daily-briefing --date 2026-04-16 --countries "中国,英国,美国,欧洲" --total 12 --email "you@gmail.com"
+$sci-research:daily-briefing --date 2026-04-16 --email "a@x.com,b@y.com" --email-dry-run
+$sci-research:daily-briefing --date 2026-04-16 --email "you@gmail.com" --no-wait
 ```

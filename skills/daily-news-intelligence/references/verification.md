@@ -30,7 +30,8 @@ Silently verify all of the following. If any check fails, fix before writing —
 7. No alternative reference formats: no `来源：` blocks, no `（来源：...）` inline citations, no bullet-list URLs, no global reference section at the end.
 8. Every category either has `min_per_category` stories or carries a single italic `gap_note` line whose text comes from `references/language-spec.md` § Localisation Table.
 9. **No `**摘要**` / `**Summary**` / `**要約**` / `**分析**` / `**Analysis**` markers anywhere** — body prose follows `### title` directly. (Prohibited-marker list in `references/output-spec.md` § Markdown Syntax Contract.)
-10. Every URL in the references block traces to the Verifier KEEP set (Lead or Corroborated by) **or** to a search URL whose content supplied a body fact (per Writer's citation contract — `.codex/agents/daily-news-writer.toml` § Citation contract). Search-derived URLs that did **not** back a body fact MUST NOT appear.
+10. Every URL in the references block traces to the Verifier KEEP set (Lead or Corroborated by) **or** to a search URL whose content supplied a body fact (per Writer's citation contract — `.codex/agents/sci-research-daily-news-writer.toml` § Citation contract). Search-derived URLs that did **not** back a body fact MUST NOT appear.
+11. **Body length**: every `lang=en` story body contains 250–350 English words and aims near 300; every `lang=zh` story body contains 450–550 Unicode Han characters and aims near 500. Count only text between `### <title>` and `**References**` per `references/language-spec.md` § Body Length Rules. `lang=ja` has no fixed body-length band.
 
 When `lang=zh`, additionally verify that the output complies with every rule in `references/language-spec.md` § Language-Specific Rules — `lang=zh` only. That document is the single source of truth for zh-specific writing rules (quote marks, official titles, country prefixes, time anchors, terminology, foreign media naming).
 
@@ -111,23 +112,23 @@ Both files must exist. Then spot-check the Markdown:
 
 ## Recommended Agent Assignment
 
-**Dispatch rule.** Every stage runs as a **native Codex subagent** defined in `.codex/agents/<name>.toml`; the orchestrator spawns each stage's named subagent (its `model` + `model_reasoning_effort` come from the TOML). See `skills/daily-news-intelligence/SKILL.md` § Subagent Dispatch Rule. The names below refer to the subagents in `.codex/agents/`.
+**Dispatch rule.** Every stage runs as its exact installed `sci-research-*` native Codex custom agent with `fork_turns="none"`; the selected role's `model` + `model_reasoning_effort` come from its TOML. See `skills/daily-news-intelligence/SKILL.md` § Subagent Dispatch Rule. A generic-agent or embedded-prompt fallback is forbidden.
 
 | Stage | Dispatch | Model | Rationale (the embedded body encodes this) |
 |-------|----------|-------|--------------------------------------------|
-| Scanner (single agent, all active categories sequentially) | `.codex/agents/daily-news-scanner.toml` subagent | `gpt-5.6-luna / medium` | Single-date scanner across all active categories. Pass A walks tier order (T4-official → T1-wire → T1-flagship → T2 → T3); Pass B is free discovery under § Source Legitimacy. Strict per-URL WebSearch `open_page` date verification — publication date must equal `date` exactly, no neighbouring days. § Step 6 performs cross-category dedup + `china_nexus`↔`ipo_ma` routing internally before emitting the Scanner Bundle |
-| Verifier | `.codex/agents/news-verifier.toml` subagent | `gpt-5.6-terra / high` | News-desk filter encoding the five-check rubric (Originality / Authority / Impact / Source legitimacy / Dedup-validation) and the three-step coverage fallback (impact relaxation / reserve-pool promotion / gap record); consumes the Scanner Bundle including its Reserve Pool |
-| Fact-Extractor | `.codex/agents/daily-fact-extractor.toml` subagent | `gpt-5.4-mini / medium` | Extracts every hard fact + direct quote from the Verifier KEEP set into a locked-values YAML manifest. Pure transformation — no web, no narrative. The manifest is the Writer's locked-values contract and the Editor's Pass-1 ground truth |
-| Writer | `.codex/agents/daily-news-writer.toml` subagent | `gpt-5.6-sol / high` | Daily briefing writer. Body encodes the Localisation Table, Category Catalog & country-derived active-category ordering, Markdown Syntax Contract, APA 7th format, Writing Standard, search-for-background contract, citation contract (search URLs that supplied a body fact MUST be in References), and self-check protocol |
-| Editor | `.codex/agents/daily-editor.toml` subagent | `gpt-5.6-sol / high` | Five-pass editor (fact verification / search-backing / quote verbatim / quote-mark normalization / local-fluency repair). Uses `apply_patch` only. Pass 5 is style-only with closed defect-class whitelist and six rollback invariants; aborts gracefully without blocking the pipeline |
+| Scanner (single agent, all active categories sequentially) | `.codex/agents/sci-research-daily-news-scanner.toml` subagent | `gpt-5.6-luna / medium` | Single-date scanner across all active categories. Pass A walks tier order (T4-official → T1-wire → T1-flagship → T2 → T3); Pass B is free discovery under § Source Legitimacy. Strict per-URL WebSearch `open_page` date verification — publication date must equal `date` exactly, no neighbouring days. § Step 6 performs cross-category dedup + `china_nexus`↔`ipo_ma` routing internally before emitting the Scanner Bundle |
+| Verifier | `.codex/agents/sci-research-news-verifier.toml` subagent | `gpt-5.6-terra / high` | News-desk filter encoding the five-check rubric (Originality / Authority / Impact / Source legitimacy / Dedup-validation) and the three-step coverage fallback (impact relaxation / reserve-pool promotion / gap record); consumes the Scanner Bundle including its Reserve Pool |
+| Fact-Extractor | `.codex/agents/sci-research-daily-fact-extractor.toml` subagent | `gpt-5.4-mini / medium` | Extracts every hard fact + direct quote from the Verifier KEEP set into a locked-values YAML manifest. Pure transformation — no web, no narrative. The manifest is the Writer's locked-values contract and the Editor's Pass-1 ground truth |
+| Writer | `.codex/agents/sci-research-daily-news-writer.toml` subagent | `gpt-5.6-sol / high` | Daily briefing writer. Body encodes the Localisation Table, Category Catalog & country-derived active-category ordering, Markdown Syntax Contract, APA 7th format, Writing Standard, search-for-background contract, citation contract (search URLs that supplied a body fact MUST be in References), and self-check protocol |
+| Editor | `.codex/agents/sci-research-daily-editor.toml` subagent | `gpt-5.6-sol / high` | Five-pass editor (fact verification / search-backing / quote verbatim / quote-mark normalization / local-fluency repair). Uses `apply_patch` only. Pass 5 is style-only with closed defect-class whitelist and six rollback invariants; aborts gracefully without blocking the pipeline |
 
-**Substitution.** Do NOT substitute any other agent's body — each body encodes stage-specific invariants (e.g., daily-news-scanner's strict single-date gate, daily-editor's `apply_patch`-only discipline) that are not present in the closest-named alternative agents. If a body file is missing, halt and report rather than substituting.
+**Substitution.** Do NOT substitute any other agent's body — each body encodes stage-specific invariants (e.g., the Scanner's strict single-date gate and the Editor's `apply_patch`-only discipline) that are not present in the closest-named alternative agents. If a named role is unavailable, halt and report rather than substituting.
 
 ## Invocation Examples
 
 ```
-/daily-news-intelligence --country "Japan" --date 2026-04-14 --lang zh
-/daily-news-intelligence --country "United Kingdom" --date 2026-04-14 --lang en --min-per-category 3
-/daily-news-intelligence --country "Germany" --lang ja
-/daily-news-intelligence --country "China"
+$sci-research:daily-news-intelligence --country "Japan" --date 2026-04-14 --lang zh
+$sci-research:daily-news-intelligence --country "United Kingdom" --date 2026-04-14 --lang en --min-per-category 3
+$sci-research:daily-news-intelligence --country "Germany" --lang ja
+$sci-research:daily-news-intelligence --country "China"
 ```

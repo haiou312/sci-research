@@ -1,8 +1,6 @@
 ---
 name: reputation-track
 description: "Monitor reputational risk for a company across news and social media. Given a company name or stock ticker + optional date, the skill resolves the entity and executive list, scans News + Reddit + X (Twitter), classifies negative items by category and severity, and — only if negative findings exist — renders an HTML email body and delivers via Gmail SMTP. Silent exit when nothing negative is found. Use when: 'reputation track', 'reputation monitor', 'adverse monitoring', 'company risk scan', '声誉监控', '声誉追踪', 'レピュテーション'."
-metadata:
-  origin: sci-research-plugin
 ---
 
 # Reputation Track (Single Company)
@@ -54,9 +52,10 @@ Before running the workflow, set `SKILL_DIR` to the absolute directory containin
 ```bash
 SKILL_DIR=<absolute path to skills/reputation-track>
 PLUGIN_ROOT="$(cd "$SKILL_DIR/../.." && pwd)"
+RUNTIME_SYNC="$PLUGIN_ROOT/skills/setup-sci-research-runtime/scripts/sync_runtime.py"
 ```
 
-Use these absolute paths for every bundled script. Do not rely on the current working directory or on Claude-specific environment variables.
+Use these absolute paths for every bundled script. Do not rely on the current working directory or on Claude-specific environment variables. Before Step 1, run `python3 "$RUNTIME_SYNC" --project-root "$PWD" --check`. If it fails, stop and tell the user to run `$sci-research:setup-sci-research-runtime` in this workspace, then start a new Codex task.
 
 ## Derived Fields (computed in Step 1)
 
@@ -79,15 +78,18 @@ Do not emit this line before Step 5. If `total_items_kept == 0`, exit silently w
 
 ### Subagent Dispatch Rule (READ FIRST — applies to every stage below)
 
-Every stage runs as a **native Codex subagent** defined in `.codex/agents/<name>.toml`. For each stage the orchestrator MUST:
+Every stage runs as a **native Codex custom agent** installed by `$sci-research:setup-sci-research-runtime`. For each stage the orchestrator MUST:
 
-1. Spawn the stage's named subagent (`reputation-resolver`, `reputation-scanner`, `reputation-classifier`, `reputation-writer`) — its `developer_instructions`, `model`, and `model_reasoning_effort` come from `.codex/agents/<name>.toml`.
-2. Pass that stage's injected parameters + the verbatim upstream output (per the handoff list below) as the spawn prompt.
-3. Wait for the subagent's result, then feed it into the next stage.
+1. Select the exact role through the spawn tool's agent-type/role selector: `sci-research-reputation-resolver`, `sci-research-reputation-scanner`, `sci-research-reputation-classifier`, or `sci-research-reputation-writer`. `task_name` is only a thread label and MUST NOT be used as the role selector.
+2. Set `fork_turns="none"`; do not pass model or reasoning overrides.
+3. Start every spawn prompt with absolute `plugin_root: {PLUGIN_ROOT}` and `skill_root: {SKILL_DIR}`, then pass that stage's injected parameters + the verbatim upstream output.
+4. Wait for the subagent's result, then feed it into the next stage.
+
+If the active Codex surface exposes no custom-agent selector, rejects the role as unknown, or cannot start it with `fork_turns="none"`, halt. Do not fall back to a generic agent or embed the TOML instructions in the prompt.
 
 Model tiering is set per-agent in the TOML: Resolver = `gpt-5.6-terra / high`; Scanner = `gpt-5.6-luna / medium`; Classifier = `gpt-5.6-terra / high`; Writer = `gpt-5.6-terra / medium`. Do NOT pass a model argument. Native Codex subagents receive their tools directly (no embed workaround).
 
-The orchestrator passes data between stages via the subagent **prompt text** — not files, not environment variables. Specifically:
+The orchestrator passes data between stages via the subagent **prompt text** — not environment variables. Every prompt includes the runtime-path header above. Specifically:
 
 - **Resolver → Scanner (× requested sources)**: Include the full Resolver Output Schema verbatim in each Scanner prompt, along with `source`, `date`, `date_en`.
 - **Scanner → Classifier**: Include every requested-source Scanner Output Schema verbatim, plus `severity_min` and the Resolver's `executives`.
@@ -102,19 +104,19 @@ The orchestrator passes data between stages via the subagent **prompt text** —
    mkdir -p "$OUT_DIR"
    ```
 
-2. **Resolve entity.** Spawn per § Subagent Dispatch Rule (the `reputation-resolver` subagent (`.codex/agents/reputation-resolver.toml`)) with `--company` verbatim. Capture the Resolver Output Schema. Update `company_display = official_name` and recompute `out_html` with the canonical name.
+2. **Resolve entity.** Spawn `sci-research-reputation-resolver` (`.codex/agents/sci-research-reputation-resolver.toml`) per § Subagent Dispatch Rule with `--company` verbatim. Capture the Resolver Output Schema. Update `company_display = official_name` and recompute `out_html` with the canonical name.
    - If `resolution_confidence=low`, halt with: `Company resolution ambiguous: {resolution_notes}. Please clarify or pass the formal name / ticker explicitly.`
 
 3. **Scan sources in parallel.** Parse and validate `--sources` as a non-empty, de-duplicated subset of `news,reddit,x`. Launch one Scanner instance per requested source in a **single orchestrator message**. Pass each instance its `source` plus the Resolver output, `date`, `date_en`.
 
-4. **Classify.** Spawn per § Subagent Dispatch Rule (the `reputation-classifier` subagent (`.codex/agents/reputation-classifier.toml`)) with one Scanner Output for every requested source, plus `severity_min` and the Resolver's `executives`. For sources excluded by `--sources`, do not spawn a Scanner and do not fabricate an empty output. Capture the Classifier Output Schema.
+4. **Classify.** Spawn `sci-research-reputation-classifier` (`.codex/agents/sci-research-reputation-classifier.toml`) per § Subagent Dispatch Rule with one Scanner Output for every requested source, plus `severity_min` and the Resolver's `executives`. For sources excluded by `--sources`, do not spawn a Scanner and do not fabricate an empty output. Capture the Classifier Output Schema.
 
 5. **Branch on findings.**
    - If `total_items_kept == 0`:
      - Exit 0 with **no terminal output**. Do NOT relay upstream output, write `out_html`, or call the email script.
    - Else: emit the deferred `DERIVED` line above, then proceed to Step 6.
 
-6. **Compose HTML.** Spawn per § Subagent Dispatch Rule (the `reputation-writer` subagent (`.codex/agents/reputation-writer.toml`)) with Classifier `kept_items` + `company_display`, `date_display`, `lang`, `sources`, `out_html`. Writer uses one `apply_patch` operation to create or overwrite `out_html`.
+6. **Compose HTML.** Spawn `sci-research-reputation-writer` (`.codex/agents/sci-research-reputation-writer.toml`) per § Subagent Dispatch Rule with Classifier `kept_items` + `company_display`, `date_display`, `lang`, `sources`, `out_html`. Writer uses one `apply_patch` operation to create or overwrite `out_html`.
 
 7. **Verify HTML integrity** (orchestrator). Read the first 200 chars of `out_html`; confirm it starts with `<!DOCTYPE html>` and contains `{company_display}` in the header area. If malformed, re-invoke the Writer once, then halt with an error rather than sending a broken email.
 
@@ -145,10 +147,10 @@ The orchestrator passes data between stages via the subagent **prompt text** —
 
 | Stage | Dispatch (see § Subagent Dispatch Rule) | Required References |
 |---|---|---|
-| Resolver | the `reputation-resolver` subagent (`.codex/agents/reputation-resolver.toml`) | `references/entity-resolution.md`, `references/schemas.md` |
-| Scanner (× requested sources, parallel) | the `reputation-scanner` subagent (`.codex/agents/reputation-scanner.toml`) | `references/source-matrix.md`, `references/schemas.md`, `rules/research/news-source.md` for `news` |
-| Classifier | the `reputation-classifier` subagent (`.codex/agents/reputation-classifier.toml`) | `references/negativity-rubric.md`, `references/schemas.md` |
-| Writer | the `reputation-writer` subagent (`.codex/agents/reputation-writer.toml`) | `references/html-template.md`, `references/schemas.md` |
+| Resolver | `sci-research-reputation-resolver` (`.codex/agents/sci-research-reputation-resolver.toml`) | `references/entity-resolution.md`, `references/schemas.md` |
+| Scanner (× requested sources, parallel) | `sci-research-reputation-scanner` (`.codex/agents/sci-research-reputation-scanner.toml`) | `references/source-matrix.md`, `references/schemas.md`, `references/news-source.md` for `news` |
+| Classifier | `sci-research-reputation-classifier` (`.codex/agents/sci-research-reputation-classifier.toml`) | `references/negativity-rubric.md`, `references/schemas.md` |
+| Writer | `sci-research-reputation-writer` (`.codex/agents/sci-research-reputation-writer.toml`) | `references/html-template.md`, `references/schemas.md` |
 | Email (Step 8) | — (Bash + `scripts/send-report-email.py`) | `references/email-spec.md` |
 
 ## References
@@ -157,6 +159,7 @@ The orchestrator passes data between stages via the subagent **prompt text** —
 |---|---|---|
 | `references/entity-resolution.md` | Ticker/name disambiguation, executive list sourcing, halt conditions | Resolver |
 | `references/source-matrix.md` | Per-source search patterns, date verification methods, credibility signals | Scanner |
+| `references/news-source.md` | T1-T4 news-source hierarchy and exclusions | Scanner (`source=news`) |
 | `references/negativity-rubric.md` | Category taxonomy, severity levels, credibility weighting, hard rules | Classifier |
 | `references/schemas.md` | Resolver / Scanner / Classifier output schemas | All agents |
 | `references/html-template.md` | HTML skeleton, severity colors, localised labels, footer disclaimer | Writer |
@@ -165,12 +168,12 @@ The orchestrator passes data between stages via the subagent **prompt text** —
 ## Invocation Examples
 
 ```
-/reputation-track --company "Apple Inc."
-/reputation-track --company "AAPL" --date 2026-04-21
-/reputation-track --company "Tesla" --lang en --severity-min high
-/reputation-track --company "腾讯控股" --email you@gmail.com
-/reputation-track --company "TSLA" --email "ceo@foo.com,risk@foo.com" --email-dry-run
-/reputation-track --company "Meta" --sources news,reddit  # skip X for this run
+$sci-research:reputation-track --company "Apple Inc."
+$sci-research:reputation-track --company "AAPL" --date 2026-04-21
+$sci-research:reputation-track --company "Tesla" --lang en --severity-min high
+$sci-research:reputation-track --company "腾讯控股" --email you@gmail.com
+$sci-research:reputation-track --company "TSLA" --email "ceo@foo.com,risk@foo.com" --email-dry-run
+$sci-research:reputation-track --company "Meta" --sources news,reddit  # skip X for this run
 ```
 
 ## Design Limits (disclosed in the HTML footer)

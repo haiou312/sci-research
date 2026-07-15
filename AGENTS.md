@@ -6,13 +6,13 @@
 
 | 流水线 | 命令 | 目标 | 输出 |
 |---|---|---|---|
-| C | /daily-news-intelligence | 单国单日新闻情报 | Markdown、可选 docx 与邮件 |
-| D | /daily-briefing | 多国品牌新闻简报 | SPD Bank 品牌 docx、可选邮件 |
-| E | /reputation-track | 公司声誉风险监测 | 仅命中负面时生成 HTML 邮件正文 |
+| C | $sci-research:daily-news-intelligence | 单国单日新闻情报 | Markdown、可选 docx 与邮件 |
+| D | $sci-research:daily-briefing | 多国品牌新闻简报 | SPD Bank 品牌 docx、可选邮件 |
+| E | $sci-research:reputation-track | 公司声誉风险监测 | 仅命中负面时生成 HTML 邮件正文 |
 
-所有子 agent 都是原生 Codex TOML 定义，位于 .codex/agents/*.toml。
+所有子 agent 都是带 `sci-research-` 命名空间的原生 Codex TOML 定义，源文件位于 `.codex/agents/*.toml`。Marketplace 更新后先用 `$sci-research:setup-sci-research-runtime` 同步到运行 workspace 的 `.codex/agents/`，再新开 Codex task。
 
-- 每个 stage 由其命名 TOML agent 启动；模型与 model_reasoning_effort 从 TOML 读取。
+- 每个 stage 通过 custom-agent selector 启动其精确命名 role，并使用 `fork_turns="none"`；模型与 model_reasoning_effort 从 TOML 读取。`task_name` 仅是线程标签。
 - 上游输出原样传给下游 prompt；不要改成通用子 agent 或将 agent body 内嵌到 prompt。
 - 所有文件创建或修改均使用 apply_patch。不要在 prompt 中要求 Write 或 Edit 工具。
 
@@ -22,16 +22,16 @@
 
 | Agent | 模型 | effort | 取舍 |
 |---|---|---:|---|
-| daily-news-scanner | gpt-5.6-luna | medium | 高吞吐检索、日期核验与候选汇总 |
-| news-verifier | gpt-5.6-terra | high | 来源、影响力与去重规则裁决 |
-| daily-fact-extractor | gpt-5.4-mini | medium | 结构化事实与引语抽取 |
-| daily-news-writer | gpt-5.6-sol | high | 多语言新闻写作与背景整合 |
-| daily-editor | gpt-5.6-sol | high | 事实、引语、引用与局部修订 |
-| briefing-curator | gpt-5.6-sol | high | 跨国筛选与品牌化改写 |
-| reputation-resolver | gpt-5.6-terra | high | 实体消歧与高管核验 |
-| reputation-scanner | gpt-5.6-luna | medium | 高吞吐多源候选收集与日期筛选 |
-| reputation-classifier | gpt-5.6-terra | high | 保守的负面分类与证据判断 |
-| reputation-writer | gpt-5.6-terra | medium | 专业风险邮件渲染 |
+| sci-research-daily-news-scanner | gpt-5.6-luna | medium | 高吞吐检索、日期核验与候选汇总 |
+| sci-research-news-verifier | gpt-5.6-terra | high | 来源、影响力与去重规则裁决 |
+| sci-research-daily-fact-extractor | gpt-5.4-mini | medium | 结构化事实与引语抽取 |
+| sci-research-daily-news-writer | gpt-5.6-sol | high | 多语言新闻写作与背景整合 |
+| sci-research-daily-editor | gpt-5.6-sol | high | 事实、引语、引用与局部修订 |
+| sci-research-briefing-curator | gpt-5.6-sol | high | 跨国筛选与品牌化改写 |
+| sci-research-reputation-resolver | gpt-5.6-terra | high | 实体消歧与高管核验 |
+| sci-research-reputation-scanner | gpt-5.6-luna | medium | 高吞吐多源候选收集与日期筛选 |
+| sci-research-reputation-classifier | gpt-5.6-terra | high | 保守的负面分类与证据判断 |
+| sci-research-reputation-writer | gpt-5.6-terra | medium | 专业风险邮件渲染 |
 
 ## 流水线契约
 
@@ -40,7 +40,7 @@
 流程：Scanner → Verifier → Fact Extractor → Writer × language → Editor × language → pandoc → 可选邮件。
 
 - Scanner、Verifier、Fact Extractor 只运行一次；双语模式下 Writer 和 Editor 按语言并行。
-- country=China 必须采用外部视角：不查询中国本土媒体或中国政府域名。权威来源、拒绝列表和日期门见 .codex/agents/daily-news-scanner.toml 与 skills/daily-news-intelligence/references/rubric.md。
+- country=China 必须采用外部视角：不查询中国本土媒体或中国政府域名。权威来源、拒绝列表和日期门见 .codex/agents/sci-research-daily-news-scanner.toml 与 skills/daily-news-intelligence/references/rubric.md。
 - country=Europe 使用 Europe-ex-UK 地域契约：英国为唯一或主要地域主体的事件必须排除，且该门槛不得被 coverage fallback 放宽；英国媒体仍可作为欧洲新闻来源，英国仅作为背景或外部交易对手时不自动排除。
 - 非中国报告有 6 个栏目；中国报告在第 5 位增加 china_nexus，并保留 ipo_ma。
 - Writer 必须遵守 Fact Manifest；Editor 使用 apply_patch 运行五道检查。引用、引号和输出格式规范以 skills/daily-news-intelligence/references/ 为准。
@@ -85,7 +85,7 @@
 
 | Hook | 触发 | 作用 |
 |---|---|---|
-| daily-news-format-check | PostToolUse: apply_patch | 阻断 C 的 Markdown 栏目、引用、URL 和引号规范错误 |
+| daily-news-format-check | PostToolUse: apply_patch + 交付前直接检查 | 编辑后反馈格式错误；直接 `--file` 检查阻断不合格 Markdown 的导出和邮件 |
 | email-send-guard | PreToolUse: Bash | 阻断绕过受控邮件脚本的内联 SMTP |
 
 变更 hook 后运行 node --check scripts/hooks/*.js。变更 TOML 后用 tomllib 解析全部 .codex/agents/*.toml；所有改动都必须通过 git diff --check。
@@ -96,18 +96,20 @@
 |---|---|
 | C 编排、参数、输出与邮件 | skills/daily-news-intelligence/SKILL.md |
 | C 来源、栏目、日期和 fallback 规则 | skills/daily-news-intelligence/references/rubric.md |
-| C agent 行为 | .codex/agents/daily-news-*.toml、.codex/agents/news-verifier.toml |
+| C agent 行为 | .codex/agents/sci-research-daily-*.toml、.codex/agents/sci-research-news-verifier.toml |
 | D 编排与参数 | skills/daily-briefing/SKILL.md |
 | D docx 模板与生成器 | skills/daily-briefing/template/、skills/daily-briefing/scripts/generate-branded-docx.py |
 | E 编排与来源规则 | skills/reputation-track/SKILL.md、skills/reputation-track/references/ |
-| E agent 行为 | .codex/agents/reputation-*.toml |
+| E agent 行为 | .codex/agents/sci-research-reputation-*.toml |
+| Runtime 安装与检查 | skills/setup-sci-research-runtime/、scripts/codex/check-plugin-bundle.py |
 | 插件清单与市场条目 | .codex-plugin/plugin.json、.agents/plugins/marketplace.json |
 
 ## 验证顺序
 
 1. 静态检查：TOML、JSON、Python、Node、Bash 语法与 git diff --check。
-2. C 最小首跑：无邮件，确认原生 agent 发现与串联、apply_patch、hook 和 pandoc 输出。
-3. D 验证：先安装 requirements.txt，使用 C 产出的样例 Markdown，邮件只做 dry-run。
-4. E 验证：测试 News、Reddit、X 的 WebSearch `search` / `open_page` 路径、干净结果静默退出与邮件 dry-run。
+2. Runtime 验证：在隔离 workspace 安装、检查、升级、冲突与卸载；新 task 逐一验证命名 agent selector、模型与 effort。
+3. C 最小首跑：无邮件，确认原生 agent 串联、apply_patch、hook、直接格式门与 pandoc 输出。
+4. D 验证：先安装 requirements.txt，使用 C 产出的样例 Markdown，邮件只做 dry-run。
+5. E 验证：测试 News、Reddit、X 的 WebSearch `search` / `open_page` 路径、干净结果静默退出与邮件 dry-run。
 
 当前只完成了静态与安装打包验证；三条流水线的真实端到端首跑仍待执行。

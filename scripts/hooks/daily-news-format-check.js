@@ -3,7 +3,7 @@
 /**
  * Daily News Format Check Hook
  *
- * Validates Pipeline C (/daily-news-intelligence) Markdown output format.
+ * Validates Pipeline C ($sci-research:daily-news-intelligence) Markdown output format.
  * Catches the failure modes observed across multiple runs where the Writer
  * deviates from `skills/daily-news-intelligence/references/output-spec.md`:
  *
@@ -14,6 +14,7 @@
  *   - References without [N] continuous numbering
  *   - References lines without a URL
  *   - Mismatched count between ### story titles and **References** blocks
+ *   - Per-story body outside the en 250-350 word or zh 450-550 Han-character band
  *   - Prohibited markers: **摘要** / **Summary** / **要約** / **分析** / **Analysis**
  *     (1.9.x+ structure: body prose follows `### title` directly; no
  *     summary/analysis markers anywhere)
@@ -23,12 +24,12 @@
  *          OR when the content's H1 matches the daily-news H1 pattern
  *          (covers all three supported languages: zh / en / ja).
  *
- * Exit codes:
- *   0 — pass (format compliant, or not our concern)
- *   2 — block (format violation; print details on stdout)
+ * Hook mode exits 0 and injects correction context after a violation.
+ * Direct `--file` mode exits 0 on success and 2 on a format violation.
  */
 
 const fs = require("fs");
+const path = require("path");
 
 // ---------- helpers ----------
 
@@ -55,18 +56,104 @@ function isPluginInternal(filePath) {
   return false;
 }
 
+function buildFailureMessage(filePath, violations) {
+  return [
+    `daily-news format check FAILED for ${filePath}`,
+    `Pipeline C Markdown must match skills/daily-news-intelligence/references/output-spec.md.`,
+    ``,
+    ...violations.map((violation, index) => `  ${index + 1}. ${violation}`),
+    ``,
+    `The edit has already been applied. Correct the file and run the check again before export or email.`,
+  ].join("\n");
+}
+
+function validateFile(filePath) {
+  let content;
+  try {
+    content = fs.readFileSync(filePath, "utf8");
+  } catch (error) {
+    return [`Could not read report: ${error.message}`];
+  }
+  if (!isDailyNewsReport(filePath, content)) {
+    return [`Not a Pipeline C daily-news Markdown report: ${filePath}`];
+  }
+  return validate(filePath, content);
+}
+
+function runFileCheck(filePath) {
+  if (!filePath) {
+    process.stderr.write("Usage: daily-news-format-check.js --file <report.md>\n");
+    return 2;
+  }
+  const violations = validateFile(filePath);
+  if (violations.length === 0) {
+    process.stdout.write(`FORMAT_OK: ${filePath}\n`);
+    return 0;
+  }
+  process.stderr.write(`${buildFailureMessage(filePath, violations)}\n`);
+  return 2;
+}
+
+function collectPatchedFilePaths(data) {
+  const rawInput = data?.tool_input;
+  const toolInput = rawInput && typeof rawInput === "object" ? rawInput : {};
+  const candidates = [];
+  for (const value of [
+    toolInput.file_path,
+    toolInput.path,
+    toolInput.filename,
+    toolInput.file,
+    data?.tool_response?.file_path,
+    data?.file_path,
+  ]) {
+    if (typeof value === "string" && value.trim()) candidates.push(value.trim());
+  }
+  if (Array.isArray(toolInput.changes)) {
+    for (const change of toolInput.changes) {
+      const value = change?.path || change?.file_path;
+      if (typeof value === "string" && value.trim()) candidates.push(value.trim());
+    }
+  }
+
+  const patchTexts = [
+    typeof rawInput === "string" ? rawInput : "",
+    toolInput.patch,
+    toolInput.input,
+    toolInput.patch_text,
+  ].filter((value) => typeof value === "string");
+  for (const patchText of patchTexts) {
+    const filePattern = /^\*\*\* (?:Add|Update|Move to) File:\s+(.+)$/gm;
+    for (const match of patchText.matchAll(filePattern)) {
+      candidates.push(match[1].trim());
+    }
+  }
+
+  const cwd = typeof data?.cwd === "string" && data.cwd ? data.cwd : process.cwd();
+  return [
+    ...new Set(
+      candidates.map((candidate) =>
+        path.isAbsolute(candidate) ? path.normalize(candidate) : path.resolve(cwd, candidate)
+      )
+    ),
+  ];
+}
+
 // Section/marker variants across supported languages.
 // The category set is country-derived (6 H2 for a non-China report, 7 for a China
 // report which adds 海外涉华财经与外交 at position 5) — see
 // skills/daily-news-intelligence/references/language-spec.md § Category Catalog &
 // Selection. This hook is intentionally category-count agnostic: it validates
-// ###↔**References** parity, [N] continuity, prohibited markers, and quote chars,
-// never the number or names of H2 sections.
+// ###↔**References** parity, [N] continuity, prohibited markers, quote chars, and
+// per-story body length, never the number or names of H2 sections.
 //
 // Prohibited markers (1.9.x+ structure): body prose follows `### title` directly.
 // No summary/analysis marker is permitted anywhere in the output.
 const PROHIBITED_MARKERS = /^\*\*(?:摘要|Summary|要約|分析|Analysis)\*\*$/gm;
 const REFERENCES_MARKER_LINE = "**References**"; // language-independent per spec
+const BODY_LENGTH_RULES = {
+  en: { target: 300, min: 250, max: 350, unit: "English words" },
+  zh: { target: 500, min: 450, max: 550, unit: "Han characters" },
+};
 
 function countMatches(content, regex) {
   return (content.match(regex) || []).length;
@@ -118,6 +205,26 @@ function collectReferenceLines(content) {
   return blocks;
 }
 
+// Story bodies are the prose between a `### title` and that story's
+// `**References**` marker. Headings, references, URLs, and gap notes therefore
+// remain outside the count by construction.
+function extractStoryBodies(content) {
+  const storyBlocks = content
+    .split(/^---\s*$/m)
+    .filter((block) => block.includes("###"));
+  const stories = [];
+
+  for (const block of storyBlocks) {
+    const match = block.match(
+      /^###\s+([^\n]+)\n+([\s\S]*?)\n+\*\*References\*\*\n+([\s\S]*)$/m
+    );
+    if (!match) continue;
+    stories.push({ title: match[1].trim(), body: match[2], refs: match[3] });
+  }
+
+  return stories;
+}
+
 // ---------- lang detection & quote-mark validation (PR #1) ----------
 
 function detectLang(content) {
@@ -129,6 +236,42 @@ function detectLang(content) {
   if (m[1] === "Daily News Intelligence") return "en";
   if (m[1] === "デイリーニュース") return "ja";
   return null;
+}
+
+function countEnglishWords(body) {
+  const wordTokens =
+    /\d+(?:[.,]\d+)*|[A-Za-z0-9]+(?:['\u2019-][A-Za-z0-9]+)*(?:\$\d+(?:[.,]\d+)*)?/g;
+  return (body.match(wordTokens) || []).length;
+}
+
+function countHanCharacters(body) {
+  return (body.match(/\p{Script=Han}/gu) || []).length;
+}
+
+function checkBodyLengths(content, lang) {
+  const rule = BODY_LENGTH_RULES[lang];
+  if (!rule) return [];
+
+  const violations = [];
+  const stories = extractStoryBodies(content);
+  const expectedStories = countMatches(content, /^### /gm);
+  if (stories.length !== expectedStories) {
+    violations.push(
+      `Could not isolate every story body for length checking: parsed ${stories.length} of ${expectedStories}. Each story must use \`### title → body → **References**\` with standalone \`---\` separators.`
+    );
+  }
+
+  for (const { title, body } of stories) {
+    const count =
+      lang === "en" ? countEnglishWords(body) : countHanCharacters(body);
+    if (count < rule.min || count > rule.max) {
+      violations.push(
+        `Story "${title}" body length is ${count} ${rule.unit}; expected ${rule.min}-${rule.max} (target ${rule.target}). Count only prose between the story title and **References**.`
+      );
+    }
+  }
+
+  return violations;
 }
 
 // Canonical quote chars per lang (mirrors language-spec.md § Canonical Quote Marks).
@@ -202,14 +345,7 @@ function validateQuoteMarks(content, lang) {
 // authoritatively; this hook is the belt-and-braces backstop.
 function checkReferenceCoverage(content, lang) {
   const violations = [];
-  const storyBlocks = content.split(/^---\s*$/m).filter((b) => b.includes("###"));
-
-  for (const block of storyBlocks) {
-    const m = block.match(
-      /^###\s+([^\n]+)\n+([\s\S]*?)\n+\*\*References\*\*\n+([\s\S]*)$/m
-    );
-    if (!m) continue;
-    const [, title, body, refs] = m;
+  for (const { title, body, refs } of extractStoryBodies(content)) {
 
     const quoteRegex =
       lang === "zh"
@@ -346,10 +482,12 @@ function validate(filePath, content) {
 
   // 7. Quote-mark canonical char enforcement (per language-spec.md § Canonical Quote Marks)
   // 8. Reference-coverage heuristic backstop (PR #5).
+  // 9. Per-story body-length bands (en/zh only).
   const lang = detectLang(content);
   if (lang) {
     violations.push(...validateQuoteMarks(content, lang));
     violations.push(...checkReferenceCoverage(content, lang));
+    violations.push(...checkBodyLengths(content, lang));
   }
 
   return violations;
@@ -364,73 +502,42 @@ function main() {
   process.stdin.on("end", () => {
     try {
       const data = JSON.parse(input);
-      // Codex apply_patch payloads vary in shape vs Claude's tool_input.file_path.
-      // Probe the likely field names defensively so the check fires on both runtimes.
-      const ti = data?.tool_input || {};
-      const filePath =
-        ti.file_path ||
-        ti.path ||
-        ti.filename ||
-        ti.file ||
-        (Array.isArray(ti.changes) &&
-          ti.changes[0] &&
-          (ti.changes[0].path || ti.changes[0].file_path)) ||
-        data?.tool_response?.file_path ||
-        data?.file_path ||
-        "";
-      // Codex apply_patch carries no full content — the disk-read below is the
-      // primary path (content stays "" here and is populated from disk).
-      let content = ti.content || "";
-
-      if (!filePath) {
+      const filePaths = collectPatchedFilePaths(data);
+      if (filePaths.length === 0) {
         process.exit(0);
       }
 
-      // For apply_patch events, tool_input.content is absent — read from disk.
-      // PostToolUse fires after the edit has been applied, so the file reflects
-      // the post-edit state.
-      if (!content) {
+      const failures = [];
+      for (const filePath of filePaths) {
+        if (isPluginInternal(filePath)) continue;
+        let content;
         try {
           content = fs.readFileSync(filePath, "utf8");
         } catch (e) {
-          // File unreadable (race, missing) — don't block on a transient error.
-          process.exit(0);
+          continue;
+        }
+        if (!content || !isDailyNewsReport(filePath, content)) continue;
+        const violations = validate(filePath, content);
+        if (violations.length > 0) {
+          failures.push(buildFailureMessage(filePath, violations));
         }
       }
-
-      if (!content) {
-        process.exit(0);
-      }
-      if (isPluginInternal(filePath)) {
-        process.exit(0);
-      }
-      if (!isDailyNewsReport(filePath, content)) {
+      if (failures.length === 0) {
         process.exit(0);
       }
 
-      const violations = validate(filePath, content);
-      if (violations.length === 0) {
-        process.exit(0);
-      }
-
-      const message = [
-        `❌ daily-news format check FAILED for ${filePath}`,
-        `Pipeline C Markdown must match skills/daily-news-intelligence/references/output-spec.md.`,
-        ``,
-        ...violations.map((v, i) => `  ${i + 1}. ${v}`),
-        ``,
-        `Fix the output and apply the patch again. This hook blocks malformed reports from being emailed.`,
-      ].join("\n");
+      const message = failures.join("\n\n");
       process.stderr.write(`${message}\n`);
       process.stdout.write(
         JSON.stringify({
-          continue: false,
-          decision: "block",
-          reason: message,
-          hookSpecificOutput: { hookEventName: "PostToolUse" },
+          systemMessage: message,
+          hookSpecificOutput: {
+            hookEventName: "PostToolUse",
+            additionalContext: message,
+          },
         })
       );
-      process.exit(2);
+      process.exit(0);
     } catch (e) {
       // don't block on parse/logic errors — the hook must never become a footgun
       process.exit(0);
@@ -438,4 +545,19 @@ function main() {
   });
 }
 
-main();
+if (require.main === module) {
+  if (process.argv[2] === "--file") {
+    process.exit(runFileCheck(process.argv[3]));
+  }
+  main();
+}
+
+module.exports = {
+  checkBodyLengths,
+  countEnglishWords,
+  countHanCharacters,
+  extractStoryBodies,
+  collectPatchedFilePaths,
+  runFileCheck,
+  validate,
+};

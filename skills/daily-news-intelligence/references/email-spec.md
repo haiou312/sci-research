@@ -359,10 +359,10 @@ Recommended order for first-time setup:
    ```
 2. Dry-run the full pipeline:
    ```
-   /daily-news-intelligence --country China --email you@gmail.com --email-dry-run
+   $sci-research:daily-news-intelligence --country China --email you@gmail.com --email-dry-run
    ```
 3. Send to yourself for inspection:
    ```
-   /daily-news-intelligence --country China --email you@gmail.com
+   $sci-research:daily-news-intelligence --country China --email you@gmail.com
    ```
 4. Check Gmail inbox — confirm subject, body render, attachments open correctly.

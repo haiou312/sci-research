@@ -1,8 +1,6 @@
 ---
 name: daily-news-intelligence
-description: "Generate a dated single-country daily news briefing (daily news, news intelligence, daily briefing, country news report, 每日新闻, 每日情报, デイリーニュース). Three-stage Scanner → Verifier → Writer pipeline: English WebSearch with per-URL date verification against T1-T4 sources, editorial second-pass filter, then target-language Markdown + docx report with APA 7th references. Supports scheduled/automated execution."
-metadata:
-  origin: sci-research-plugin
+description: "Generate a dated single-country daily news briefing (daily news, news intelligence, daily briefing, country news report, 每日新闻, 每日情报, デイリーニュース). Five-stage Scanner → Verifier → Fact Extractor → Writer → Editor pipeline: English WebSearch with per-URL date verification against T1-T4 sources, editorial filtering, target-language Markdown, final fact/style checks, and optional docx/email delivery. Supports scheduled/automated execution."
 ---
 
 # Daily News Intelligence (Single Country)
@@ -11,7 +9,7 @@ Generate a professional dated daily report for institutional readers covering a 
 
 ## Quick Reference (Orchestrator Checklist)
 
-**Rule (every stage):** spawn the stage's named subagent from `.codex/agents/<name>.toml` (see § Subagent Dispatch Rule below).
+**Rule (every stage):** spawn the exact installed `sci-research-*` custom agent with `fork_turns="none"` (see § Subagent Dispatch Rule below).
 
 **Pipeline flow** (high-level — Workflow below has the numbered procedure with bash commands):
 
@@ -75,23 +73,27 @@ Before running the workflow, set `SKILL_DIR` to the absolute directory containin
 ```bash
 SKILL_DIR=<absolute path to skills/daily-news-intelligence>
 PLUGIN_ROOT="$(cd "$SKILL_DIR/../.." && pwd)"
+RUNTIME_SYNC="$PLUGIN_ROOT/skills/setup-sci-research-runtime/scripts/sync_runtime.py"
 ```
 
-Use these absolute paths for every bundled script. Do not rely on the current working directory or on Claude-specific environment variables.
+Use these absolute paths for every bundled script. Do not rely on the current working directory or on Claude-specific environment variables. Before Step 1, run `python3 "$RUNTIME_SYNC" --project-root "$PWD" --check`. If it fails, stop and tell the user to run `$sci-research:setup-sci-research-runtime` in this workspace, then start a new Codex task.
 
 ## Data Handoff Between Stages
 
 ### Subagent Dispatch Rule (READ FIRST — applies to every stage below)
 
-Every stage runs as a **native Codex subagent** defined in `.codex/agents/<name>.toml`. For each stage the orchestrator MUST:
+Every stage runs as a **native Codex custom agent** installed by `$sci-research:setup-sci-research-runtime`. For each stage the orchestrator MUST:
 
-1. Spawn the stage's named subagent (`daily-news-scanner`, `news-verifier`, `daily-fact-extractor`, `daily-news-writer`, `daily-editor`) — its `developer_instructions`, `model`, and `model_reasoning_effort` come from `.codex/agents/<name>.toml`.
-2. Pass that stage's injected parameters + the verbatim upstream output (per the handoff list below) as the spawn prompt.
-3. Wait for the subagent's result, then feed it into the next stage.
+1. Select the exact custom-agent role through the spawn tool's agent-type/role selector: `sci-research-daily-news-scanner`, `sci-research-news-verifier`, `sci-research-daily-fact-extractor`, `sci-research-daily-news-writer`, or `sci-research-daily-editor`. `task_name` is only a thread label and MUST NOT be used as the role selector.
+2. Set `fork_turns="none"` so the selected role's TOML model, reasoning effort, and developer instructions are applied instead of inheriting a full parent history.
+3. Start every spawn prompt with absolute `plugin_root: {PLUGIN_ROOT}` and `skill_root: {SKILL_DIR}`, then pass that stage's injected parameters + the verbatim upstream output (per the handoff list below).
+4. Wait for the subagent's result, then feed it into the next stage.
+
+If the active Codex surface exposes no custom-agent selector, rejects the role as unknown, or cannot start it with `fork_turns="none"`, halt with a runtime-compatibility error. Do not fall back to `default`, `worker`, `explorer`, another generic subagent, or an embedded copy of the TOML instructions.
 
 Model tiering is set per-agent in the TOML: Scanner = `gpt-5.6-luna / medium`; Verifier = `gpt-5.6-terra / high`; Fact-Extractor = `gpt-5.4-mini / medium`; Writer and Editor = `gpt-5.6-sol / high`. Do NOT pass a model argument at spawn time. Native Codex subagents receive their tools directly (no embed workaround).
 
-The orchestrator passes data between stages via the subagent **prompt text** — not files, not environment variables. Specifically:
+The orchestrator passes data between stages via the subagent **prompt text** — not environment variables. Every prompt includes the runtime-path header above. Specifically:
 
 - **Orchestrator → Scanner**: the orchestrator launches ONE Scanner subagent with **all** `active_categories` plus `country`, `date`, `min_per_category`, and `geography_scope`. The Scanner processes all categories sequentially, performs cross-category dedup + routing internally, and returns a unified Scanner Bundle (`references/schemas.md` § Scanner Bundle Schema).
 - **Scanner → Verifier**: the orchestrator includes the Scanner's full Scanner Bundle verbatim plus `country`, `min_per_category`, and `geography_scope` in the Verifier agent's prompt.
@@ -139,7 +141,7 @@ The orchestrator must not summarise, truncate, or reformat the upstream output �
    ```
    Use `OUT_DIR` (expanded) in all subsequent bash commands. The default resolves to e.g. `~/.sci-research/reports/daily-news/2026-04-16/`.
 
-2. **Scan candidates** (Scanner stage, English only — SINGLE AGENT). Launch **ONE Scanner subagent** for the full report. **Spawn the `daily-news-scanner` subagent (`.codex/agents/daily-news-scanner.toml`) — see § Subagent Dispatch Rule.** The Scanner prompt carries **all** `active_categories` plus `country`, `date`, `min_per_category`, and `geography_scope`; it processes each category sequentially (Pass A + Pass B per category), applies the hard geography gate after date verification, then performs cross-category dedup + routing and returns a unified Scanner Bundle (`references/schemas.md` § Scanner Bundle Schema). Query construction is **per-term, never `OR`-joined** — see `.codex/agents/daily-news-scanner.toml` § Step 1 for the term lists (single source of truth).
+2. **Scan candidates** (Scanner stage, English only — SINGLE AGENT). Launch **ONE Scanner subagent** for the full report. **Spawn `sci-research-daily-news-scanner` (`.codex/agents/sci-research-daily-news-scanner.toml`) — see § Subagent Dispatch Rule.** The Scanner prompt carries **all** `active_categories` plus `country`, `date`, `min_per_category`, and `geography_scope`; it processes each category sequentially (Pass A + Pass B per category), applies the hard geography gate after date verification, then performs cross-category dedup + routing and returns a unified Scanner Bundle (`references/schemas.md` § Scanner Bundle Schema). Query construction is **per-term, never `OR`-joined** — see `.codex/agents/sci-research-daily-news-scanner.toml` § Step 1 for the term lists (single source of truth).
 
    **Per-category specifics:**
    - **Corporate IPO & M&A** — runs in every report; country-anchored. Primary-filing queries (SEC EDGAR / LSE RNS / exchange disclosure) and T3 Finance & Trade/Legal verticals are **always-first-class** — run first regardless of `min_per_category`. A Europe-ex-UK report uses non-UK European disclosure portals; LSE/RNS is not its domestic discovery channel.
@@ -149,13 +151,13 @@ The orchestrator must not summarise, truncate, or reformat the upstream output �
 
 The Scanner gathers 20-30 candidate URLs across all categories. If the Scanner Bundle is empty (main pool AND reserve pool), stop and report: "No news candidates found for {country} on {date}. The date may be a future date, a holiday, or WebSearch may be temporarily unavailable." Do not proceed to the Verifier.
 
-3–6. **[Scanner internal]** Per-URL date verification, hard geography filtering, tier filtering, category coverage enforcement, per-category dedup, cross-category dedup, and `china_nexus`↔`ipo_ma` routing all happen inside the Scanner per `.codex/agents/daily-news-scanner.toml`. The orchestrator waits for the Scanner Bundle before proceeding.
+3–6. **[Scanner internal]** Per-URL date verification, hard geography filtering, tier filtering, category coverage enforcement, per-category dedup, cross-category dedup, and `china_nexus`↔`ipo_ma` routing all happen inside the Scanner per `.codex/agents/sci-research-daily-news-scanner.toml`. The orchestrator waits for the Scanner Bundle before proceeding.
 
-7. **Quality filter** (Verifier stage). Spawn per § Subagent Dispatch Rule (the `news-verifier` subagent (`.codex/agents/news-verifier.toml`)) with the **Scanner Bundle** (`references/schemas.md` § Scanner Bundle Schema) included verbatim in its prompt plus `country`, `min_per_category`, and `geography_scope`. Before the five editorial checks, the Verifier re-applies `references/rubric.md` § Geographic Scope Gate to every main-pool and Reserve-Pool candidate. It then applies originality, authority, impact, **source legitimacy**, and dedup-validation plus § Source Legitimacy for Pass-B sources. Applies the **Three-Step Coverage Fallback** if any category drops below `min_per_category`: Fallback 1 relaxes impact tier (→ `Regional-structural`); Fallback 1.5 promotes from the Scanner Bundle's `## Reserve Pool` (held `below-authority-cap` candidates become `T3-extended` Leads; held `below-ipo-ma-floor` soft-band deals become Leads at their real tier) — revalidating Source Legitimacy and geographic scope on every promotion, never relaxing date / geography / China red-line / originality; Fallback 2 records the gap. Hard-paywall Leads (`Body-source: paywall-stub`, admitted at Scanner Step 3.5 when no free same-event alternative existed) flow through unchanged — the Writer's mandatory ≥2 background-search obligation and Editor Pass 3's quote-downgrade rule handle the body and quote constraints downstream. Emits the Verifier Output Schema from `references/schemas.md`. The orchestrator captures this output for the next two stages (Fact-Extractor and Writer).
+7. **Quality filter** (Verifier stage). Spawn `sci-research-news-verifier` (`.codex/agents/sci-research-news-verifier.toml`) per § Subagent Dispatch Rule with the **Scanner Bundle** (`references/schemas.md` § Scanner Bundle Schema) included verbatim in its prompt plus `country`, `min_per_category`, and `geography_scope`. Before the five editorial checks, the Verifier re-applies `references/rubric.md` § Geographic Scope Gate to every main-pool and Reserve-Pool candidate. It then applies originality, authority, impact, **source legitimacy**, and dedup-validation plus § Source Legitimacy for Pass-B sources. Applies the **Three-Step Coverage Fallback** if any category drops below `min_per_category`: Fallback 1 relaxes impact tier (→ `Regional-structural`); Fallback 1.5 promotes from the Scanner Bundle's `## Reserve Pool` (held `below-authority-cap` candidates become `T3-extended` Leads; held `below-ipo-ma-floor` soft-band deals become Leads at their real tier) — revalidating Source Legitimacy and geographic scope on every promotion, never relaxing date / geography / China red-line / originality; Fallback 2 records the gap. Hard-paywall Leads (`Body-source: paywall-stub`, admitted at Scanner Step 3.5 when no free same-event alternative existed) flow through unchanged — the Writer's mandatory ≥2 background-search obligation and Editor Pass 3's quote-downgrade rule handle the body and quote constraints downstream. Emits the Verifier Output Schema from `references/schemas.md`. The orchestrator captures this output for the next two stages (Fact-Extractor and Writer).
 
-7.5. **Extract Fact Manifest** (Fact-Extractor stage). Spawn per § Subagent Dispatch Rule (the `daily-fact-extractor` subagent (`.codex/agents/daily-fact-extractor.toml`)) with the Verifier's full output included verbatim in its prompt plus `country`, `date`, `lang`, and `out_manifest`. Resolve `out_manifest` to `${OUT_DIR}/fact-manifest-{country_slug}-{date}.yaml` where `{country_slug}` is the lowercase ASCII slug of `country` (e.g. `japan`, `united-kingdom`, `china`). The agent emits a YAML Fact Manifest — one entry per KEPT story listing every number, date, named person, institution, product, and direct quote in the Verifier's `factual_excerpt`, each anchored to its source URL with a verbatim excerpt (see `.codex/agents/daily-fact-extractor.toml` for the full schema). The Fact-Extractor calls `apply_patch` once and returns confirmation. The orchestrator captures the manifest path for downstream stages (Writer in Step 8; Editor in the future Step 8.5).
+7.5. **Extract Fact Manifest** (Fact-Extractor stage). Spawn `sci-research-daily-fact-extractor` (`.codex/agents/sci-research-daily-fact-extractor.toml`) per § Subagent Dispatch Rule with the Verifier's full output included verbatim in its prompt plus `country`, `date`, `lang`, and `out_manifest`. Resolve `out_manifest` to `${OUT_DIR}/fact-manifest-{country_slug}-{date}.yaml` where `{country_slug}` is the lowercase ASCII slug of `country` (e.g. `japan`, `united-kingdom`, `china`). The agent emits a YAML Fact Manifest — one entry per KEPT story listing every number, date, named person, institution, product, and direct quote in the Verifier's `factual_excerpt`, each anchored to its source URL with a verbatim excerpt (see `.codex/agents/sci-research-daily-fact-extractor.toml` for the full schema). The Fact-Extractor calls `apply_patch` once and returns confirmation. The orchestrator captures the manifest path for downstream stages (Writer in Step 8; Editor in the future Step 8.5).
 
-8. **Translate and write the report** (Writer stage — **fans out per `lang` in `langs`** when `is_bilingual`). Spawn per § Subagent Dispatch Rule (the `daily-news-writer` subagent (`.codex/agents/daily-news-writer.toml`)). Ensure the output directory exists:
+8. **Translate and write the report** (Writer stage — **fans out per `lang` in `langs`** when `is_bilingual`). Spawn `sci-research-daily-news-writer` (`.codex/agents/sci-research-daily-news-writer.toml`) per § Subagent Dispatch Rule. Ensure the output directory exists:
    ```bash
    mkdir -p "$OUT_DIR"
    ```
@@ -168,7 +170,7 @@ The Scanner gathers 20-30 candidate URLs across all categories. If the Scanner B
 
    Each Writer invocation **runs 1-3 supplemental WebSearch `search` actions per story by default and `open_page` for every result used in body prose** to enrich background context — what came before, broader pattern, prior policy. Each invocation generates its own background searches independently (no cross-lang sharing — keeps the prompt simple, accepts the duplicated web cost). **References = Verifier KEEP URLs ∪ {search URLs that supplied a fact in body}** — every search URL whose content backed a body fact MUST be cited with proper APA and continuous `[N]` (see `references/output-spec.md` § Cited Search URLs).
 
-   Compose narrative in `lang` per `references/language-spec.md`. Structure is `### title → body → **References**` per story — **no `**摘要**` / `**Summary**` / `**要約**` / `**分析**` / `**Analysis**` markers anywhere**. **Quote marks follow `references/language-spec.md` § Canonical Quote Marks** (en ASCII `""` / zh curly `""` / ja corner `「」` — the format-check hook blocks `apply_patch` on any non-canonical char). When `lang=zh`, also comply with `references/language-spec.md` § Language-Specific Rules (official titles, country prefixes, time anchors, terminology, foreign media naming). Produce Markdown obeying `references/output-spec.md`. Use one `apply_patch` operation to create or overwrite the `out_md` path it was given (= this invocation's `out_md_{lang}`).
+   Compose narrative in `lang` per `references/language-spec.md`. Structure is `### title → body → **References**` per story — **no `**摘要**` / `**Summary**` / `**要約**` / `**分析**` / `**Analysis**` markers anywhere**. **Body length follows `references/language-spec.md` § Body Length Rules**: `en` targets 300 words and must stay within 250–350; `zh` targets 500 Unicode Han characters and must stay within 450–550; `ja` remains unrestricted. **Quote marks follow `references/language-spec.md` § Canonical Quote Marks** (en ASCII `""` / zh curly `“”` / ja corner `「」` — the format-check hook reports any non-canonical char immediately after the edit). When `lang=zh`, also comply with `references/language-spec.md` § Language-Specific Rules (official titles, country prefixes, time anchors, terminology, foreign media naming). Produce Markdown obeying `references/output-spec.md`. Use one `apply_patch` operation to create or overwrite the `out_md` path it was given (= this invocation's `out_md_{lang}`).
 
    **Bilingual execution order — PARALLEL**. Spawn both Writer subagents in a single orchestrator message (multi-Agent-tool-uses in one turn). Each Writer is independent: separate `lang`, separate `out_md_{lang}`, no shared file, no shared state. The orchestrator awaits both invocations and proceeds when both have returned.
 
@@ -186,7 +188,7 @@ The Scanner gathers 20-30 candidate URLs across all categories. If the Scanner B
 
    **Failure mode** (per the Failure Modes table): if either parallel Writer fails, the orchestrator preserves the surviving lang's output, surfaces the failed lang's error, and defaults to halting Step 8.5 + Step 10 with a clear report.
 
-8.5. **Fact-check + local-fluency editor pass** (Editor stage — **fans out per `lang` in `langs`** when `is_bilingual`; **PARALLEL like Writer**, same rationale as Step 8 § Bilingual execution order). Wait for Step 8 to fully complete first — Editor needs its `writer_md_path` to exist on disk. Then spawn all Editor subagents in a single orchestrator message (multi-Agent-tool-uses in one turn) per § Subagent Dispatch Rule (the `daily-editor` subagent (`.codex/agents/daily-editor.toml`)).
+8.5. **Fact-check + local-fluency editor pass** (Editor stage — **fans out per `lang` in `langs`** when `is_bilingual`; **PARALLEL like Writer**, same rationale as Step 8 § Bilingual execution order). Wait for Step 8 to fully complete first — Editor needs its `writer_md_path` to exist on disk. Then spawn all `sci-research-daily-editor` (`.codex/agents/sci-research-daily-editor.toml`) subagents in a single orchestrator message (multi-Agent-tool-uses in one turn) per § Subagent Dispatch Rule.
 
    **For each `lang` in `langs`** (single-lang: 1 invocation; bilingual: 2 invocations dispatched concurrently in a single message) launch a separate Editor subagent, each receiving:
    - `writer_md_path` = this lang's `out_md_{lang}` (the file the matching Writer just produced).
@@ -208,13 +210,19 @@ The Scanner gathers 20-30 candidate URLs across all categories. If the Scanner B
 
    **Pass 5 rollback.** Any Pass-5 patch that violates its six invariants is reverted: manifest facts preserved · References byte-identical · paragraph count preserved · `### title` preserved · quote-mark pairs balanced · no prohibited marker introduced. On unrecoverable failure, Pass 5 aborts gracefully and the pipeline continues with Passes 1-4's changes only.
 
-   **Reporting.** The Editor prints a structured stdout report (drift counts, refs added, claims cut / weakened, quote-mark fixes, per-class Pass-5 totals); the orchestrator logs it but does not gate on it. The format-check hook fires on every `apply_patch` and validates the post-patch state — if any patch produces a malformed file, the hook blocks and the orchestrator surfaces the violation.
+   **Reporting.** The Editor prints a structured stdout report (drift counts, refs added, claims cut / weakened, quote-mark fixes, per-class Pass-5 totals); the orchestrator logs it but does not gate on it. The format-check hook fires after every `apply_patch` and validates the resulting file — if a patch produces a malformed state, the hook reports the violation and the Editor must correct that file before continuing.
 
 9. **Export to Word** (**fans out per `lang` in `langs`** when `is_bilingual`). First verify pandoc is available:
    ```bash
+   FORMAT_CHECK="$PLUGIN_ROOT/scripts/hooks/daily-news-format-check.js"
+   for L in "${LANGS[@]}"; do
+     MD_PATH="$(eval echo "\$out_md_$L")"
+     node "$FORMAT_CHECK" --file "$MD_PATH" || exit 2
+   done
+
    command -v pandoc >/dev/null 2>&1
    ```
-   If pandoc is not installed, skip docx export and report: "pandoc not found — .docx export skipped. Install pandoc to enable Word export." The Markdown file(s) remain valid output. If pandoc is available, run one export **per `lang` in `langs`**:
+   This direct check is the hard delivery gate: unlike PostToolUse feedback, a non-zero result stops export and email until the already-written Markdown is corrected. If pandoc is not installed, skip docx export and report: "pandoc not found — .docx export skipped. Install pandoc to enable Word export." The Markdown file(s) remain valid output. If pandoc is available, run one export **per `lang` in `langs`**:
    ```bash
    for L in "${LANGS[@]}"; do
      MD_BASENAME="$(basename "$(eval echo \"\$out_md_$L\")")"
@@ -253,15 +261,15 @@ The Scanner gathers 20-30 candidate URLs across all categories. If the Scanner B
 
 | Stage | Recommended Agent | Required References |
 |-------|-------------------|---------------------|
-| Scanner (Step 2, single agent — all active categories sequentially) | the `daily-news-scanner` subagent (`.codex/agents/daily-news-scanner.toml`) (see § Subagent Dispatch Rule) | `references/rubric.md`, `references/schemas.md` |
-| Verifier (Step 7) | the `news-verifier` subagent (`.codex/agents/news-verifier.toml`) | `references/rubric.md`, `references/schemas.md` |
-| Fact-Extractor (Step 7.5) | the `daily-fact-extractor` subagent (`.codex/agents/daily-fact-extractor.toml`) | (Verifier output only — agent prompt has full schema) |
-| Writer (Step 8 — **× len(langs)** in bilingual mode) | the `daily-news-writer` subagent (`.codex/agents/daily-news-writer.toml`) | `references/language-spec.md`, `references/output-spec.md`, `references/verification.md`, Fact Manifest from Step 7.5 |
-| Editor (Step 8.5 — **× len(langs)** in bilingual mode) | the `daily-editor` subagent (`.codex/agents/daily-editor.toml`) | Writer's MD (per lang), Fact Manifest (shared), Verifier bundle (verbatim, shared), `references/language-spec.md` § Canonical Quote Marks (Pass 4) + § Language Rules (Pass 5 foreign-residue / inconsistent-name detection) |
+| Scanner (Step 2, single agent — all active categories sequentially) | `sci-research-daily-news-scanner` (`.codex/agents/sci-research-daily-news-scanner.toml`) (see § Subagent Dispatch Rule) | `references/rubric.md`, `references/schemas.md` |
+| Verifier (Step 7) | `sci-research-news-verifier` (`.codex/agents/sci-research-news-verifier.toml`) | `references/rubric.md`, `references/schemas.md` |
+| Fact-Extractor (Step 7.5) | `sci-research-daily-fact-extractor` (`.codex/agents/sci-research-daily-fact-extractor.toml`) | (Verifier output only — agent prompt has full schema) |
+| Writer (Step 8 — **× len(langs)** in bilingual mode) | `sci-research-daily-news-writer` (`.codex/agents/sci-research-daily-news-writer.toml`) | `references/language-spec.md`, `references/output-spec.md`, `references/verification.md`, Fact Manifest from Step 7.5 |
+| Editor (Step 8.5 — **× len(langs)** in bilingual mode) | `sci-research-daily-editor` (`.codex/agents/sci-research-daily-editor.toml`) | Writer's MD (per lang), Fact Manifest (shared), Verifier bundle (verbatim, shared), `references/language-spec.md` § Canonical Quote Marks (Pass 4) + § Language Rules (Pass 5 foreign-residue / inconsistent-name detection) |
 | Email sender (Step 10) | — (Bash + `scripts/send-report-email.py`) | `references/email-spec.md` |
 | Orchestrator delivery check | — | `references/verification.md` |
 
-See `references/verification.md` § Recommended Agent Assignment for substitution rules and caveats. **The § Subagent Dispatch Rule above is authoritative — each stage runs as its named `.codex/agents/<name>.toml` subagent.**
+See `references/verification.md` § Recommended Agent Assignment for substitution rules and caveats. **The § Subagent Dispatch Rule above is authoritative — each stage runs as its exact installed `sci-research-*` custom agent.**
 
 ## Failure Modes
 
@@ -287,25 +295,25 @@ Scattered through the Workflow above; consolidated here for quick scanning. **No
 | `references/schemas.md` | Scanner Bundle Schema (all categories), Verifier Output Schema | Scanner, Verifier |
 | `references/rubric.md` | Source Tier Rules, Source Discovery Model (with Reserve Pool), Source Legitimacy Rubric, Authority & Impact Rubric, Three-Step Coverage Fallback (1 impact / 1.5 reserve-pool promote / 2 gap), Date Verification Rules, Category Coverage Rules, Conditional & Topical Categories (three-band ipo_ma materiality) | Scanner, Verifier |
 | `references/output-spec.md` | Required Markdown Output, Markdown Syntax Contract, Invalid + Valid examples (`lang=en`, `lang=zh`), APA 7th Reference Format | Writer |
-| `references/language-spec.md` | Localisation Table, Derived Display Fields, Filename Pattern, Language Rules, Title Length Rules, Writing Standard, **Language-Specific Rules — `lang=zh` only** (quote marks, official titles, country prefixes, time anchors, terminology precision, foreign media naming) | Writer |
+| `references/language-spec.md` | Localisation Table, Derived Display Fields, Filename Pattern, Language Rules, Title Length Rules, Body Length Rules, Writing Standard, **Language-Specific Rules — `lang=zh` only** (quote marks, official titles, country prefixes, time anchors, terminology precision, foreign media naming) | Writer |
 | `references/verification.md` | Output Rules, Writer Self-Check, End-to-End Verification, Flow Diagram, Recommended Agent Assignment, Invocation Examples | Writer (self-check), Orchestrator (delivery check) |
 | `references/email-spec.md` | Email subject / body templates, env var contract, attachment selection, exit-code handling, security | Orchestrator (Step 10 only when `email` is set) |
 
 ## Invocation Examples
 
 ```
-/daily-news-intelligence --country "Japan" --date 2026-04-14 --lang zh
-/daily-news-intelligence --country "United Kingdom" --date 2026-04-14 --lang en --min-per-category 3
-/daily-news-intelligence --country "Germany" --lang ja
-/daily-news-intelligence --country "China"
+$sci-research:daily-news-intelligence --country "Japan" --date 2026-04-14 --lang zh
+$sci-research:daily-news-intelligence --country "United Kingdom" --date 2026-04-14 --lang en --min-per-category 3
+$sci-research:daily-news-intelligence --country "Germany" --lang ja
+$sci-research:daily-news-intelligence --country "China"
 
 # With email delivery
-/daily-news-intelligence --country "China" --email "you@gmail.com"
-/daily-news-intelligence --country "Japan" --email "a@x.com,b@y.com" --email-attach docx
-/daily-news-intelligence --country "UK" --lang en --email "you@gmail.com" --email-dry-run
+$sci-research:daily-news-intelligence --country "China" --email "you@gmail.com"
+$sci-research:daily-news-intelligence --country "Japan" --email "a@x.com,b@y.com" --email-attach docx
+$sci-research:daily-news-intelligence --country "UK" --lang en --email "you@gmail.com" --email-dry-run
 
 # Bilingual mode (1.18.0+) — 4 attachments (zh+en md + docx) + stacked zh+en email body
-/daily-news-intelligence --country "China" --lang zh+en --email "boss@company.com"
-/daily-news-intelligence --country "Japan" --lang en+zh --email "you@gmail.com" --email-attach docx
-/daily-news-intelligence --country "Germany" --lang zh+ja --email "you@gmail.com" --email-dry-run
+$sci-research:daily-news-intelligence --country "China" --lang zh+en --email "boss@company.com"
+$sci-research:daily-news-intelligence --country "Japan" --lang en+zh --email "you@gmail.com" --email-attach docx
+$sci-research:daily-news-intelligence --country "Germany" --lang zh+ja --email "you@gmail.com" --email-dry-run
 ```

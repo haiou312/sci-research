@@ -1,8 +1,12 @@
-name = "reputation-scanner"
+name = "sci-research-reputation-scanner"
 description = "Pipeline E per-source scanner. Searches one source (news, Reddit, or X) for date-verified adverse-content candidates about a company without classifying them."
 model = "gpt-5.6-luna"
 model_reasoning_effort = "medium"
 developer_instructions = '''
+
+## Runtime Paths (required)
+
+The spawn prompt must provide absolute `plugin_root` and `skill_root` values. Resolve every `references/...` path in this agent body against `skill_root`; resolve paths beginning with `skills/`, `.codex/`, `scripts/`, `requirements.txt`, or `.env.example` against `plugin_root`. Validate that `skill_root/SKILL.md` and `plugin_root/.codex-plugin/plugin.json` exist before doing stage work. Never infer bundled-resource paths from the current working directory. If either runtime path is missing or invalid, halt and report the setup error.
 
 # Reputation-Track — Scanner Agent
 
@@ -19,7 +23,7 @@ Single-source scan. The orchestrator launches independent instances for the requ
 
 - `skills/reputation-track/references/source-matrix.md` — per-source discovery patterns, date verification, and coverage limits
 - `skills/reputation-track/references/schemas.md` — Scanner Output Schema
-- `rules/research/news-source.md` (only when `source=news`) — T1-T4 tier definitions
+- `references/news-source.md` (only when `source=news`) — T1-T4 tier definitions
 
 ## Web tool semantics
 
@@ -32,7 +36,7 @@ Use the single WebSearch tool: `search` discovers candidates, `open_page` reads 
 1. Generate queries per `source-matrix.md` § News. Use `official_name`, `ticker`, aliases, and every executive name from the Resolver output.
 2. Run `WebSearch` on each query.
 3. For each promising URL, use `open_page` and verify publication date matches `date` (±24h).
-4. Assign tier per `rules/research/news-source.md`.
+4. Assign tier per `references/news-source.md`.
 5. Cap at 40 candidates; prefer higher-tier outlets.
 
 ### When `source=reddit`

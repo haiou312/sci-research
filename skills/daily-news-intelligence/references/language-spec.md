@@ -184,13 +184,31 @@ Rationale: `ja` uses corner brackets because Japanese newsroom convention treats
   - `lang=en`: 8-16 words, single line, no terminal punctuation.
 - Do not compress the body into the title. Detail lives in the body paragraph(s) that follow the `### title` line directly (no `**摘要**` / `**Summary**` / `**要約**` marker is used).
 
+## Body Length Rules
+
+Body length is a target band, not a minimum. Every final story body must stay inside the band for its output language and should aim near the centre so Editor corrections have room in either direction.
+
+| `lang` | Target | Accepted band | Unit |
+|---|---:|---:|---|
+| `en` | 300 | 250–350 | English words |
+| `zh` | 500 | 450–550 | Unicode Han characters |
+| `ja` | — | No fixed band | — |
+
+Count only the story body between its `### <title>` and `**References**` marker. Exclude the title, category headings, References lines, URLs, separators, gap notes, and all other document structure.
+
+- **English word count**: count ASCII alphanumeric lexical tokens. Internal apostrophes or hyphens and a decimal or currency-number suffix do not split a token (`central-bank`, `investor's`, `3.5`, and `US$3.5` each count as one word).
+- **Chinese character count**: count only characters with Unicode Script property `Han`. Punctuation, Arabic numerals, Latin letters, whitespace, and Markdown syntax do not count.
+- Below the band, add verifiable substance: event mechanics, prior context, affected parties, quantified consequences, or the next decision point. Never pad with repetition, generic significance claims, or unsourced prose.
+- Above the band, compress repetition and secondary context while preserving every material fact, attribution, and necessary explanation.
+- Paragraph count remains flexible in all languages; the band applies to the combined body across all paragraphs of one story.
+
 ## Writing Standard
 
-The goal is a brief that reads like a tight, in-medias-res news piece in `lang` — short, fluid, opinion-free, packed with facts that matter. The full writing standard (in medias res / depth over breadth / 干练 / background context / quote handling) lives in `.codex/agents/daily-news-writer.toml` § Writing Standard. The items below are the language-specific conventions only.
+The goal is a brief that reads like a tight, in-medias-res news piece in `lang` — short, fluid, opinion-free, packed with facts that matter. The full writing standard (in medias res / depth over breadth / 干练 / background context / quote handling) lives in `.codex/agents/sci-research-daily-news-writer.toml` § Writing Standard. The items below are the language-specific conventions only.
 
 ### Story body (between `### title` and `**References**`)
 
-- Body prose follows `### title` directly with one blank line between. **No `**摘要**` / `**Summary**` / `**要約**` / `**分析**` / `**Analysis**` marker is used** — these markers are prohibited and the format-check hook will block any output containing them.
+- Body prose follows `### title` directly with one blank line between. **No `**摘要**` / `**Summary**` / `**要約**` / `**分析**` / `**Analysis**` marker is used** — these markers are prohibited and the format-check hook reports any output containing them after the edit.
 - **No fixed paragraph count** — let the story decide its own length and structure. Use paragraph breaks as a tool for clarity: at narrative shifts (e.g. disclosure → market reaction), when introducing background context, when separating multi-party reactions. A simple announcement may need just one paragraph; a complex story with rich historical background may need three or four.
 - Open in medias res with a concrete fact (number / action / named person doing something). Close on a substantive fact, never a wrap-up ("折射出", "凸显了", "标志着", "this signals…").
 - Be specific about numbers, names, titles, dates, and the substance of any quote you keep — these must come from a verifiable source (Verifier KEEP set for Lead facts; verifiable search result for background context). The prose around them is the Writer's own.

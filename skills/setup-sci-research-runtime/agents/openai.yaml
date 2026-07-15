@@ -1,0 +1,6 @@
+interface:
+  display_name: "Sci-Research Runtime Setup"
+  short_description: "Install project-scoped Codex agents for Sci-Research"
+  default_prompt: "Use $sci-research:setup-sci-research-runtime to install or check the Sci-Research Codex runtime in this workspace."
+policy:
+  allow_implicit_invocation: false

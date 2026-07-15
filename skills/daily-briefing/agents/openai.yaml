@@ -1,7 +1,7 @@
 interface:
   display_name: "Daily Briefing (Branded)"
   short_description: "Branded multi-country SPD Bank Word briefing"
-  default_prompt: "Use $daily-briefing to create today's branded multi-country news briefing."
+  default_prompt: "Use $sci-research:daily-briefing to create today's branded multi-country news briefing."
 
 policy:
   allow_implicit_invocation: true

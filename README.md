@@ -10,7 +10,7 @@ Given a country, a company, or a date, this plugin orchestrates specialised agen
 
 ## Three Pipelines
 
-| | `/daily-news-intelligence` | `/daily-briefing` | `/reputation-track` |
+| | `$sci-research:daily-news-intelligence` | `$sci-research:daily-briefing` | `$sci-research:reputation-track` |
 |---|---|---|---|
 | **Purpose** | Single-country daily news briefing | Multi-country branded briefing (SPD Bank) | Company reputation risk monitor |
 | **Time focus** | Single date | Single date (reads existing reports) | Single date |
@@ -27,89 +27,247 @@ All three pipelines are **completely independent** — they don't share agents a
 
 - **10 specialised agents** across three pipelines, each agent narrowly scoped
 - **Credibility-first** — T1-T4 date-verified source grading
-- **Per-URL date verification** in `/daily-news-intelligence` — neighbouring days are discarded
-- **Editorial second-pass filter** (`news-verifier`) for daily news — originality / authority / impact / source legitimacy / dedup
+- **Per-URL date verification** in `$sci-research:daily-news-intelligence` — neighbouring days are discarded
+- **Editorial second-pass filter** (`sci-research-news-verifier`) for daily news — originality / authority / impact / source legitimacy / dedup
 - **Fact Manifest + 5-pass Editor** — numbers / names / dates / quotes locked to a verbatim YAML manifest, then fact-checked and style-repaired post-Writer
-- **External-view China matrix** — `/daily-news-intelligence --country "China"` uses only Western media + international organisations + external governments by structural design (no Chinese-domestic outlets, no Chinese government domains)
+- **External-view China matrix** — `$sci-research:daily-news-intelligence --country "China"` uses only Western media + international organisations + external governments by structural design (no Chinese-domestic outlets, no Chinese government domains)
 - **Free-prose Writer** — daily news Writer composes explanatory prose in the target language, not a mechanical translation
 - **Bilingual mode (1.18.0+)** — `--lang zh+en` runs upstream once, fans Writer/Editor out per language in parallel, ships one email with a stacked bilingual body + up to 4 attachments
-- **Branded Word output** via SPD Bank template (`/daily-briefing`)
+- **Branded Word output** via SPD Bank template (`$sci-research:daily-briefing`)
 - **Gmail SMTP email delivery** built into all three pipelines
 - **Quality hooks** enforce daily-news Markdown format and email-send safety
 - **Multilingual** — Chinese / English / Japanese output
 
 ---
 
-## Installation
+## Deployment
 
-### Option 1: From a marketplace
+Sci-Research has two deployment layers:
+
+1. The Codex marketplace installs the plugin skills and hooks.
+2. The runtime setup skill copies the plugin's 10 namespaced TOML agents into the project where the pipelines will run.
+
+Marketplace installation alone is therefore not sufficient. Complete every step below before the first pipeline run.
+
+### First-Time Installation From GitHub
+
+#### Step 1 — Check the required executables
 
 ```bash
-# Add this repo as a Codex plugin marketplace, then install
-codex plugin marketplace add haiou312/sci-research
+codex --version
+python3 --version
+node --version
+```
+
+These three commands must succeed. Node.js is required by the quality hooks. Python is required by the runtime setup, email scripts, and Pipeline D.
+
+Check the optional Pipeline C docx exporter separately:
+
+```bash
+pandoc --version
+```
+
+If `pandoc` is unavailable, Pipeline C can still produce Markdown but skips docx export.
+
+#### Step 2 — Add the Git marketplace
+
+Run this once:
+
+```bash
+codex plugin marketplace add haiou312/sci-research --ref main
 codex plugin marketplace list
 ```
 
-### Option 2: Local Development
+Confirm that the list contains `sci-research-marketplace`. The marketplace name comes from `.agents/plugins/marketplace.json`; it is not the GitHub repository name.
+
+#### Step 3 — Install the plugin from that marketplace
+
+```bash
+codex plugin add sci-research@sci-research-marketplace
+codex plugin list
+```
+
+Confirm that `sci-research@sci-research-marketplace` is shown as `installed, enabled`. Record the displayed version; it should match `.codex-plugin/plugin.json` in the marketplace revision.
+
+#### Step 4 — Create and enter the dedicated runtime workspace
+
+```bash
+mkdir -p ~/.sci-research
+cd ~/.sci-research
+codex
+```
+
+For the Codex macOS App, run only `mkdir -p ~/.sci-research`, then open `~/.sci-research` as the workspace in the App instead of running the `codex` CLI command.
+
+The same workspace must be used for runtime setup and pipeline execution. The default report directories also live under `~/.sci-research/reports/`.
+
+#### Step 5 — Install the project-scoped agents from inside Codex
+
+Enter this in the Codex task, not in the shell:
+
+```text
+Use $sci-research:setup-sci-research-runtime to install the project-scoped runtime in this workspace.
+```
+
+The setup performs a bundle check and dry-run before installing. It creates:
+
+```text
+~/.sci-research/.codex/agents/sci-research-*.toml
+~/.sci-research/.codex/sci-research-runtime.json
+```
+
+It does not modify global `~/.codex/config.toml`, install Python packages, or run a news pipeline. If it reports an unmanaged-file conflict or a locally modified managed agent, resolve the named file instead of overwriting it manually.
+
+#### Step 6 — Review plugin hooks
+
+Inside Codex, open:
+
+```text
+/hooks
+```
+
+Review and trust the two Sci-Research hooks if Codex asks:
+
+- `email-send-guard` — blocks inline SMTP implementations.
+- `daily-news-format-check` — reports invalid Pipeline C Markdown after edits.
+
+#### Step 7 — Start a new Codex task in the same workspace
+
+End the current task, keep `~/.sci-research` as the workspace, and start a new task. Project custom agents are discovered when a task starts; the setup task is not accepted as proof that the new agent registry has loaded.
+
+In the new task, run a runtime-only check:
+
+```text
+Use $sci-research:setup-sci-research-runtime to check the project-scoped runtime in this workspace. Do not run a news pipeline.
+```
+
+The check must report 10 agents and a matching plugin version before first use.
+
+#### Step 8 — Run a no-email smoke test
+
+Enter this in Codex:
+
+```text
+Use $sci-research:daily-news-intelligence --country "Japan" --lang en
+```
+
+Do not add `--email` to the first run. Pipeline C uses its default output directory under `~/.sci-research/reports/daily-news/{date}/`.
+
+### Updating an Existing Git Marketplace Installation
+
+An update has three distinct steps: refresh the Git marketplace snapshot, reinstall the plugin cache version, and resync the project agents.
+
+#### Step 1 — Refresh the Git marketplace
+
+```bash
+codex plugin marketplace upgrade sci-research-marketplace
+```
+
+The correct subcommand is `upgrade`. Codex does not provide `codex plugin update` or `codex plugin marketplace update`.
+
+#### Step 2 — Reinstall the plugin from the refreshed snapshot
+
+```bash
+codex plugin add sci-research@sci-research-marketplace
+codex plugin list
+```
+
+Confirm that the displayed plugin version changed. If it did not, confirm that the pushed `.codex-plugin/plugin.json` has a new `+codex.<cachebuster>` suffix.
+
+#### Step 3 — Update the project-scoped agents
+
+Open `~/.sci-research` in Codex and enter:
+
+```text
+Use $sci-research:setup-sci-research-runtime to update and check the project-scoped runtime in this workspace.
+```
+
+The updater backs up managed files before replacing them and refuses to overwrite local changes. Review `/hooks` again if Codex requests trust for the updated hook definitions.
+
+#### Step 4 — Start another new task
+
+Start a new Codex task in `~/.sci-research` after every plugin/runtime update. The new task is the boundary where updated skills, hooks, and project agents are all loaded together.
+
+### Local Marketplace Development
+
+Use this instead of the GitHub marketplace flow when testing an unpushed checkout:
 
 ```bash
 git clone https://github.com/haiou312/sci-research.git
-codex plugin marketplace add ./sci-research
+cd sci-research
+codex plugin marketplace add "$PWD"
+codex plugin add sci-research@sci-research-marketplace
 ```
 
-Subagents live in `.codex/agents/*.toml`; skills in `skills/*/SKILL.md`; the manifest is `.codex-plugin/plugin.json`. See `PORTING-NOTES.md` for current runtime-validation status.
+After changing the checkout, update the cachebuster in `.codex-plugin/plugin.json`, run `codex plugin add sci-research@sci-research-marketplace` again, then repeat runtime setup in `~/.sci-research`. `marketplace upgrade` refreshes Git marketplaces and is not needed for a local-path marketplace.
 
-### Verify Installation
+### Pipeline D Dependency (optional)
 
+Pipeline D alone requires `python-docx`. If no source checkout exists yet, create one, then install the declared dependency before starting Codex:
+
+```bash
+git clone https://github.com/haiou312/sci-research.git /path/to/sci-research
+cd /path/to/sci-research
+python3 -m pip install --user --upgrade -r requirements.txt
 ```
-/plugin
-```
-You should see `sci-research` listed with its version.
+
+Skip the `git clone` command when the checkout already exists. The pipeline only checks the dependency; it never runs `pip install` itself. If using a virtual environment, activate it before launching the Codex CLI so `python3` inside the task resolves to that environment.
 
 ### Email Delivery (optional)
 
-For the `--email` option in any pipeline, configure Gmail SMTP via `.env`:
+The email scripts read exported environment variables; they do not automatically load a repository `.env` file. Add the required values to the shell profile used to launch the Codex CLI:
 
 ```bash
-cp .env.example .env
-# Edit .env with your Gmail address + app password
+export GOOGLE_EMAIL_USERNAME='you@gmail.com'
+export GOOGLE_EMAIL_APP_PASSWORD='your-16-character-app-password'
+export GOOGLE_EMAIL_FROM_NAME='Your Name'
 ```
 
-See `.env.example` for the required variables.
+Reload the profile, verify that the required variables are exported, and launch Codex from that shell:
+
+```bash
+source ~/.zshrc
+[ -n "$GOOGLE_EMAIL_USERNAME" ] && echo "username: set"
+[ -n "$GOOGLE_EMAIL_APP_PASSWORD" ] && echo "password: set"
+cd ~/.sci-research
+codex
+```
+
+Never commit real credentials or place them in the marketplace repository. The shell-profile example applies to Codex CLI sessions started from that shell. For the macOS App, the variables must be present in the App process environment; use the CLI for email-enabled runs if they are not. Real email is sent only when explicitly requested. Use `--email-dry-run` for the first email-path test.
 
 ---
 
 ## Usage
 
-### Pipeline C — `/daily-news-intelligence` (Single-Country Daily Briefing)
+### Pipeline C — `$sci-research:daily-news-intelligence` (Single-Country Daily Briefing)
 
 ```
-/daily-news-intelligence --country "<name>" [--date YYYY-MM-DD] \
+$sci-research:daily-news-intelligence --country "<name>" [--date YYYY-MM-DD] \
   [--lang zh|en|ja|zh+en|en+zh|zh+ja|ja+zh|en+ja|ja+en] \
   [--out-dir <path>] [--min-per-category <N>] \
   [--email <a@x.com,b@y.com>] [--email-attach both|docx|md|none] [--email-dry-run]
 ```
 
-```bash
+```text
 # Today's UK briefing in Chinese, dry-run the email
-/daily-news-intelligence --country "United Kingdom" --email you@gmail.com --email-dry-run
+$sci-research:daily-news-intelligence --country "United Kingdom" --email you@gmail.com --email-dry-run
 
 # China briefing — external-view by design (Western media + international orgs + external govs only)
-/daily-news-intelligence --country "China" --date 2026-05-11 --lang zh
+$sci-research:daily-news-intelligence --country "China" --date 2026-05-11 --lang zh
 
 # Japanese briefing for Japan, English output
-/daily-news-intelligence --country "Japan" --lang en
+$sci-research:daily-news-intelligence --country "Japan" --lang en
 
 # Bilingual (1.18.0+) — Chinese primary, ships 4 attachments (zh+en md+docx) + stacked zh+en email body
-/daily-news-intelligence --country "China" --lang zh+en --email boss@company.com
+$sci-research:daily-news-intelligence --country "China" --lang zh+en --email boss@company.com
 ```
 
 **Note on `--country "China"`**: Pipeline C scans China from an outside-observer perspective. Chinese-domestic outlets (Xinhua, People's Daily, Caixin, China Daily, SCMP, TechNode, etc.) and Chinese government domains (`gov.cn`, `pbc.gov.cn`, `stats.gov.cn`, …) are **not queried**. Source pool is Reuters / AP / AFP / Bloomberg / DJ Newswires (T1-wire); FT / WSJ / NYT / WaPo / Guardian / BBC / Telegraph / Times / Economist / Le Monde / Spiegel / FAZ / El País / Nikkei Asia (T1-flagship); NHK World / ABC Australia / Straits Times / Korea Herald / The Hindu (T2 regional); IMF / World Bank / WTO / OECD / BIS / IEA / US Treasury / USTR / State Dept / Commerce-BIS / White House / EU Commission / UK Gov / METI / MOFA Japan (T4 external institutions).
 
-### Pipeline D — `/daily-briefing` (Multi-Country Branded Word Document)
+### Pipeline D — `$sci-research:daily-briefing` (Multi-Country Branded Word Document)
 
 ```
-/daily-briefing [--date YYYY-MM-DD] [--countries "中国,英国,美国,欧洲,日本,韩国"] [--total 14] \
+$sci-research:daily-briefing [--date YYYY-MM-DD] [--countries "中国,英国,美国,欧洲,日本,韩国"] [--total 14] \
   [--source-dir <path>] [--out-dir <path>] [--email <a@x.com>] [--email-subject <text>] \
   [--email-dry-run] [--no-wait]
 ```
@@ -125,40 +283,40 @@ By default, local output is independent of the plugin install location and any G
 | D branded briefing | `~/.sci-research/reports/daily-briefings/{date}/` |
 | E reputation report | `~/.sci-research/reports/reputation/{date}/` |
 
-```bash
+```text
 # Today's multi-country briefing with default countries and 14 stories
-/daily-briefing --email you@gmail.com
+$sci-research:daily-briefing --email you@gmail.com
 
 # Specific date with custom country selection
-/daily-briefing --date 2026-05-11 --countries "中国,日本,韩国" --total 12
+$sci-research:daily-briefing --date 2026-05-11 --countries "中国,日本,韩国" --total 12
 ```
 
-### Pipeline E — `/reputation-track` (Company Reputation Risk Monitor)
+### Pipeline E — `$sci-research:reputation-track` (Company Reputation Risk Monitor)
 
 ```
-/reputation-track --company "<name|ticker>" [--date YYYY-MM-DD] [--lang zh|en] \
+$sci-research:reputation-track --company "<name|ticker>" [--date YYYY-MM-DD] [--lang zh|en] \
   [--sources news,reddit,x] [--severity-min low|medium|high] \
   [--email <a@x.com>] [--email-dry-run]
 ```
 
 Resolves the company + executives, scans News + Reddit + X for adverse content, classifies category and severity. **Silent when clean** — only emails a report if negative findings exist.
 
-```bash
+```text
 # Scan Tesla for today's negative coverage
-/reputation-track --company "TSLA" --email you@gmail.com
+$sci-research:reputation-track --company "TSLA" --email you@gmail.com
 
 # Scan Alibaba for a specific date, low-severity threshold
-/reputation-track --company "BABA" --date 2026-05-10 --severity-min low --lang en
+$sci-research:reputation-track --company "BABA" --date 2026-05-10 --severity-min low --lang en
 ```
 
 ---
 
 ## How It Works
 
-### Pipeline C — `/daily-news-intelligence`
+### Pipeline C — `$sci-research:daily-news-intelligence`
 
 ```
-daily-news-scanner → news-verifier → daily-fact-extractor → daily-news-writer → daily-editor → pandoc → email (optional)
+sci-research-daily-news-scanner → sci-research-news-verifier → sci-research-daily-fact-extractor → sci-research-daily-news-writer → sci-research-daily-editor → pandoc → email (optional)
    (Luna / medium)      (Terra / high)  (5.4 mini / medium)    (Sol / high, ×langs) (Sol / high, ×langs)
 
 Bilingual mode (--lang zh+en …): Scanner/Verifier/Fact-Extractor run ONCE; Writer ×langs in parallel → Editor ×langs in parallel → pandoc ×langs
@@ -166,27 +324,27 @@ Bilingual mode (--lang zh+en …): Scanner/Verifier/Fact-Extractor run ONCE; Wri
 
 | Agent | Codex configuration | Role |
 |---|---|---|
-| `daily-news-scanner` | gpt-5.6-luna / medium | Single agent scanning all active categories sequentially. English WebSearch + per-URL date verification (T4 → T1 → T2 → T3), Pass A matrix + Pass B free discovery, paywall fallback (Step 3.5), then internal cross-category dedup + Cat5↔Cat6 routing (§ Step 6) → unified Scanner Bundle |
-| `news-verifier` | gpt-5.6-terra / high | Editorial second-pass filter: originality / authority / impact / source legitimacy / dedup-validation + Three-Step Coverage Fallback |
-| `daily-fact-extractor` | gpt-5.4-mini / medium | Extracts every number / name / date / quote from the Verifier KEEP set into a locked-values YAML Fact Manifest (no web access) |
-| `daily-news-writer` | gpt-5.6-sol / high | Consumes Verifier KEEP set + Fact Manifest, composes explanatory prose in target language with 1-3 background searches per story, emits Markdown + APA refs. One instance per language in bilingual mode |
-| `daily-editor` | gpt-5.6-sol / high | 5-pass post-Writer editor: manifest-fact drift / search-fact backing / quote verbatim / quote-mark normalization / local fluency repair. `apply_patch`-only. One instance per language in bilingual mode |
+| `sci-research-daily-news-scanner` | gpt-5.6-luna / medium | Single agent scanning all active categories sequentially. English WebSearch + per-URL date verification (T4 → T1 → T2 → T3), Pass A matrix + Pass B free discovery, paywall fallback (Step 3.5), then internal cross-category dedup + Cat5↔Cat6 routing (§ Step 6) → unified Scanner Bundle |
+| `sci-research-news-verifier` | gpt-5.6-terra / high | Editorial second-pass filter: originality / authority / impact / source legitimacy / dedup-validation + Three-Step Coverage Fallback |
+| `sci-research-daily-fact-extractor` | gpt-5.4-mini / medium | Extracts every number / name / date / quote from the Verifier KEEP set into a locked-values YAML Fact Manifest (no web access) |
+| `sci-research-daily-news-writer` | gpt-5.6-sol / high | Consumes Verifier KEEP set + Fact Manifest, composes explanatory prose in target language with 1-3 background searches per story, emits Markdown + APA refs. One instance per language in bilingual mode |
+| `sci-research-daily-editor` | gpt-5.6-sol / high | 5-pass post-Writer editor: manifest-fact drift / search-fact backing / quote verbatim / quote-mark normalization / local fluency repair. `apply_patch`-only. One instance per language in bilingual mode |
 
-### Pipeline D — `/daily-briefing`
+### Pipeline D — `$sci-research:daily-briefing`
 
 ```
 daily-news-reports/YYYY-MM-DD/*.md  (existing country reports)
   │
-  └─→ briefing-curator → generate-branded-docx.py → send-briefing-email.py
+  └─→ sci-research-briefing-curator → generate-branded-docx.py → send-briefing-email.py
       (Sol / high)          (python-docx)              (Gmail SMTP)
 ```
 
-`briefing-curator` uses gpt-5.6-sol / high.
+`sci-research-briefing-curator` uses gpt-5.6-sol / high.
 
-### Pipeline E — `/reputation-track`
+### Pipeline E — `$sci-research:reputation-track`
 
 ```
-reputation-resolver → reputation-scanner × requested sources (parallel; default: news / reddit / x) → reputation-classifier → reputation-writer → email (only if findings)
+sci-research-reputation-resolver → sci-research-reputation-scanner × requested sources (parallel; default: news / reddit / x) → sci-research-reputation-classifier → sci-research-reputation-writer → email (only if findings)
    (Terra / high)      (Luna / medium)                                                              (Terra / high)          (Terra / medium)
 ```
 
@@ -194,10 +352,10 @@ Silent exit when `total_items_kept == 0`. Reddit and X use Codex WebSearch `sear
 
 | Agent | Codex configuration |
 |---|---|
-| `reputation-resolver` | gpt-5.6-terra / high |
-| `reputation-scanner` | gpt-5.6-luna / medium |
-| `reputation-classifier` | gpt-5.6-terra / high |
-| `reputation-writer` | gpt-5.6-terra / medium |
+| `sci-research-reputation-resolver` | gpt-5.6-terra / high |
+| `sci-research-reputation-scanner` | gpt-5.6-luna / medium |
+| `sci-research-reputation-classifier` | gpt-5.6-terra / high |
+| `sci-research-reputation-writer` | gpt-5.6-terra / medium |
 
 ---
 
@@ -216,8 +374,8 @@ Silent exit when `total_items_kept == 0`. Reddit and X use Codex WebSearch `sear
 **For `country = China`**: T1-wire is Universal only (no Xinhua / China News Service); T1-flagship Country-of-coverage is empty (no Caixin / People's Daily / SCMP); T3 has no Country: China rows; T4 uses an external-institution table (IMF, World Bank, WTO, OECD, BIS, IEA, US Treasury, USTR, State Dept, US Commerce/BIS, White House, EU Commission, UK Gov, METI, MOFA Japan). Chinese government domains are never queried.
 
 Detailed rules:
-- Pipeline C: [`skills/daily-news-intelligence/references/rubric.md`](./skills/daily-news-intelligence/references/rubric.md) + [`.codex/agents/daily-news-scanner.toml`](./.codex/agents/daily-news-scanner.toml) § Source Matrix
-- Pipeline E news tiering: [`rules/research/news-source.md`](./rules/research/news-source.md)
+- Pipeline C: [`skills/daily-news-intelligence/references/rubric.md`](./skills/daily-news-intelligence/references/rubric.md) + [`.codex/agents/sci-research-daily-news-scanner.toml`](./.codex/agents/sci-research-daily-news-scanner.toml) § Source Matrix
+- Pipeline E news tiering: [`skills/reputation-track/references/news-source.md`](./skills/reputation-track/references/news-source.md)
 
 ---
 
@@ -225,7 +383,7 @@ Detailed rules:
 
 | Hook | Pipeline | Trigger | What It Does |
 |---|---|---|---|
-| `daily-news-format-check` | C | PostToolUse:apply_patch | **Blocks** Pipeline C Markdown if format violates spec (count invariants, `[N]` continuity, URLs, canonical quote marks, no global refs section) |
+| `daily-news-format-check` | C | PostToolUse:apply_patch + direct pre-delivery check | Reports format violations after edits; the direct `--file` check hard-stops export/email on count, numbering, URL, quote-mark, or body-length failures |
 | `email-send-guard` | C / D / E | PreToolUse:Bash | **Blocks** inline `smtplib` / `MIMEMultipart` / `sendmail` Bash commands that bypass the sanctioned `send-*-email.py` scripts |
 
 ---
@@ -239,17 +397,17 @@ sci-research/
 ├── .agents/plugins/
 │   └── marketplace.json                     # Codex install manifest
 ├── .codex/agents/                           # Native Codex subagents (TOML — dispatched by the skills)
-│   ├── daily-news-scanner.toml              # Pipeline C: single-date scan + dedup + Cat5↔Cat6 routing
-│   ├── news-verifier.toml                   # Pipeline C: editorial second-pass filter
-│   ├── daily-fact-extractor.toml            # Pipeline C: Verifier KEEP → YAML fact manifest
-│   ├── daily-news-writer.toml               # Pipeline C: free-prose target-language writer
-│   ├── daily-editor.toml                    # Pipeline C: 5-pass post-Writer editor
-│   ├── briefing-curator.toml                # Pipeline D: multi-country curator
-│   ├── reputation-resolver.toml             # Pipeline E: ticker/name → exec list
-│   ├── reputation-scanner.toml              # Pipeline E: per-source (news/reddit/x)
-│   ├── reputation-classifier.toml           # Pipeline E: per-item negativity grader
-│   └── reputation-writer.toml               # Pipeline E: HTML email body composer
-├── skills/                                  # 3 independent skill workflows (SKILL.md = orchestration; agents/openai.yaml = metadata)
+│   ├── sci-research-daily-news-scanner.toml
+│   ├── sci-research-news-verifier.toml
+│   ├── sci-research-daily-fact-extractor.toml
+│   ├── sci-research-daily-news-writer.toml
+│   ├── sci-research-daily-editor.toml
+│   ├── sci-research-briefing-curator.toml
+│   ├── sci-research-reputation-resolver.toml
+│   ├── sci-research-reputation-scanner.toml
+│   ├── sci-research-reputation-classifier.toml
+│   └── sci-research-reputation-writer.toml
+├── skills/                                  # 3 pipelines + project runtime setup
 │   ├── daily-news-intelligence/             # Pipeline C
 │   │   ├── SKILL.md
 │   │   ├── agents/openai.yaml               # skill metadata (display_name, default_prompt)
@@ -268,24 +426,30 @@ sci-research/
 │   │   └── scripts/
 │   │       ├── generate-branded-docx.py
 │   │       └── send-briefing-email.py
-│   └── reputation-track/                    # Pipeline E
+│   ├── reputation-track/                    # Pipeline E
+│   │   ├── SKILL.md
+│   │   ├── agents/openai.yaml
+│   │   └── references/                      # Pipeline E specs
+│   │       ├── entity-resolution.md
+│   │       ├── source-matrix.md
+│   │       ├── news-source.md
+│   │       ├── negativity-rubric.md
+│   │       ├── html-template.md
+│   │       ├── email-spec.md
+│   │       └── schemas.md
+│   └── setup-sci-research-runtime/           # Installs/checks project-scoped agents
 │       ├── SKILL.md
-│       ├── agents/openai.yaml
-│       └── references/                      # Pipeline E specs
-│           ├── entity-resolution.md
-│           ├── source-matrix.md
-│           ├── negativity-rubric.md
-│           ├── html-template.md
-│           ├── email-spec.md
-│           └── schemas.md
-├── hooks.json                               # Codex hook config (PreToolUse Bash + PostToolUse apply_patch)
+│       └── scripts/sync_runtime.py
+├── hooks/hooks.json                         # Plugin lifecycle hook config
 ├── scripts/
+│   ├── codex/check-plugin-bundle.py         # Installed-cache integrity check
 │   ├── hooks/                               # Hook implementations (Node.js)
 │   │   ├── daily-news-format-check.js
 │   │   └── email-send-guard.js
 │   └── send-report-email.py                 # Gmail SMTP (Pipelines C / E)
-├── rules/research/
-│   └── news-source.md                       # T1-T4 news tiering (Pipeline E dependency)
+├── tests/
+│   ├── test_hooks.py                        # Codex hook protocol tests
+│   └── test_runtime_sync.py                 # Isolated setup/update/uninstall tests
 ├── .env.example                             # Gmail SMTP environment template
 ├── requirements.txt                         # Pipeline D dependency (latest at install time)
 ├── AGENTS.md                                # Project guidance for Codex
@@ -300,18 +464,18 @@ sci-research/
 
 | Goal | Edit |
 |---|---|
-| Pipeline C source matrix / date verification | `.codex/agents/daily-news-scanner.toml` + `skills/daily-news-intelligence/references/rubric.md` |
-| Pipeline C external-view China rules | `.codex/agents/daily-news-scanner.toml` § Source Matrix § T4-official + Step 2.1 |
+| Pipeline C source matrix / date verification | `.codex/agents/sci-research-daily-news-scanner.toml` + `skills/daily-news-intelligence/references/rubric.md` |
+| Pipeline C external-view China rules | `.codex/agents/sci-research-daily-news-scanner.toml` § Source Matrix § T4-official + Step 2.1 |
 | Pipeline C output format / Markdown contract | `skills/daily-news-intelligence/references/output-spec.md` |
 | Pipeline C language localisation / bilingual mode | `skills/daily-news-intelligence/references/language-spec.md` (§ Bilingual Mode) |
 | Pipeline C email delivery / bilingual email | `skills/daily-news-intelligence/references/email-spec.md` + `scripts/send-report-email.py` |
 | Pipeline D brand template | `skills/daily-briefing/template/briefing-template.docx` |
-| Pipeline D curator rules | `.codex/agents/briefing-curator.toml` |
+| Pipeline D curator rules | `.codex/agents/sci-research-briefing-curator.toml` |
 | Pipeline E negativity rubric | `skills/reputation-track/references/negativity-rubric.md` |
-| Pipeline E news source tiering | `rules/research/news-source.md` |
+| Pipeline E news source tiering | `skills/reputation-track/references/news-source.md` |
 | Pipeline E HTML email template | `skills/reputation-track/references/html-template.md` |
-| Pipeline E entity resolution | `skills/reputation-track/references/entity-resolution.md` + `.codex/agents/reputation-resolver.toml` |
-| New output language (Pipeline C) | `.codex/agents/daily-news-writer.toml` + `skills/daily-news-intelligence/references/language-spec.md` |
+| Pipeline E entity resolution | `skills/reputation-track/references/entity-resolution.md` + `.codex/agents/sci-research-reputation-resolver.toml` |
+| New output language (Pipeline C) | `.codex/agents/sci-research-daily-news-writer.toml` + `skills/daily-news-intelligence/references/language-spec.md` |
 | Adding hook / changing email-send guard | `scripts/hooks/email-send-guard.js` + the relevant SKILL.md email step |
 
 ---
