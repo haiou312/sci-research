@@ -1,188 +1,163 @@
-# Rubric — Source Tiers, Authority & Impact, Date Verification, Category Coverage
+# Rubric - Source Credibility, Geography, News Value, and Coverage
 
-Loaded by the Scanner (tier + date + coverage + Pass-B legitimacy + § Step 6 cross-category dedup + routing) and the Verifier (authority + impact + source legitimacy). Not needed by the Writer.
-
-## Source Tier Rules
-
-| Tier | Type | Examples |
-|------|------|----------|
-| T1 | Wire services and flagship English newspapers | Reuters, AP, AFP, Bloomberg, FT, NYT, BBC, The Guardian, WSJ, The Economist |
-| T2 | National / regional flagships and quality dailies | CNBC, CNN, Politico, Axios, NPR, SCMP, Nikkei Asia, Le Monde, Der Spiegel, Folha, Times of India |
-| T3 | Specialist and trade publications | TechCrunch, Wired, The Verge, Euractiv, Semafor, Finextra |
-| T4 | Primary institutional releases | Central banks, statistics bureaus, parliaments, regulators (official `.gov` / `.gov.uk` / `.europa.eu` domains) |
-
-Exclude entirely: personal blogs, Wikipedia, link aggregators, forums, SEO farms, content mills, unattributed rewrites (this is enforced by § Source Legitimacy below for any Pass-B source).
+Loaded by the Scanner and Verifier. This document defines outcome-based admission rules. It intentionally does not contain an outlet whitelist, source tiers, fixed per-domain query plan, or mechanical impact thresholds.
 
 ## Source Discovery Model
 
-The Scanner runs **two passes** per category:
+The Scanner searches adaptively across the open web and official channels. It may use broad topic queries, entity-led follow-ups, official-document searches, local terminology, and sector-specific searches based on what the day's results reveal.
 
-- **Pass A — Source Matrix seed (authoritative)**: `site:`-anchored queries down the T4→T1-wire→T1-flagship→T2→T3 ladder against matrix domains. The matrix is the high-authority **seed pool + authority-calibration baseline + structural red-line carrier** (the China external-view design is implemented by the matrix simply not containing Chinese domestic/government rows). It is **not** a hard wall.
-- **Pass B — free discovery (recall expansion)**: bare-keyword sweep (no `site:`). Always for `ipo_ma` and `china_nexus`; on-demand for the other five (category below `min_per_category` after Pass A, or a Pass-A hard-paywall Lead with no free Pass-A alternative). Every Pass-B hit passes, in order: (1) the China red-line denylist (China report: drop Chinese domestic-media + `*.gov.cn` domains — a rule, never a judgement), (2) the date gate, (3) § Geographic Scope Gate below, (4) § Source Legitimacy below, (5) the authority cap. **Candidates that clear (1)–(4) but fail (5) are NOT discarded** — they are written to the Scanner's `## Reserve Pool` (`held: below-authority-cap`) so the Verifier can promote them via Fallback 1.5 if the category is short. See § Three-Step Coverage Fallback below and `references/schemas.md` § Scanner Bundle Schema for the reserve-pool format.
+- Prefer official primary records, established international or national media, and reputable regional or specialist publications.
+- Do not require a source to appear on a predefined list.
+- Do not stop discovery when `min_per_category` candidates have been found. The per-category discovery target is `max(min_per_category * 2, 6)` distinct date-verified events when credible material exists.
+- Search quality is evaluated by the resulting evidence, not by compliance with a fixed query sequence.
 
-Tradeoff accepted by design: Pass B introduces day-to-day source-pool drift (slightly lower reproducibility) in exchange for materially higher recall on paywalled, wire-relay-lagged, and non-whitelist-but-legitimate stories.
+## Source Eligibility
+
+Classify each Lead into exactly one `Source class`:
+
+| Source class | Meaning |
+|---|---|
+| `official-primary` | Government, regulator, central bank, legislature, court, statistics authority, exchange, filing system, or other primary institutional record reporting its own action or data |
+| `established-media` | Accountable international or national newsroom with an established reporting record |
+| `reputable-regional` | Accountable regional or local newsroom with identifiable provenance and direct relevance to the event |
+| `reputable-specialist` | Established trade, legal, financial, scientific, technology, or industry publication with subject-matter reporting responsibility |
+| `sanctioned-syndication` | Transparent, attributed full-text syndication of an eligible original when the original is inaccessible or paywalled |
+
+Eligibility principles:
+
+- A personal byline is useful but not mandatory. An established outlet's organisation byline is acceptable.
+- Source authority is claim-specific. Official records are authoritative for their own decisions, filings, statistics, and statements; independent reporting is preferable for disputed effects, criticism, or broader interpretation.
+- Regional and specialist sources may Lead when they directly report an in-scope event and have accountable editorial provenance.
+- A company filing or official company statement can establish what the company announced. Material consequences or contested claims should be corroborated when practical.
+- Transparent syndication is eligible when attribution is clear. Prefer the original URL when it is usable; otherwise retain the original under `Corroborated by` when known.
+- Paywall status is not a credibility score. A paywalled source may Lead under `Body-source: paywall-stub`, with retrievable same-event and background support added downstream.
+
+Hard-reject as a Lead:
+
+- PR-wire distribution used as sole reporting;
+- SEO/AI content farms, scraped-content mills, fabricated local-news networks, or anonymous unattributed rewrites;
+- unsupported personal blogs, Substack/Medium posts, social-media posts, forums, Q&A pages, and link aggregators;
+- pages whose provenance, date, or asserted event cannot be verified;
+- promotional copy with no substantive reportable fact.
 
 ## Geographic Scope Gate
 
-This hard gate runs after the date gate and before paywall fallback, Source Legitimacy, authority scoring, or Reserve-Pool placement. The Scanner applies it to every candidate; the Verifier independently revalidates it before the five editorial checks and again before any Fallback-1.5 promotion. No coverage fallback may relax geography.
+The gate runs after date verification and before editorial selection. Scanner applies it to every candidate; Verifier independently revalidates it. Coverage Review may never relax it.
 
-Existing country-scoped eligibility remains unchanged for ordinary country reports. For normalized `country == Europe`, use `geography_scope = Europe-ex-UK`:
+For ordinary single-country reports:
 
-- Preserve the pipeline's existing meaning of Europe; this rule subtracts the United Kingdom and does not redefine Europe as EU-27.
-- Hard-DROP with reason `UK-primary-nexus-excluded` when the United Kingdom is the event's sole or primary geographic nexus. This includes UK domestic government, parliamentary, judicial, regulatory, central-bank, market, corporate, social, migration, public-health, and other domestic events, including events specific to England, Scotland, Wales, or Northern Ireland.
-- KEEP when an EU or pan-European institution, or a non-UK European jurisdiction, is the event's primary geographic nexus and the story otherwise passes the rubric. A UK actor may appear only as context or an external counterparty; its presence does not itself disqualify an otherwise European event.
-- For a mixed Europe-UK event, the non-UK European side must independently carry the story's material action or impact and remain the dominant frame. If removing the UK facts leaves no independently material European event, DROP it.
-- Outlet nationality and domain do not determine event geography. UK-based outlets such as Reuters' London bureau, the Financial Times, BBC, Guardian, Telegraph, or The Times remain eligible sources for in-scope European events.
-- For `ipo_ma` in a Europe report, at least one listing entity, acquirer, or target must be principally headquartered, registered, or listed in non-UK Europe and must carry an independently material role in the deal. A UK-only deal, or a UK company dealing only with a non-European counterparty, is out of scope.
+- The target country must be the event's primary decision-maker, jurisdiction, location, regulated market, materially affected principal, or direct economic/political counterparty.
+- Foreign actors may appear, but the target-country relevance must be concrete rather than incidental.
 
-The Scanner records `Geographic nexus` and `UK role` for every surviving main-pool and Reserve-Pool candidate. For non-Europe reports, emit `UK role: not-applicable`; for Europe-ex-UK use `none`, `context`, or `external-counterparty`. These fields are evidence labels, not a replacement for the gate.
+For `geography_scope = Europe-ex-UK`:
 
-## Source Legitimacy Rubric
+- `Europe` means Europe excluding events whose sole or primary geographic nexus is the United Kingdom.
+- Hard-DROP `UK-primary-nexus-excluded` for UK domestic government, parliamentary, judicial, regulatory, central-bank, market, corporate, social, public-health, or other primarily UK events.
+- KEEP an event led by an EU/pan-European institution or non-UK European jurisdiction when that side independently carries the material action or impact and remains the dominant frame.
+- For a mixed Europe-UK event, removing the UK facts must still leave an independently meaningful non-UK European event.
+- Publisher nationality is irrelevant. A UK outlet can report an eligible non-UK European event.
 
-Applies to **every Pass-B source**. Pass-A matrix sources are pre-cleared (the matrix is the whitelist). Classify each Pass-B outlet into exactly one bucket:
+## China External-View Gate
 
-- **`auto-accept`** — a recognized global/national wire or flagship newspaper-of-record that simply is not in the matrix yet (Reuters/AP/AFP/Bloomberg/Kyodo/Yonhap/PTI/Reuters-equivalents; a country's paper of record). **Also** a free **full-text** syndication of a hard-paywalled wire/flagship original (Yahoo Finance carrying full Reuters/Bloomberg, AP News, MSN partner copy): admissible as Lead, the paywalled original recorded under `Corroborated by`. Authority = the original's real tier.
-- **`conditional-accept`** — admit only if **ALL** hold: (1) an identifiable independent newsroom / masthead with named editorial staff; (2) a bylined human reporter (not "staff"/"admin"/anonymous); (3) original reporting OR clearly-attributed syndication of a wire/flagship; (4) a corrections/ethics policy or an established multi-year track record; (5) the article sits on the outlet's own primary domain (not an aggregator path or content-mill subdomain). **Authority cap: T2** (T3 for trade/niche outlets). Never T1 unless it is itself a recognized wire/flagship (that is `auto-accept`).
-- **`hard-reject`** — discard regardless of how important the story seems: press-release / PR-wire as primary source (PRNewswire, BusinessWire, GlobeNewswire, ACCESSWIRE), SEO or AI-generated content farm, unbacked blog / Substack / Medium / personal site, social-media post, forum or Q&A or link-aggregator (Reddit, Yahoo/Google answers, Investing.com reposts), state-propaganda front, "pink-slime" partisan pseudo-local-news network, scraped-content mill.
+For `country = China`:
 
-**Authority cap rule**: a Pass-B story may be the sole Lead of its category only if Pass A surfaced nothing on that event; otherwise it is recorded as corroboration of the Pass-A Lead. The Verifier enforces this rubric as its Source-legitimacy check and may DROP with reason `Illegitimate-source`.
+- Do not query or admit Chinese domestic media or Chinese government domains as report sources.
+- Chinese domestic actions must be reported through eligible external media, international organisations, foreign official institutions, or other non-prohibited external sources.
+- This restriction applies across all categories and cannot be relaxed for coverage.
 
-## Authority & Impact Rubric
+## Editorial Selection Rubric
 
-The Verifier applies these four independent checks. A story must pass all four to be KEPT.
+The Verifier applies five checks. A story must pass all five, except that Coverage Review may broaden only the news-value judgement.
 
-### 1. Originality
+### 1. Credible evidence
 
-Prefer original reporting over syndicated copies.
+The source must fit one eligible `Source class`, support the asserted event, expose a verifiable date, and provide identifiable provenance. Sensitive allegations and disputed claims require an accessible primary record or credible independent corroboration.
 
-- **Original**: outlet broke the story, has its own byline, quotes obtained directly, or is the primary institutional release (T4).
-- **Syndicated**: marked "via Reuters/AP/AFP", reproduces another outlet's lede verbatim, or is a near-identical rewrite of an earlier piece.
-- **Unclear**: no attribution, no byline, but no evidence of copying either — keep only if no competing original exists.
+### 2. Concrete new information
 
-When multiple candidates cover the same event, keep the most original and drop the rewrites.
+The target date must contain a reportable development: a decision, filing, vote, enforcement step, result, transaction stage, data release, operational change, market consequence, attributable reaction, or original factual finding.
 
-### 2. Authority
+Transparent syndication is acceptable. Drop a rewrite or follow-up only when it adds no meaningful new fact.
 
-Grade within T1-T4 using this priority (highest to lowest):
+### 3. Daily briefing value
 
-1. `T4-official` — primary institutional release (central bank, regulator, ministry, parliament).
-2. `T1-primary` — T1 outlet with named-reporter byline + direct quotes from primary sources.
-3. `T1-wire` — T1 wire-service piece (Reuters/AP/AFP/Bloomberg) with organisation byline.
-4. `T2-primary` — T2 outlet with named-reporter byline + primary sourcing.
-5. `T2-wire` — T2 outlet with organisation byline.
-6. `T3` — specialist / trade publication.
+Use contextual judgement rather than fixed numerical thresholds:
 
-Between two candidates on the same event, prefer the higher authority band.
+- `high` - major consequences for policy, politics, economy, markets, business, technology, society, law, security, diplomacy, or humanitarian conditions.
+- `medium` - a concrete development with meaningful national, regional, sector, company, community, or institutional relevance.
+- `coverage-keep` - narrower but useful information admitted during Coverage Review for an under-covered category.
 
-### 3. Impact / Materiality
+An event does not need to be nationally transformative. It is enough that an informed executive reader would reasonably want to know it happened today and that its consequence or relevance can be stated clearly.
 
-Accept only stories with demonstrable impact. Match each keep to one tier:
+Categorical rejects:
 
-- **Policy** — central bank decisions, legislation passed or tabled, regulatory enforcement, election outcomes, treaty signings.
-- **Market** — single-stock or sector moves ≥ 2%, M&A ≥ USD 1B, layoffs ≥ 1000, IPO pricing, sovereign rating changes, large bond auctions.
-- **Structural** — technology platform pivots, supply-chain relocations, landmark court rulings, infrastructure approvals/cancellations.
-- **Humanitarian** — armed conflict developments, mass-casualty incidents, natural disasters with material regional impact.
-- **Regional-structural** (fallback-only) — structural events with regional rather than national scope. Admissible only when Fallback 1 is active for that category.
+- routine marketing or promotion with no substantive consequence;
+- opinion/commentary without a new reportable fact;
+- unsupported rumours or speculation;
+- lifestyle, celebrity, entertainment, or gossip without broader significance;
+- ordinary sports results without material political, economic, diplomatic, or major-championship significance;
+- content whose only rationale is that it appeared in a famous outlet.
 
-Reject categorically:
+### 4. Originality and corroboration
 
-- Lifestyle, celebrity, entertainment, or gossip pieces.
-- Routine corporate PR or marketing announcements without material financial impact.
-- Op-eds, columns, and pure commentary without new facts.
-- Incremental follow-ups that add no new facts to a previously reported story.
-- Sports results, unless politically charged (sanctioned athletes, boycotts) or a major championship final (Olympic medal event, World Cup final, Grand Slam title match).
+Select the Lead with the clearest claim-level evidence and most useful retrievable body. Official primary evidence and independent reporting may coexist as references because they serve different purposes. Do not use a global prestige score.
 
-### 4. Deduplication
+### 5. Deduplication
 
-When two or more candidates cover the same underlying event:
+Merge only the same underlying event: substantially the same actors, action, and date. Keep later stages or follow-ups when they add a distinct decision, filing, vote, enforcement action, result, or other material fact. Broad thematic similarity is not duplication.
 
-- Keep one `Lead` (the most original + highest authority).
-- Mark the rest as `Corroboration-of-#X` in the Verifier schema and drop them from the KEEP set.
-- Related consecutive actions on the same policy line (e.g. "central bank announces", "central bank publishes details") collapse to a single story anchored on the most substantive node.
+## Coverage Review
 
-## Three-Step Coverage Fallback
+If the primary Verifier pass leaves a category below `min_per_category`:
 
-If the Verifier's primary pass leaves any category below `min_per_category`, apply the steps below **in order**. Stop as soon as the category reaches `min_per_category`. Each step records its own marker; markers compose (e.g. `fallback_1+1.5+gap`).
+1. Reconsider candidates rejected only as `No-meaningful-news-value` or provisionally labelled `routine` by the Scanner.
+2. KEEP as `coverage-keep` when the candidate still has an eligible source, exact date, correct geography, a concrete new fact, and identifiable relevance to the category.
+3. Regional, specialist, institutional, and company-level developments may qualify; national-scale impact is not required.
+4. Never restore source-provenance failures, off-date or geography failures, China external-view violations, exact duplicates, routine PR, opinion-only pieces, unsupported rumours, or fabricated/unverifiable material.
+5. Continue until the category reaches `min_per_category` or no eligible candidates remain. Existing high/medium stories are never removed merely to hit a number.
 
-### Fallback 1 — Relax impact tier within the shortfall category
-
-- Reconsider items dropped on **impact** grounds only.
-- Accept them under the **`Regional-structural`** impact tier if they carry structural significance at a regional or sub-national scope.
-- Never reconsider items dropped on date, geographic scope, T1-T4 tier, originality (Syndicated), source legitimacy (Illegitimate-source), or categorical reject grounds.
-
-Mark `Fallback used: fallback_1` in the Verifier report header.
-
-### Fallback 1.5 — Relax authority cap from Reserve Pool
-
-If Fallback 1 still leaves the category below `min_per_category`, draw from the Scanner Bundle's `## Reserve Pool` (the holding zone defined in `references/schemas.md` § Scanner Bundle Schema and `.codex/agents/sci-research-daily-news-scanner.toml` § Pass B). The reserve pool contains date-verified candidates that passed the Geographic Scope Gate, China red-line denylist, and Source Legitimacy rubric but were held back at the Scanner stage for **one of two reasons**:
-
-- **`held: below-authority-cap`** — Pass-B `conditional-accept` outlets whose real tier is at or below the cap (T3 trade / niche / smaller national outlets — e.g. The Register, UKTN, Sifted, Tech.eu, Electronics Weekly, City A.M. tech section, niche industry trades). The cap is the floor for ordinary KEEP eligibility; these candidates are admissible only via this fallback.
-- **`held: below-ipo-ma-floor`** — `ipo_ma` deals that satisfy the **soft band** of the materiality scale (USD 50M ≤ value < primary floor) per § Conditional & Topical Categories below. Below USD 50M still hard-DROP at the Scanner.
-
-Rules for what Fallback 1.5 may do:
-
-- Promote held candidates to KEEP at their **real tier** (`Authority score: T3-extended` for `below-authority-cap`; `Authority score` carried verbatim for `below-ipo-ma-floor`). Mark `Dedup role: Lead`.
-- Apply only to the shortfall category; never to a category that already met `min_per_category` in Fallback 1.
-- Promote in **best-first** order: prefer (a) hits closer to T2 over deep-T3 niche; (b) `Original` over `Unclear`; (c) higher Impact tier when known; (d) `auto-accept` over `conditional-accept`.
-- Stop promoting as soon as the category reaches `min_per_category` — do NOT over-fill at the expense of report compactness.
-- Never relax date, geographic scope, China red-line denylist, originality (Syndicated drops stay dropped), or Source Legitimacy (`Illegitimate-source` DROPs stay dropped).
-- Hard-paywall outlets do not flow through Fallback 1.5 — they are admitted (or routed to `Corroborated by`) at Scanner Step 3.5, with Lead status carrying `Body-source: paywall-stub` and the Writer's mandatory ≥2 background-search obligation. Reserve Pool serves the orthogonal authority-cap and `ipo_ma` soft-band cases only.
-
-Mark `Fallback used: fallback_1+1.5` in the Verifier report header.
-
-### Fallback 2 — Record the gap
-
-If Fallback 1 and Fallback 1.5 together still leave the category below `min_per_category`:
-
-- Leave the category underfilled.
-- Emit a `Post-Verification Coverage Gap` block for that category.
-- Do NOT reach for low-tier or off-date stories to fill the hole.
-
-Mark `Fallback used: fallback_1+1.5+gap` (or `fallback_1+gap` if 1.5 did not need to run because the reserve pool was empty) in the Verifier report header.
+When a category remains short, record the gap instead of admitting weak evidence.
 
 ## Date Verification Rules
 
-- Every candidate URL must pass a WebSearch `open_page` round trip.
-- The extracted publication date must equal `date` in either the outlet's local timezone or UTC — one match is sufficient.
-- Neighbouring days do not qualify. Do not relax the window.
-- If the article displays only a relative date (e.g. "2 hours ago") and no absolute date can be recovered from the opened page, drop the candidate.
-- If the page is an index, topic hub, or tag listing rather than a single article, drop it.
+- Every candidate URL must pass an `open_page` round trip on the canonical article or document.
+- The extracted publication date must equal `date` in either the outlet's local timezone or UTC.
+- Neighbouring days do not qualify.
+- Search snippets alone are not proof.
+- Drop relative-only dates with no recoverable absolute date, index/topic/search pages, empty pages, and pages whose canonical date cannot be verified.
 
 ## Category Coverage Rules
 
-- The **active category set is derived from `country`** per `references/language-spec.md` § Category Catalog & Selection — 6 categories for a non-China report (`econ, politics, tech, society, ipo_ma, other`), 7 for a China report (the same plus `china_nexus` at position 5). All active categories must appear as H2 sections in that fixed order, even when a category ends up with zero stories.
-- Each category must contain at least `min_per_category` stories when sources allow.
-- When short, append the italic `gap_note` rather than inflating with low-tier sources. `china_nexus` and `ipo_ma` are legitimately thin on many days — record the gap, never pad.
-- A story belongs to exactly one category — classify by the article's dominant frame, not by topical overlap. For the China-report `china_nexus`↔`ipo_ma` overlap, apply the routing tie-break in § Conditional & Topical Categories below.
+- The active category set comes from `references/language-spec.md`: six categories for a non-China report and seven for a China report.
+- Scanner aims for `max(min_per_category * 2, 6)` distinct credible candidates per category when available.
+- Verifier aims for at least `min_per_category` KEEP stories per category, using Coverage Review when necessary.
+- Every story belongs to exactly one category by dominant frame.
+- Underfilled categories carry the localized `gap_note`; never pad them with untrustworthy, off-date, or out-of-scope material.
 
-## Conditional & Topical Categories
+## Conditional and Topical Categories
 
-This section is the **authoritative ruleset** for the two non-standard categories. The Scanner uses it to decide what to search and admit; the Verifier uses it to decide what to KEEP, DROP, and how to route. `references/language-spec.md` owns identity/naming/numbering; this section owns eligibility, scope, exclusions, and routing.
+### `china_nexus` - China-Nexus Finance and Investment
 
-### `china_nexus` — China-Nexus Finance & Investment (China report only)
+- Appears only when `country == China`.
+- Requires China and at least one foreign party interacting through a concrete economic or financial channel: investment, FDI, goods/technology flow, commercial or industrial policy, tariffs, export controls, sanctions, trade measures, or investment screening.
+- Purely domestic China developments belong in the appropriate general category.
+- Pure diplomacy without concrete economic substance belongs in `politics`.
+- The foreign counterparty may be anywhere; this is a global topical search.
+- Drop Chinese aid, concessional lending, or development/infrastructure finance to Africa or a small developing economy unless the event is itself a strategic key-industry or supply-chain transaction.
+- Strategic areas include semiconductors, AI/compute, EVs and batteries, critical minerals, advanced manufacturing, biotech, aerospace, clean energy and grids, telecoms, and strategic logistics.
 
-- **Presence**: appears **only** when `country == China`. It is absent from every non-China report. Do not emit a `china_nexus` heading for Japan, the US, the UK, etc.
-- **Cross-border requirement (hard)**: a story is eligible only if China **and at least one foreign party** interact through an **economic / financial channel** — inbound or outbound investment & FDI, goods/technology flow, commercial & industrial policy, tariffs, export controls, sanctions, trade measures, or investment-screening actions that cross China's border. A purely domestic Chinese item (PBoC reserve-ratio cut, a provincial stimulus, an onshore-only regulatory action with no foreign counterparty) is **not** eligible — it stays in `econ`.
-- **Finance scope, not diplomacy (hard)**: `china_nexus` is the **economic / commercial** thread only. Pure diplomacy with no concrete economic transaction — bilateral summits, joint statements, foreign-ministry rhetoric, ambassadorial actions, treaty signings with no commercial core — belongs in `politics` (the China report's Politics & Diplomacy category at position 2 already covers it), **not** here. Tariffs, sanctions, export controls and investment-screening are NOT treated as diplomacy: they carry concrete economic substance and stay in `china_nexus`. This keeps `china_nexus` disjoint from both `econ` and `politics` within the same China report.
-- **Region scope**: the foreign counterparty may be **any country / region** — `china_nexus` is a global topical sweep, NOT country-scoped. The Scanner does not anchor it to a single country the way `econ`/`politics` are anchored to the report country.
-- **Exclusion (hard DROP)**: Chinese aid, concessional loans, or development/infrastructure finance directed to Africa or to small developing economies is **dropped** (Verifier reason `China-aid-smallcountry-excluded`). "Small developing economy" = a low- or lower-middle-income economy that is not a G20 member and not a major economy.
-  - **Carve-out (overrides the exclusion)**: KEEP if the transaction is itself a **China key-industry play** — e.g. a lithium / rare-earth / cobalt / nickel mine stake, a semiconductor or chip-equipment deal, a port or rail asset that is a strategic logistics node for a key-industry supply chain. Strategic key-industry positioning outranks the aid exclusion.
-- **Key-industry list** (drives both the carve-out and priority): semiconductors & chip-making equipment; AI / compute / data centres; electric vehicles & power batteries; rare earths & critical minerals; advanced manufacturing & robotics; biotech & pharmaceuticals; aerospace & commercial aviation; clean energy (solar / wind / nuclear / grid); telecom / 5G / networking; shipbuilding.
-- **Priority**: when eligible candidates exceed `min_per_category`, rank stories that touch a key industry **above** stories that do not.
+### `ipo_ma` - Corporate IPO and M&A
 
-### `ipo_ma` — Corporate IPO & M&A (every report)
+- Appears in every report.
+- A company linked to the report country must be a principal listing entity, acquirer, target, seller, or materially affected regulated party.
+- For `Europe-ex-UK`, at least one independently material principal must be headquartered, registered, listed, or regulated in non-UK Europe.
+- Eligibility is contextual, not a fixed dollar threshold. A filing, priced or proposed IPO, acquisition, takeover, merger, strategic stake, review, approval, rejection, or completion is eligible when it has a concrete new development and meaningful financial, strategic, competitive, employment, regulatory, market-access, ownership, or industrial significance.
+- Drop unsupported rumours and routine immaterial transactions with no identifiable briefing value.
 
-- **Presence**: appears in **every** report regardless of `country`.
-- **Scope**: IPO or M&A where a **company of the report's country** is a principal — the listing entity, the acquirer, or the target. Country-scoped exactly like `econ`/`politics` (anchored to the report country's companies; the counterparty may be foreign, e.g. a domestic champion acquiring or being acquired by an overseas firm). For `Europe-ex-UK`, at least one principal must be headquartered, registered, or listed in non-UK Europe and independently carry the material European side of the deal; UK-only deals and UK-company/non-European-counterparty deals are excluded.
-- **Materiality scale (three bands)**: classify each candidate against the value bands below. Bands (a)–(d) define the **primary floor**; (e) defines the **soft band**.
-  - **Primary band (KEEP-eligible at the Scanner stage)**: any of — (a) an IPO whose priced offering is ≥ USD 300M; (b) an M&A / takeover / buyout with disclosed value ≥ USD 500M; (c) any cross-border deal under national-security or antitrust review; (d) any deal touching a China key industry (per the list above), regardless of size. Goes into the Scanner's main bundle, evaluated normally by the Verifier.
-  - **(e) Soft band (Reserve Pool, Fallback-1.5-eligible only)**: an IPO priced USD 50M ≤ value < USD 300M, or an M&A / takeover / buyout USD 50M ≤ value < USD 500M, with **no** primary-band qualifier (no review-trigger, no China-key-industry touch). The Scanner writes these to `## Reserve Pool` with `held: below-ipo-ma-floor` (per `references/schemas.md`); the Verifier may promote them via Fallback 1.5 if the category is short. Outside that fallback path they are never KEEP.
-  - **Below USD 50M** (and no primary-band qualifier): hard DROP at the Scanner with reason `Below-IPO-MA-threshold`. Not reserve-pool eligible; not Fallback-1.5-promotable.
+### China-report routing tie-break
 
-### China-report routing tie-break (`china_nexus` ↔ `ipo_ma`)
+For an event that matches both `china_nexus` and `ipo_ma`:
 
-**Applied in Scanner § Step 6 (after all per-category Pass A + Pass B passes complete).** During each per-category pass the Scanner only judges whether an item is in-scope for the current category and may leave a `Reroute hint`; the routing tie-break and all cross-category dedup are resolved together in § Step 6. A single Chinese company's cross-border deal can match both categories. One story, one category — resolve by dominant frame:
-
-- Dominant frame is China's **external economic / industrial strategy, key-industry positioning, or triggering a foreign security / antitrust / investment-screening review** → `china_nexus`.
-- Dominant frame is a **corporate-finance event** (offering price, listing venue, ownership change) with no strategic/policy overlay → `ipo_ma`.
-- A purely domestic Chinese listing (STAR Market / ChiNext / Shanghai / Shenzhen main board, no foreign party) → always `ipo_ma` (it fails the `china_nexus` cross-border test anyway).
+- Route to `china_nexus` when the dominant frame is China's external economic/industrial strategy, key-industry positioning, or foreign security/antitrust/investment screening.
+- Route to `ipo_ma` when the dominant frame is corporate finance, listing mechanics, price, venue, or ownership change without a strategic policy overlay.
+- Route a purely domestic Chinese listing to `ipo_ma`.

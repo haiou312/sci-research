@@ -7,7 +7,7 @@
   {
     "id": 2,
     "prompt": "$sci-research:daily-news-intelligence --country \"United Kingdom\" --lang en --min-per-category 3",
-    "expected": "6-category en Markdown + docx (non-China: econ/politics/tech/society/ipo_ma/other; no china_nexus), >=3 stories per category or italic gap_note, no tier relaxation to fill gaps"
+    "expected": "6-category en Markdown + docx (non-China: econ/politics/tech/society/ipo_ma/other; no china_nexus), >=3 stories per category or italic gap_note, no untrustworthy/off-date/out-of-scope padding"
   },
   {
     "id": 3,

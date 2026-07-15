@@ -26,11 +26,11 @@ Body prose follows `### title` directly (with one blank line between). **There i
 Between consecutive stories use a standalone `---` separator line.
 Do not emit a trailing global references or sources section.
 
-**`[N]` numbering rule**: every reference line starts with `[N] ` where `N` runs **continuously from 1 across the entire document**, not per-story. The first reference of story 1 is `[1]`; if story 1 has 3 references, story 2's first reference is `[4]`. Multiple references per story are allowed (and common — Verifier often delivers corroborating T1-T2 pairs).
+**`[N]` numbering rule**: every reference line starts with `[N] ` where `N` runs **continuously from 1 across the entire document**, not per-story. The first reference of story 1 is `[1]`; if story 1 has 3 references, story 2's first reference is `[4]`. Multiple references per story are allowed and common when the Verifier delivers corroborating or claim-complementary sources.
 
 **Search URLs that supplied a fact in body MUST appear** in the references block. Writer **runs 1-3 supplemental WebSearch `search` actions per story by default and `open_page` for every used result** to enrich body prose with background context (what came before, broader pattern, prior policy). The references block contains: Verifier KEEP URLs (Lead + every Corroborated by URL) ∪ {search URLs whose content backed a body fact}.
 
-If a category has fewer kept stories than `min_per_category` after the Scanner gap pass, keep the section heading and append exactly one italic `gap_note` line before the next `---`.
+If a category has fewer kept stories than `min_per_category` after Verifier Coverage Review, keep the section heading and append exactly one italic `gap_note` line before the next `---`.
 
 ## Markdown Syntax Contract
 
@@ -155,7 +155,7 @@ Writer runs supplemental WebSearch `search` actions per story for background con
 
 This is **mandatory**. Citing background facts in body without listing the supporting URL in References creates a reference gap visible to readers checking sources. Writer is responsible at write time; Editor verifies at edit time.
 
-Verifier-delivered URLs (Lead + every Corroborated by URL) always appear in References regardless of whether Writer cites them in body — they carry the report's authority signal.
+Verifier-delivered URLs (Lead + every Corroborated by URL) always appear in References regardless of whether Writer cites them in body — they preserve the report's evidence trail.
 
 The ONLY URLs that may be opened and NOT cited are ones that returned irrelevant content or whose facts duplicate something already cited. When in doubt, cite.
 

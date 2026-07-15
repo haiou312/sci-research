@@ -11,7 +11,7 @@ Target-language tokens used by the Writer. Scanner and Verifier output stays Eng
 | `title_label` | `Daily News Intelligence` | `每日热点新闻` | `デイリーニュース` |
 | `h1_pattern` | `# {country_display} Daily News Intelligence — {date_display}` | `# {country_display}每日热点新闻 — {date_display}` | `# {country_display}デイリーニュース — {date_display}` |
 | `references_marker` | `**References**` | `**References**` | `**References**` |
-| `gap_note` | `*Note: only N story/stories met T1-T4 standards for this category today.*` | `*注：本分类当日仅检索到 N 条符合 T1-T4 标准的新闻。*` | `*注：このカテゴリで本日 T1-T4 基準を満たした記事は N 件のみでした。*` |
+| `gap_note` | `*Note: only N credible, date-verified story/stories were available for this category today.*` | `*注：本分类当日仅检索到 N 条来源可信且日期经核验的新闻。*` | `*注：このカテゴリで本日確認できた、信頼でき日付検証済みの記事は N 件のみでした。*` |
 | `quote_marks` | `""` (U+0022) | `""` (U+201C / U+201D) | `「」` (U+300C / U+300D) |
 
 Section H2 headings are **not** Localisation tokens — they are composed at render time from the **Category Catalog** below, because the active category set and its numbering depend on `country`.
@@ -45,7 +45,7 @@ active(country) = [econ, politics, tech, society]
 - **Non-China report** → 6 categories: `econ, politics, tech, society, ipo_ma, other`.
 - **China report** → 7 categories: `econ, politics, tech, society, china_nexus, ipo_ma, other`.
 
-`china_nexus` appears **only** in a `--country China` report. `ipo_ma` appears in **every** report (always, regardless of country). `other` is always the final catch-all. Eligibility, scope, exclusions, and the China-report `china_nexus`↔`ipo_ma` routing tie-break are defined in `references/rubric.md` § Conditional & Topical Categories — this file owns only identity, naming, order, and numbering.
+`china_nexus` appears **only** in a `--country China` report. `ipo_ma` appears in **every** report (always, regardless of country). `other` is always the final catch-all. Eligibility, scope, exclusions, and the China-report `china_nexus`↔`ipo_ma` routing tie-break are defined in `references/rubric.md` § Conditional and Topical Categories — this file owns only identity, naming, order, and numbering.
 
 ### H2 numbering convention
 

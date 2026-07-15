@@ -40,9 +40,11 @@
 流程：Scanner → Verifier → Fact Extractor → Writer × language → Editor × language → pandoc → 可选邮件。
 
 - Scanner、Verifier、Fact Extractor 只运行一次；双语模式下 Writer 和 Editor 按语言并行。
-- country=China 必须采用外部视角：不查询中国本土媒体或中国政府域名。权威来源、拒绝列表和日期门见 .codex/agents/sci-research-daily-news-scanner.toml 与 skills/daily-news-intelligence/references/rubric.md。
-- country=Europe 使用 Europe-ex-UK 地域契约：英国为唯一或主要地域主体的事件必须排除，且该门槛不得被 coverage fallback 放宽；英国媒体仍可作为欧洲新闻来源，英国仅作为背景或外部交易对手时不自动排除。
+- Scanner 不使用固定媒体清单、T1-T4、Pass A/B 或来源等级；它按原则广泛搜索官方原始渠道及具备编辑责任的国际、全国、地区和专业媒体，并在达到最终最低篇数后继续收集候选缓冲。
+- country=China 必须采用外部视角：不查询中国本土媒体或中国政府域名。原则驱动的来源资格、拒绝规则和日期门见 .codex/agents/sci-research-daily-news-scanner.toml 与 skills/daily-news-intelligence/references/rubric.md。
+- country=Europe 使用 Europe-ex-UK 地域契约：英国为唯一或主要地域主体的事件必须排除，且该门槛不得被 Coverage Review 放宽；英国媒体仍可作为欧洲新闻来源，英国仅作为背景或外部交易对手时不自动排除。
 - 非中国报告有 6 个栏目；中国报告在第 5 位增加 china_nexus，并保留 ipo_ma。
+- Scanner Bundle 与 Verifier KEEP/DROP 报告必须原样保存到日报目录的 `audit/*.txt`；不要使用 `.md`，避免 Pipeline D 将审计文件当作国家日报。
 - Writer 必须遵守 Fact Manifest；Editor 使用 apply_patch 运行五道检查。引用、引号和输出格式规范以 skills/daily-news-intelligence/references/ 为准。
 - --email-attach none 表示仅发送正文，必须省略 --attach。
 
@@ -95,7 +97,7 @@
 | 需求 | 真源文件 |
 |---|---|
 | C 编排、参数、输出与邮件 | skills/daily-news-intelligence/SKILL.md |
-| C 来源、栏目、日期和 fallback 规则 | skills/daily-news-intelligence/references/rubric.md |
+| C 来源、栏目、日期和 Coverage Review 规则 | skills/daily-news-intelligence/references/rubric.md |
 | C agent 行为 | .codex/agents/sci-research-daily-*.toml、.codex/agents/sci-research-news-verifier.toml |
 | D 编排与参数 | skills/daily-briefing/SKILL.md |
 | D docx 模板与生成器 | skills/daily-briefing/template/、skills/daily-briefing/scripts/generate-branded-docx.py |

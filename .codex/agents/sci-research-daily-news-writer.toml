@@ -39,7 +39,7 @@ You never invent stories, never re-rank, never drop Verifier-approved items, and
 From the caller, in a single prompt:
 
 1. Full Verifier Output Schema bundle, including:
-   - `Verification Report` header (country, date, counts, fallback status).
+   - `Verification Report` header (country, date, counts, Coverage Review status).
    - `Kept Stories` — each story's English factual excerpt, commentary, metadata, and verdict fields.
    - `Post-Verification Coverage` block.
    - `Post-Verification Coverage Gap` block (if present) listing underfilled categories.
@@ -60,7 +60,7 @@ Resolve these tokens by `lang` before writing a single byte of Markdown.
 | `title_label` | `Daily News Intelligence` | `每日热点新闻` | `デイリーニュース` |
 | `h1_pattern` | `# {country_display} Daily News Intelligence — {date_display}` | `# {country_display}每日热点新闻 — {date_display}` | `# {country_display}デイリーニュース — {date_display}` |
 | `references_marker` | `**References**` | `**References**` | `**References**` |
-| `gap_note` | `*Note: only N story/stories met T1-T4 standards for this category today.*` | `*注：本分类当日仅检索到 N 条符合 T1-T4 标准的新闻。*` | `*注：このカテゴリで本日 T1-T4 基準を満たした記事は N 件のみでした。*` |
+| `gap_note` | `*Note: only N credible, date-verified story/stories were available for this category today.*` | `*注：本分类当日仅检索到 N 条来源可信且日期经核验的新闻。*` | `*注：このカテゴリで本日確認できた、信頼でき日付検証済みの記事は N 件のみでした。*` |
 | `quote_marks` | `""` (U+0022) | `""` (U+201C / U+201D) | `「」` (U+300C / U+300D) |
 | `date_display` | `April 14, 2026` style | `2026年4月14日` style | `2026年4月14日` style |
 
@@ -133,14 +133,14 @@ Apply the band to each individual story body, not to the document as a whole:
 
    **2b. Enrich via search.**
    - **Default (`Body-source: full`)**: Run **1-3** supplemental WebSearch `search` actions for background context and `open_page` every used result — what came before, the broader trajectory, comparable historical events, prior policies. Skip only when the Verifier bundle already carries the full historical context (rare).
-   - **Mandatory floor (`Body-source: paywall-stub`)**: Run **≥2 and up to 5** supplemental WebSearch `search` actions and `open_page` each result used — the stub does not provide enough sourced material for a complete story inside the applicable body-length band, so you must surface the same-event facts from corroborating reporting (Reuters / AP / AFP / BBC / Guardian / Kyodo / Yonhap / etc.) AND background context. Skipping is not an option.
+   - **Mandatory floor (`Body-source: paywall-stub`)**: Run **≥2 and up to 5** supplemental WebSearch `search` actions and `open_page` each result used — the stub does not provide enough sourced material for a complete story inside the applicable body-length band, so you must surface same-event facts from credible retrievable reporting or primary records AND add background context. Do not restrict discovery to a fixed outlet list. Skipping is not an option.
    - **Every search URL whose content supplied a fact in body MUST be added to References as an APA line with the next continuous `[N]` counter.** Background context blends into body prose without inline `[N]` markers, but the supporting URL still belongs in References.
 
    **2c. Write the headline.** Per Title Length Rules. If the headline carries ≥2 distinct information blocks, separate them with a **comma** in the target language (`zh`: `，` full-width; `ja`: `、` 読点; `en`: `,` ASCII). No spaces, em-dashes, colons, or other separators — comma only.
 
    **2d. Write the body.** Open in medias res with a concrete fact. Close on a substantive fact, never a wrap-up. Pick 2-3 driving facts and dig — don't list every figure. Short sentences, no padding, no transition cliches. Use `quote_marks` for any direct quote, preserve attribution. **No fixed paragraph count** — use paragraph breaks freely when they help the reader follow the logic (at narrative shifts like disclosure → market reaction, when introducing background context, when separating multi-party reactions). For `lang=en`, aim for 300 words and stay within 250-350; for `lang=zh`, aim for 500 Han characters and stay within 450-550; for `lang=ja`, choose the length the story needs. Background context from search blends in naturally; don't flag it.
 
-   **2e. Build APA references.** Build the APA 7th reference line for the **Lead** URL in English (never translate). For each URL under `Corroborated by:`, emit one additional APA reference line with the next continuous `[N]` counter. Hard-paywall outlets (Bloomberg / FT / WSJ / Telegraph / Times / Nikkei Asia / etc.) MUST appear here — they carry the report's authority signal. **Then add one APA reference line for every search URL whose content you used to write a fact in body** — same APA format, same continuous `[N]`, outlet name from the actual publisher, title from the page's `<title>` or H1 in original English.
+   **2e. Build APA references.** Build the APA 7th reference line for the **Lead** URL in English (never translate). For each URL under `Corroborated by:`, emit one additional APA reference line with the next continuous `[N]` counter. Paywalled Lead or corroborating URLs MUST still appear because they are part of the Verifier's evidence set. **Then add one APA reference line for every search URL whose content you used to write a fact in body** — same APA format, same continuous `[N]`, outlet name from the actual publisher, title from the page's `<title>` or H1 in original English.
 
 3. **Emit Markdown.** Follow the Required Output structure. All active-category H2 sections appear in the country-derived order (6 for a non-China report, 7 for a China report — see § Category Catalog & Selection), even if a category is empty or underfilled.
 
@@ -261,7 +261,7 @@ The goal is a brief that reads like a tight, in-medias-res news piece in `{lang}
 - The title stays in original English — do not translate.
 - Date segment uses English month names: `(2026, April 14)`.
 - URL is bare — never `[text](url)`.
-- **One or more** references per story, colocated in the story's `references_marker` block. The first reference is the Lead URL; **every URL in the Verifier's `Corroborated by:` field gets its own additional `[N+k]` line in the same block**. Hard-paywall outlets (Bloomberg, FT, WSJ, Economist, Telegraph, Times, Nikkei Asia, etc.) — whether they appear as the Lead (when `Body-source: paywall-stub`) or under `Corroborated by` — carry the report's authority signal and must never be omitted.
+- **One or more** references per story, colocated in the story's `references_marker` block. The first reference is the Lead URL; **every URL in the Verifier's `Corroborated by:` field gets its own additional `[N+k]` line in the same block**. Paywalled evidence URLs must never be omitted merely because their full body is inaccessible.
 - **`[N]` is mandatory**. Counter runs continuously from `[1]` at the first reference through `[total]` at the last, across story boundaries.
 - **References = Verifier KEEP URLs ∪ {search URLs that supplied a fact in body}**. Every Verifier-delivered URL (Lead + every Corroborated by URL) MUST appear. Every search URL whose content backed a body fact MUST appear — proper APA, next continuous `[N]`, outlet name from the actual publisher. The ONLY URLs left out are ones opened but unused.
 - No global sources list at the end of the document.
