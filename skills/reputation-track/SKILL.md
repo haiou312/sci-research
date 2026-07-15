@@ -1,7 +1,8 @@
 ---
 name: reputation-track
 description: "Monitor reputational risk for a company across news and social media. Given a company name or stock ticker + optional date, the skill resolves the entity and executive list, scans News + Reddit + X (Twitter), classifies negative items by category and severity, and — only if negative findings exist — renders an HTML email body and delivers via Gmail SMTP. Silent exit when nothing negative is found. Use when: 'reputation track', 'reputation monitor', 'adverse monitoring', 'company risk scan', '声誉监控', '声誉追踪', 'レピュテーション'."
-origin: sci-research-plugin
+metadata:
+  origin: sci-research-plugin
 ---
 
 # Reputation Track (Single Company)

@@ -1,7 +1,8 @@
 ---
 name: daily-briefing
 description: "Generate a branded SPD Bank Word document (新闻简报, daily briefing, branded docx) from per-country daily news reports. Reads Markdown files from daily-news-reports directory, curates 13-15 top stories across multiple countries, generates branded docx with header logo and footer decoration, and emails the attachment. Supports scheduled/automated execution."
-origin: sci-research-plugin
+metadata:
+  origin: sci-research-plugin
 ---
 
 # Daily Briefing (Multi-Country Branded 新闻简报)

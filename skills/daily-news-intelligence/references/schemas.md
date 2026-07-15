@@ -12,9 +12,11 @@ The Scanner handles all active categories and returns one unified bundle. Same p
 - Cross-category duplicates collapsed: <d>
 - Reroutes applied: <r>
 - Reserve pool entries held: <p>
+- Geography exclusions: <g>   (unique candidate URLs discarded by the hard geography gate)
 
 ## Scan Summary
 - Country: <country>
+- Geography scope: <country | Europe-ex-UK>
 - Date: <YYYY-MM-DD>
 - Candidates kept: <M>
 - Category counts: one `id=<n>` token per category in active-category order (per `references/language-spec.md` § Category Catalog & Selection), pipe-separated. Non-China report: `econ=<n1> | politics=<n2> | tech=<n3> | society=<n4> | ipo_ma=<n5> | other=<n6>`. China report: `econ=<n1> | politics=<n2> | tech=<n3> | society=<n4> | china_nexus=<n5> | ipo_ma=<n6> | other=<n7>`. **Example concrete value (Japan, non-China)**: `econ=3 | politics=2 | tech=2 | society=1 | ipo_ma=2 | other=1`. **Example (China)**: `econ=3 | politics=2 | tech=2 | society=1 | china_nexus=2 | ipo_ma=1 | other=1`.
@@ -29,6 +31,8 @@ The Scanner handles all active categories and returns one unified bundle. Same p
 - Source: <outlet name> [tier]
 - Source legitimacy: <matrix | auto-accept | conditional-accept>
 - Body-source: <full | paywall-stub>
+- Geographic nexus: <primary country, non-UK European jurisdiction, or EU/pan-European institution>
+- UK role: <not-applicable | none | context | external-counterparty>
 - Impact tier: <Policy | Market | Structural | Humanitarian>
 - URL: <full https URL>
 - Byline: <...>
@@ -48,6 +52,8 @@ The Scanner handles all active categories and returns one unified bundle. Same p
 - Source legitimacy: <auto-accept | conditional-accept>
 - Held: <below-authority-cap | below-ipo-ma-floor>
 - Held reason: <single sentence>
+- Geographic nexus: <primary country, non-UK European jurisdiction, or EU/pan-European institution>
+- UK role: <not-applicable | none | context | external-counterparty>
 - URL: <full https URL>
 - Byline: <...>
 - Corroborated by: <merged list or "None">
@@ -72,6 +78,7 @@ Verifier must consume the **Scanner Bundle** and emit exactly this shape (still 
 - Input count (from Scanner): <N>
 - Reserve pool input count (from Scanner): <P>
 - Kept count: <M>   (includes any Fallback-1.5 promotions)
+- Geography scope: <country | Europe-ex-UK>
 - Category counts after verification: one `id=<n>` token per category in active-category order, pipe-separated. Non-China report: `econ=<n1> | politics=<n2> | tech=<n3> | society=<n4> | ipo_ma=<n5> | other=<n6>`. China report: `econ=<n1> | politics=<n2> | tech=<n3> | society=<n4> | china_nexus=<n5> | ipo_ma=<n6> | other=<n7>`
 - Fallback used: <none | fallback_1 | fallback_1+gap | fallback_1+1.5 | fallback_1+1.5+gap>
 - Reserve pool promotions (Fallback 1.5): <k>   (omit or "0" when fallback_1.5 did not run)
@@ -86,6 +93,8 @@ Verifier must consume the **Scanner Bundle** and emit exactly this shape (still 
 - Discovery: <A | B>   (carried verbatim from the Scanner Bundle)
 - Source legitimacy: <matrix | auto-accept | conditional-accept>   (carried verbatim)
 - Body-source: <full | paywall-stub>   (carried verbatim from the Scanner Bundle)
+- Geographic nexus: <carried verbatim from the Scanner Bundle>
+- UK role: <not-applicable | none | context | external-counterparty>   (carried verbatim from the Scanner Bundle)
 - Origin: <main-pool | reserve-pool>   (reserve-pool means promoted via Fallback 1.5; omit field for main-pool entries)
 - Corroborated by: <carried verbatim from the Scanner Bundle — each entry as "  - <outlet name> [<tier>|<paywall_status>] — <full https URL>"; or "None">
 - Factual excerpt: <carried verbatim — full body or paywall stub per Body-source>
@@ -101,7 +110,7 @@ Verifier must consume the **Scanner Bundle** and emit exactly this shape (still 
 ## Dropped Stories
 
 - URL: <full https URL>
-- Reason: <Duplicate-of-#X | Syndicated-rewrite | Illegitimate-source | Low-impact | Op-ed | Routine-PR | Celebrity-or-lifestyle | Incremental-no-new-fact | Sports-non-political | China-aid-smallcountry-excluded | Below-IPO-MA-threshold | Other-specific-reason>
+- Reason: <Duplicate-of-#X | Syndicated-rewrite | Illegitimate-source | UK-primary-nexus-excluded | Low-impact | Op-ed | Routine-PR | Celebrity-or-lifestyle | Incremental-no-new-fact | Sports-non-political | China-aid-smallcountry-excluded | Below-IPO-MA-threshold | Other-specific-reason>
 
 ... (repeat per dropped story) ...
 
@@ -111,7 +120,7 @@ Verifier must consume the **Scanner Bundle** and emit exactly this shape (still 
 - URL: <full https URL>
 - Category: <id>
 - Held: <below-authority-cap | below-ipo-ma-floor>
-- Disposition: <category-already-met | not-needed-by-fallback-1.5 | dropped-illegitimate-on-revalidation>
+- Disposition: <category-already-met | not-needed-by-fallback-1.5 | dropped-illegitimate-on-revalidation | dropped-geography-on-revalidation>
 
 ... (repeat per held entry) ...
 

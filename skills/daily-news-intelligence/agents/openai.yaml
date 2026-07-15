@@ -1,4 +1,7 @@
-display_name: Daily News Intelligence
-short_description: Dated single-country daily news briefing (mono- or bilingual)
-default_prompt: '--country "" --date  --lang zh'
-allow_implicit_invocation: true
+interface:
+  display_name: "Daily News Intelligence"
+  short_description: "Dated single-country briefing, mono or bilingual"
+  default_prompt: "Use $daily-news-intelligence to generate today's Japan daily news report in English."
+
+policy:
+  allow_implicit_invocation: true

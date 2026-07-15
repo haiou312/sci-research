@@ -1,4 +1,7 @@
-display_name: Daily Briefing (Branded)
-short_description: Multi-country branded SPD Bank Word briefing from existing daily reports
-default_prompt: '--date  --countries "中国,英国,美国,欧洲,日本,韩国" --total 14'
-allow_implicit_invocation: true
+interface:
+  display_name: "Daily Briefing (Branded)"
+  short_description: "Branded multi-country SPD Bank Word briefing"
+  default_prompt: "Use $daily-briefing to create today's branded multi-country news briefing."
+
+policy:
+  allow_implicit_invocation: true
