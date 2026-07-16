@@ -19,9 +19,13 @@
           {
             "type": "command",
             "command": "node \"$PLUGIN_ROOT/scripts/hooks/daily-news-format-check.js\""
+          },
+          {
+            "type": "command",
+            "command": "node \"$PLUGIN_ROOT/scripts/hooks/opportunity-briefing-format-check.js\""
           }
         ],
-        "description": "Validate Pipeline C Markdown after apply_patch"
+        "description": "Validate Pipeline C and Pipeline F Markdown after apply_patch"
       }
     ]
   }

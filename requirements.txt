@@ -1,2 +1,2 @@
-# Pipeline D — branded Word document generation (latest release at install time)
+# Pipelines D/F — branded Word document generation (latest release at install time)
 python-docx

@@ -5,7 +5,7 @@ description: "Install, update, verify, or remove the project-scoped Codex agents
 
 # Setup Sci-Research Runtime
 
-Install the plugin's native Codex agents and required subagent concurrency setting into the current workspace. This skill configures the runtime only; it never runs Pipelines C, D, or E.
+Install the plugin's native Codex agents and required subagent concurrency setting into the current workspace. This skill configures the runtime only; it never runs Pipelines C, D, E, or F.
 
 ## Rules
 

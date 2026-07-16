@@ -1,25 +1,23 @@
 # sci-research
 
-> A **Codex plugin** with **three specialised multi-agent workflows** for daily news intelligence, branded briefings, and company reputation monitoring.
+> A **Codex plugin** with **four specialised multi-agent workflows** for daily news intelligence, branded briefings, company reputation monitoring, and China-outbound commercial opportunity development.
 
-Given a country, a company, or a date, this plugin orchestrates specialised agents to produce a polished, sourced deliverable — daily news briefing, branded Word document, or reputational risk email.
+Given a country, company, date, or reporting window, this plugin orchestrates specialised agents to produce a polished, sourced deliverable: daily news briefing, branded Word document, reputational risk email, or UK/Europe opportunity briefing.
 
 *(The plugin name is a historical artifact — the original `/sci-research` deep-research pipeline has been removed; the name is kept for marketplace identity and install-path stability.)*
 
 ---
 
-## Three Pipelines
+## Four Pipelines
 
-| | `$sci-research:daily-news-intelligence` | `$sci-research:daily-briefing` | `$sci-research:reputation-track` |
+| Pipeline | Command | Purpose | Output |
 |---|---|---|---|
-| **Purpose** | Single-country daily news briefing | Multi-country branded briefing (SPD Bank) | Company reputation risk monitor |
-| **Time focus** | Single date | Single date (reads existing reports) | Single date |
-| **Sources** | Authoritative media with exact-date and readable-body verification | Country reports from Pipeline C | Yahoo identity + non-mainland-China media + public social media |
-| **Output** | 6/7-section Markdown + docx (+email); mono- or bilingual | 13-15-story branded Word document (+email) | Inline HTML email (only when negative) |
-| **Default lang** | `zh` | `zh` | `zh` |
-| **Languages** | zh / en / ja + 6 bilingual combos (`zh+en` …) | zh / en | zh / en |
+| C | `$sci-research:daily-news-intelligence` | Single-country, exact-date news intelligence | 6/7-section Markdown + docx (+email); mono- or bilingual |
+| D | `$sci-research:daily-briefing` | Multi-country branded briefing from Pipeline C | 13-15-story SPD Bank Word document (+email) |
+| E | `$sci-research:reputation-track` | Company and current-executive reputation risk monitor | Inline HTML email, only when negative |
+| F | `$sci-research:china-outbound-opportunity-briefing` | UK economy, China outbound Europe, cross-border M&A, investment footprints, and Companies House entity changes | Chinese Markdown + institutional Word document (+email) |
 
-The three pipelines use separate agent chains and stage contracts. Pipeline D intentionally consumes Pipeline C report files, while the pipelines also share a small amount of delivery infrastructure such as email guards and runtime setup.
+The four pipelines use separate agent chains and stage contracts. Pipeline D intentionally consumes Pipeline C report files. Pipeline F performs its own date-range discovery and uses a scoped Companies House API/watchlist monitor; it does not claim exhaustive discovery of every Chinese-backed UK entity.
 
 Pipeline C also writes raw Scanner and Verifier audit artifacts under `daily-news/{date}/audit/` as `.txt` files. They show the Scanner candidate pool and coverage notes, then the Verifier's source assessment, KEEP/DROP reasons, Coverage Review decisions, and remaining gaps; Pipeline D ignores them because it reads report Markdown rather than audit text files.
 
@@ -27,7 +25,7 @@ Pipeline C also writes raw Scanner and Verifier audit artifacts under `daily-new
 
 ## Why This Plugin
 
-- **9 specialised agents** across three pipelines, each agent narrowly scoped
+- **15 specialised agents** across four pipelines, each agent narrowly scoped
 - **Parallel high-freedom Luna Scanners** — one focused agent and one short direction per category, with no outlet list, source tier, candidate quota, impact threshold, deduplication, or routing logic
 - **Per-URL date verification** in `$sci-research:daily-news-intelligence` — neighbouring days are discarded
 - **Readable free reporting** — paid or stub-only leads are replaced with an authoritative free same-event article or excluded
@@ -37,8 +35,10 @@ Pipeline C also writes raw Scanner and Verifier audit artifacts under `daily-new
 - **Free-prose Writer** — daily news Writer composes explanatory prose in the target language, not a mechanical translation
 - **Bilingual mode (1.18.0+)** — `--lang zh+en` runs the category Scanner fan-out once per report, then fans Writer/Editor out per language in parallel and ships one email with a stacked bilingual body + up to 4 attachments
 - **Branded Word output** via SPD Bank template (`$sci-research:daily-briefing`)
-- **Gmail SMTP email delivery** built into all three pipelines
-- **Quality hooks** enforce daily-news Markdown format and email-send safety
+- **Commercial opportunity pipeline** for China-to-UK/Europe expansion, M&A, investment, and Companies House changes
+- **Evidence-first Companies House radar** with confirmed/probable/unverified Chinese-nexus labels and explicit coverage limits
+- **Gmail SMTP email delivery** built into all four pipelines
+- **Quality hooks** enforce Pipeline C/F Markdown format and email-send safety
 - **Multilingual** — Chinese / English / Japanese output
 
 ---
@@ -48,7 +48,7 @@ Pipeline C also writes raw Scanner and Verifier audit artifacts under `daily-new
 Sci-Research has two deployment layers:
 
 1. The Codex marketplace installs the plugin skills and hooks.
-2. The runtime setup skill copies the plugin's 9 namespaced TOML agents into the project where the pipelines will run and ensures enough project-scoped subagent concurrency for Pipeline C.
+2. The runtime setup skill copies the plugin's 15 namespaced TOML agents into the project where the pipelines will run and ensures enough project-scoped subagent concurrency for Pipelines C and F.
 
 Marketplace installation alone is therefore not sufficient. Complete every step below before the first pipeline run.
 
@@ -134,10 +134,11 @@ Inside Codex, open:
 /hooks
 ```
 
-Review and trust the two Sci-Research hooks if Codex asks:
+Review and trust the three Sci-Research hooks if Codex asks:
 
 - `email-send-guard` — blocks inline SMTP implementations.
 - `daily-news-format-check` — reports invalid Pipeline C Markdown after edits.
+- `opportunity-briefing-format-check` — reports invalid Pipeline F Markdown and blocks DOCX/email delivery in direct-check mode.
 
 #### Step 7 — Start a new Codex task in the same workspace
 
@@ -149,7 +150,7 @@ In the new task, run a runtime-only check:
 Use $sci-research:setup-sci-research-runtime to check the project-scoped runtime in this workspace. Do not run a news pipeline.
 ```
 
-The check must report 9 agents, `max_threads` of at least 10, and a matching plugin version before first use.
+The check must report 15 agents, `max_threads` of at least 10, and a matching plugin version before first use.
 
 #### Step 8 — Run a no-email smoke test
 
@@ -198,7 +199,7 @@ The updater backs up managed files before replacing them, refuses to overwrite l
 
 #### Step 5 — Start a fresh pipeline task
 
-End the setup task and start another new task in the same workspace before running Pipeline C, D, or E. This second boundary loads the newly copied project agents. A successful runtime check inside the setup task does not prove that the setup task itself has refreshed its agent registry.
+End the setup task and start another new task in the same workspace before running Pipeline C, D, E, or F. This second boundary loads the newly copied project agents. A successful runtime check inside the setup task does not prove that the setup task itself has refreshed its agent registry.
 
 #### Diagnose a partial update
 
@@ -260,9 +261,9 @@ codex plugin add sci-research@sci-research-marketplace
 
 Then repeat the setup-task and pipeline-task boundaries so the runtime and loaded agents match the restored Git version.
 
-### Pipeline D Dependency (optional)
+### Pipelines D/F Dependency (optional)
 
-Pipeline D alone requires the additional `python-docx` package. If no source checkout exists yet, create one, then install the declared dependency before starting Codex:
+Pipelines D and F require the additional `python-docx` package. If no source checkout exists yet, create one, then install the declared dependency before starting Codex:
 
 ```bash
 git clone https://github.com/haiou312/sci-research.git /path/to/sci-research
@@ -293,6 +294,16 @@ codex
 ```
 
 Never commit real credentials or place them in the marketplace repository. The shell-profile example applies to Codex CLI sessions started from that shell. For the macOS App, the variables must be present in the App process environment; use the CLI for email-enabled runs if they are not. Real email is sent only when explicitly requested. Use `--email-dry-run` for the first email-path test.
+
+### Companies House API (optional for Pipeline F)
+
+Create an API key at the [Companies House Developer Hub](https://developer.company-information.service.gov.uk/) and export it before launching Codex:
+
+```bash
+export COMPANIES_HOUSE_API_KEY='your-api-key'
+```
+
+With `--companies-house auto` (the default), Pipeline F records registry coverage as unavailable when the key is absent and continues without fabricating findings. With `--companies-house required`, a missing key stops the run.
 
 ---
 
@@ -341,6 +352,7 @@ By default, local output is independent of the plugin install location and any G
 | D source reports | `~/.sci-research/reports/daily-news/{date}/` |
 | D branded briefing | `~/.sci-research/reports/daily-briefings/{date}/` |
 | E reputation report | `~/.sci-research/reports/reputation/{date}/` |
+| F opportunity briefing | `~/.sci-research/reports/china-opportunity-briefings/{date_to}/` |
 
 ```text
 # Today's multi-country briefing with default countries and 14 stories
@@ -365,6 +377,28 @@ $sci-research:reputation-track --company "TSLA" --email you@gmail.com
 
 # English dry-run for a specific date
 $sci-research:reputation-track --company "9988.HK" --date 2026-05-10 --lang en --email you@gmail.com --email-dry-run
+```
+
+### Pipeline F — `$sci-research:china-outbound-opportunity-briefing`
+
+```text
+$sci-research:china-outbound-opportunity-briefing \
+  [--date-from YYYY-MM-DD] [--date-to YYYY-MM-DD] [--total 12] \
+  [--companies-house auto|required|off] [--watchlist <path>] \
+  [--previous-ch-snapshot <path>] \
+  [--images prefer|none] [--out-dir <path>] \
+  [--email <a@x.com,b@y.com>] [--email-dry-run]
+```
+
+Pipeline F scans five lanes in parallel: UK economic and policy signals, Chinese expansion into Europe, cross-border M&A, UK/Europe investment footprints, and Companies House entity discovery. It then runs a scoped registry collector/diff, Chinese-nexus analyst, senior Verifier, locked Fact Manifest, Chinese Writer/Editor, format gate, and institutional DOCX exporter.
+
+```text
+# Default seven-day Chinese opportunity briefing
+$sci-research:china-outbound-opportunity-briefing
+
+# Require registry coverage and use a maintained parent/entity watchlist
+$sci-research:china-outbound-opportunity-briefing --companies-house required \
+  --watchlist ~/.sci-research/config/china-company-watchlist.json
 ```
 
 ---
@@ -416,6 +450,23 @@ The Verifier removes non-risk content, deduplicates events, and grades findings 
 | `sci-research-reputation-verifier` | gpt-5.6-terra / high |
 | `sci-research-reputation-writer` | gpt-5.6-terra / medium |
 
+### Pipeline F — `$sci-research:china-outbound-opportunity-briefing`
+
+```text
+opportunity-scanner ×5 → Companies House collector/diff → Companies House analyst
+       → opportunity-verifier → opportunity-fact-extractor → opportunity-writer
+       → opportunity-editor → format gate → institutional DOCX → email (optional)
+```
+
+| Agent | Codex configuration | Role |
+|---|---|---|
+| `sci-research-opportunity-scanner` | gpt-5.6-luna / medium | One parallel instance per discovery lane |
+| `sci-research-companies-house-analyst` | gpt-5.6-terra / high | Resolves Chinese nexus and material registry changes |
+| `sci-research-opportunity-verifier` | gpt-5.6-terra / high | Revalidates, deduplicates, prioritises, and frames banking hypotheses |
+| `sci-research-opportunity-fact-extractor` | gpt-5.4-mini / medium | Locks factual values, stages, registry facts, sources, and image provenance |
+| `sci-research-opportunity-writer` | gpt-5.6-sol / high | Writes the Chinese institutional briefing |
+| `sci-research-opportunity-editor` | gpt-5.6-sol / high | Runs six factual, identity, framing, format, and fluency passes |
+
 ---
 
 ## Pipeline C Discovery And Verification
@@ -445,7 +496,8 @@ Detailed rules:
 | Hook | Pipeline | Trigger | What It Does |
 |---|---|---|---|
 | `daily-news-format-check` | C | PostToolUse:apply_patch + direct pre-delivery check | Reports format violations after edits; the direct `--file` check hard-stops export/email on count, numbering, URL, quote-mark, or body-length failures |
-| `email-send-guard` | C / D / E | PreToolUse:Bash | **Blocks** inline `smtplib` / `MIMEMultipart` / `sendmail` Bash commands that bypass the sanctioned `send-*-email.py` scripts |
+| `opportunity-briefing-format-check` | F | PostToolUse:apply_patch + direct pre-delivery check | Enforces section order, action tables, story fields, sources, image provenance/fallback, Companies House confidence, and disclaimer |
+| `email-send-guard` | C / D / E / F | PreToolUse:Bash | **Blocks** inline `smtplib` / `MIMEMultipart` / `sendmail` Bash commands that bypass the sanctioned `send-*-email.py` scripts |
 
 ---
 
@@ -466,8 +518,14 @@ sci-research/
 │   ├── sci-research-briefing-curator.toml
 │   ├── sci-research-reputation-scanner.toml
 │   ├── sci-research-reputation-verifier.toml
-│   └── sci-research-reputation-writer.toml
-├── skills/                                  # 3 pipelines + project runtime setup
+│   ├── sci-research-reputation-writer.toml
+│   ├── sci-research-opportunity-scanner.toml
+│   ├── sci-research-companies-house-analyst.toml
+│   ├── sci-research-opportunity-verifier.toml
+│   ├── sci-research-opportunity-fact-extractor.toml
+│   ├── sci-research-opportunity-writer.toml
+│   └── sci-research-opportunity-editor.toml
+├── skills/                                  # 4 pipelines + project runtime setup
 │   ├── daily-news-intelligence/             # Pipeline C
 │   │   ├── SKILL.md
 │   │   ├── agents/openai.yaml               # skill metadata (display_name, default_prompt)
@@ -494,6 +552,11 @@ sci-research/
 │   │       ├── html-template.md
 │   │       ├── email-spec.md
 │   │       └── schemas.md
+│   ├── china-outbound-opportunity-briefing/ # Pipeline F
+│   │   ├── SKILL.md
+│   │   ├── agents/openai.yaml
+│   │   ├── references/                      # Rubric, schemas, registry, images, output
+│   │   └── scripts/                         # Registry collector/diff + DOCX exporter
 │   └── setup-sci-research-runtime/           # Installs/checks project-scoped agents
 │       ├── SKILL.md
 │       ├── runtime/config.toml                # Project-scoped agent concurrency template
@@ -504,13 +567,16 @@ sci-research/
 │   ├── codex/update-plugin-cachebuster.py    # Refresh local-development plugin version suffix
 │   ├── hooks/                               # Hook implementations (Node.js)
 │   │   ├── daily-news-format-check.js
+│   │   ├── opportunity-briefing-format-check.js
 │   │   └── email-send-guard.js
-│   └── send-report-email.py                 # Gmail SMTP (Pipelines C / E)
+│   └── send-report-email.py                 # Gmail SMTP (Pipelines C / E / F)
 ├── tests/
 │   ├── test_hooks.py                        # Codex hook protocol tests
-│   └── test_runtime_sync.py                 # Isolated setup/update/uninstall tests
+│   ├── test_opportunity_scripts.py          # Companies House collector/diff tests
+│   ├── test_runtime_sync.py                 # Isolated setup/update/uninstall tests
+│   └── fixtures/opportunity-briefing-sample.md
 ├── .env.example                             # Gmail SMTP environment template
-├── requirements.txt                         # Pipeline D dependency (latest at install time)
+├── requirements.txt                         # Pipelines D/F dependency
 ├── AGENTS.md                                # Project guidance for Codex
 ├── PORTING-NOTES.md                         # Runtime-validation status and open checks
 ├── README.md
@@ -534,6 +600,10 @@ sci-research/
 | Pipeline E search and mainland-China exclusions | `.codex/agents/sci-research-reputation-scanner.toml` |
 | Pipeline E severity judgement | `skills/reputation-track/references/severity-rules.md` + `.codex/agents/sci-research-reputation-verifier.toml` |
 | Pipeline E HTML email template | `skills/reputation-track/references/html-template.md` |
+| Pipeline F selection / opportunity rules | `skills/china-outbound-opportunity-briefing/references/rubric.md` |
+| Pipeline F Companies House method | `skills/china-outbound-opportunity-briefing/references/companies-house-method.md` + collector/diff scripts |
+| Pipeline F output / image / layout policy | `skills/china-outbound-opportunity-briefing/references/output-spec.md` + `references/image-policy.md` + `references/layout-benchmarks.md` |
+| Pipeline F agent behavior | `.codex/agents/sci-research-opportunity-*.toml` + `.codex/agents/sci-research-companies-house-analyst.toml` |
 | New output language (Pipeline C) | `.codex/agents/sci-research-daily-news-writer.toml` + `skills/daily-news-intelligence/references/language-spec.md` |
 | Adding hook / changing email-send guard | `scripts/hooks/email-send-guard.js` + the relevant SKILL.md email step |
 
@@ -543,11 +613,12 @@ sci-research/
 
 - [Codex](https://developers.openai.com/codex) CLI for marketplace installation and updates; pipelines may run in the CLI or macOS App after setup
 - Node.js ≥ 18 (for hook scripts)
-- Python ≥ 3.11 (required by runtime setup; also used by email delivery and Pipeline D)
-- Pipeline D dependency (install or update from the plugin root): `python3 -m pip install --user --upgrade -r requirements.txt`
+- Python ≥ 3.11 (required by runtime setup; also used by email delivery and Pipelines D/F)
+- Pipelines D/F dependency (install or update from the plugin root): `python3 -m pip install --user --upgrade -r requirements.txt`
 - `pandoc` is optional; without it Pipeline C still produces Markdown but skips docx export
 - Internet access (for WebSearch `search` / `open_page`)
 - Gmail SMTP credentials (only when `--email` is used; see `.env.example`)
+- Companies House API key (optional in Pipeline F `auto` mode; required in `required` mode)
 - No separate social-media MCP configuration is required. Pipeline E uses public, openable social content discovered through WebSearch.
 
 ---

@@ -1,6 +1,6 @@
 # sci-research — Codex 项目指引
 
-这是一个 Codex 插件，包含三条彼此独立的新闻情报流水线。以当前 skill、TOML agent 和引用规范为准；不要恢复旧平台的 agent 注册、嵌入式 prompt 或专用社交媒体 MCP 配置。
+这是一个 Codex 插件，包含四条专业情报流水线。以当前 skill、TOML agent 和引用规范为准；不要恢复旧平台的 agent 注册、嵌入式 prompt 或专用社交媒体 MCP 配置。
 
 ## 当前架构
 
@@ -9,6 +9,7 @@
 | C | $sci-research:daily-news-intelligence | 单国单日新闻情报 | Markdown、可选 docx 与邮件 |
 | D | $sci-research:daily-briefing | 多国品牌新闻简报 | SPD Bank 品牌 docx、可选邮件 |
 | E | $sci-research:reputation-track | 公司声誉风险监测 | 仅命中负面时生成 HTML 邮件正文 |
+| F | $sci-research:china-outbound-opportunity-briefing | 中资企业英国及欧洲商机拓展情报 | Markdown、机构化 docx、可选邮件 |
 
 所有子 agent 都是带 `sci-research-` 命名空间的原生 Codex TOML 定义，源文件位于 `.codex/agents/*.toml`。Marketplace 更新后先用 `$sci-research:setup-sci-research-runtime` 同步到运行 workspace 的 `.codex/agents/`，并校验项目级 `.codex/config.toml` 中 `agents.max_threads >= 10`，再新开 Codex task。
 
@@ -32,6 +33,12 @@
 | sci-research-reputation-scanner | gpt-5.6-luna | medium | Yahoo 企业/高管确认与非中国大陆媒体、公开社交媒体搜索 |
 | sci-research-reputation-verifier | gpt-5.6-terra | high | 声誉相关性、低中高严重度与去重判断 |
 | sci-research-reputation-writer | gpt-5.6-terra | medium | 专业风险邮件渲染 |
+| sci-research-opportunity-scanner | gpt-5.6-luna | medium | 五条 lane 并行检索英国经济、欧洲出海、跨境并购、投资布局与英国实体线索 |
+| sci-research-companies-house-analyst | gpt-5.6-terra | high | 中资归属证据链与英国实体变化研判 |
+| sci-research-opportunity-verifier | gpt-5.6-terra | high | 来源、交易阶段、商业重要性、去重与商机评级 |
+| sci-research-opportunity-fact-extractor | gpt-5.4-mini | medium | 交易、登记、图片和来源事实清单 |
+| sci-research-opportunity-writer | gpt-5.6-sol | high | 中文机构化商机简报写作 |
+| sci-research-opportunity-editor | gpt-5.6-sol | high | 事实、阶段、实体身份、商机措辞、引用与版式检查 |
 
 ## 流水线契约
 
@@ -71,6 +78,18 @@
 - 不使用 `critical`、七类风险 taxonomy、confidence、来源加权、--sources 或 --severity-min。
 - `findings: []` 时静默退出，不写 HTML、不发邮件；有结果时 Writer 生成简洁 HTML，必须由受控邮件脚本发送。
 
+### F — China Outbound Opportunity Briefing
+
+流程：Scanner × 5 lanes → Companies House 结构化采集 → Companies House Analyst → Verifier → Fact Extractor → Writer → Editor → 机构化 docx → 可选邮件。
+
+- 五个 Scanner lane 为 `uk_economy`、`outbound_europe`、`cross_border_ma`、`investment_footprint` 与 `companies_house_discovery`，并行运行一次。
+- Scanner 负责日期范围、可读正文、权威来源和候选收集；不做最终去重、商机评级或交易阶段裁决。
+- Companies House API 采集由 skill 内脚本执行，Agent 只负责中资关系和变化意义判断；不得根据姓名、国籍、地址或拼音相似直接认定中资控股。
+- 英国实体使用 `confirmed`、`probable`、`unverified` 三档；未验证实体不得进入最终中资企业表。
+- Verifier 负责来源、日期、交易阶段、同事件去重、商机优先级及潜在银行产品判断；不得虚构现有客户关系或已确认需求。
+- Writer 必须遵守 Fact Manifest 和固定 Markdown 结构；图片优先使用官方图表或企业官方图片，版权不明时仅链接或写无合规配图。
+- Editor 完成事实、交易阶段、Companies House 身份、商机措辞、引用、图片与中文表达检查；导出前运行直接格式门。
+
 ## 默认目录
 
 | 用途 | 默认路径 |
@@ -79,21 +98,23 @@
 | D 输入 | ~/.sci-research/reports/daily-news/{date}/ |
 | D 输出 | ~/.sci-research/reports/daily-briefings/{date}/ |
 | E 声誉报告 | ~/.sci-research/reports/reputation/{date}/ |
+| F 商机简报 | ~/.sci-research/reports/china-opportunity-briefings/{date_to}/ |
 
 - 输出目录可被相应的 --out-dir 或 --source-dir 覆盖。
 
 ## 邮件、依赖与安全
 
-- 所有邮件一律通过受控脚本：C/E 使用 scripts/send-report-email.py，D 使用 skills/daily-briefing/scripts/send-briefing-email.py。
+- 所有邮件一律通过受控脚本：C/E/F 使用 scripts/send-report-email.py，D 使用 skills/daily-briefing/scripts/send-briefing-email.py。
 - 不要内嵌 smtplib、sendmail 或 mail -s。email-send-guard hook 会阻断这类调用。
 - 真实邮件必须由用户明确请求；验证使用 --email-dry-run。
-- 安装或更新 D 依赖：python3 -m pip install --user --upgrade -r requirements.txt。不要自动修改用户 Python 环境。
+- 安装或更新 D/F 的 docx 依赖：python3 -m pip install --user --upgrade -r requirements.txt。不要自动修改用户 Python 环境。
 
 ## 质量钩子
 
 | Hook | 触发 | 作用 |
 |---|---|---|
 | daily-news-format-check | PostToolUse: apply_patch + 交付前直接检查 | 编辑后反馈格式错误；直接 `--file` 检查阻断不合格 Markdown 的导出和邮件 |
+| opportunity-briefing-format-check | PostToolUse: apply_patch + 交付前直接检查 | 检查 F 的章节、表格、逐条摘要/影响/商机/关注、Companies House 字段、图片与免责声明 |
 | email-send-guard | PreToolUse: Bash | 阻断绕过受控邮件脚本的内联 SMTP |
 
 变更 hook 后运行 node --check scripts/hooks/*.js。变更 TOML 后用 tomllib 解析全部 .codex/agents/*.toml；所有改动都必须通过 git diff --check。
@@ -110,6 +131,10 @@
 | D docx 模板与生成器 | skills/daily-briefing/template/、skills/daily-briefing/scripts/generate-branded-docx.py |
 | E 编排与来源规则 | skills/reputation-track/SKILL.md、skills/reputation-track/references/ |
 | E agent 行为 | .codex/agents/sci-research-reputation-*.toml |
+| F 编排、参数、输出与邮件 | skills/china-outbound-opportunity-briefing/SKILL.md |
+| F 选择、Companies House、图片与输出规范 | skills/china-outbound-opportunity-briefing/references/ |
+| F agent 行为 | .codex/agents/sci-research-opportunity-*.toml、.codex/agents/sci-research-companies-house-analyst.toml |
+| F Companies House 与 docx 脚本 | skills/china-outbound-opportunity-briefing/scripts/ |
 | Runtime 安装与检查 | skills/setup-sci-research-runtime/、skills/setup-sci-research-runtime/runtime/config.toml、scripts/codex/check-plugin-bundle.py |
 | 插件清单与市场条目 | .codex-plugin/plugin.json、.agents/plugins/marketplace.json |
 
@@ -120,5 +145,6 @@
 3. C 最小首跑：无邮件，确认原生 agent 串联、apply_patch、hook、直接格式门与 pandoc 输出。
 4. D 验证：先安装 requirements.txt，使用 C 产出的样例 Markdown，邮件只做 dry-run。
 5. E 验证：测试 Yahoo 企业/高管确认、非中国大陆媒体与公开社交媒体搜索、低中高判断、干净结果静默退出与邮件 dry-run。
+6. F 验证：测试五 lane 并行、Companies House 有/无 API key、watchlist 与 snapshot diff、confirmed/probable/unverified、格式门、图片回退、docx 渲染和邮件 dry-run。
 
-当前只完成了静态与安装打包验证；三条流水线的真实端到端首跑仍待执行。
+当前 C/D/E 只完成了静态与安装打包验证，真实端到端首跑仍待执行；F 已完成静态检查、Companies House 脚本测试、格式门和样例 docx 视觉验证，原生 agent 联网首跑仍待执行。

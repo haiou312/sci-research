@@ -1,7 +1,7 @@
 {
   "name": "sci-research",
-  "version": "1.20.1+codex.20260716120357",
-  "description": "Three specialised multi-agent news workflows plus a project-scoped Codex runtime setup. Pipeline C uses parallel category-scoped news Scanners before editorial verification; Pipeline E uses high-freedom company and executive reputation scanning with low, medium, and high verification.",
+  "version": "1.21.0+codex.20260716152926",
+  "description": "Four specialised multi-agent intelligence workflows plus project-scoped runtime setup, including UK and Europe commercial opportunity monitoring for Chinese enterprises.",
   "author": {
     "name": "Peter Wang"
   },
@@ -13,6 +13,9 @@
     "news-intelligence",
     "daily-briefing",
     "reputation-track",
+    "china-outbound",
+    "companies-house",
+    "cross-border-ma",
     "adverse-media",
     "branded-docx",
     "references",
@@ -23,8 +26,8 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "Sci-Research News Intelligence",
-    "shortDescription": "Daily news intelligence, branded briefings, and reputation monitoring",
-    "longDescription": "Three specialised workflows: daily-news-intelligence (dated single-country briefing with parallel category-scoped authoritative-media Scanners and one editorial Verifier), daily-briefing (multi-country branded SPD Bank Word doc), and reputation-track (Yahoo-resolved company and executive monitoring across non-mainland-China media and public social content, followed by low/medium/high verification and HTML email). A setup skill installs the namespaced TOML custom agents into the active project before first run.",
+    "shortDescription": "News, commercial opportunities, branded briefings, and reputation monitoring",
+    "longDescription": "Four specialised workflows: daily-news-intelligence for dated single-country reporting, daily-briefing for a multi-country branded Word document, reputation-track for company and executive risk alerts, and china-outbound-opportunity-briefing for UK economic signals, Chinese expansion into Europe, cross-border M&A, investment footprints, and Companies House entity changes. A setup skill installs the namespaced TOML custom agents into the active project.",
     "developerName": "Peter Wang",
     "category": "Productivity",
     "capabilities": [
@@ -36,6 +39,7 @@
       "Generate a daily news intelligence report for Japan",
       "Create a branded briefing from daily news reports",
       "Monitor a company for reputational risk",
+      "Create a UK and Europe opportunity briefing for Chinese enterprises",
       "Set up the Sci-Research runtime in this workspace"
     ]
   }

@@ -16,7 +16,7 @@
  * fired because the script was never invoked.
  *
  * Allowlist (command containing one of these → pass):
- *   - `send-report-email.py`      (Pipelines C, E)
+ *   - `send-report-email.py`      (Pipelines C, E, F)
  *   - `send-briefing-email.py`    (Pipeline D)
  *
  * Blocklist (command contains any of these without allowlist match → Codex deny):
@@ -85,7 +85,7 @@ function main() {
             "",
             "Use the sanctioned scripts instead:",
             "",
-            "  Pipelines C and E:",
+            "  Pipelines C, E, and F:",
             '    python3 "$PLUGIN_ROOT/scripts/send-report-email.py" \\',
             '      --to "..." --subject "..." --body-file "..." \\',
             '      --attach "..." "..."    # or --body-html-file for Pipeline E',

@@ -10,6 +10,12 @@ import unittest
 REPO_ROOT = Path(__file__).resolve().parents[1]
 EMAIL_GUARD = REPO_ROOT / "scripts/hooks/email-send-guard.js"
 FORMAT_CHECK = REPO_ROOT / "scripts/hooks/daily-news-format-check.js"
+OPPORTUNITY_FORMAT_CHECK = (
+    REPO_ROOT / "scripts/hooks/opportunity-briefing-format-check.js"
+)
+OPPORTUNITY_FIXTURE = (
+    REPO_ROOT / "tests/fixtures/opportunity-briefing-sample.md"
+)
 
 
 class HookTests(unittest.TestCase):
@@ -83,6 +89,50 @@ class HookTests(unittest.TestCase):
             )
             self.assertEqual(result.returncode, 2)
             self.assertIn("daily-news format check FAILED", result.stderr)
+
+    def test_direct_opportunity_format_check_accepts_fixture(self) -> None:
+        result = subprocess.run(
+            [
+                "node",
+                str(OPPORTUNITY_FORMAT_CHECK),
+                "--file",
+                str(OPPORTUNITY_FIXTURE),
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("FORMAT_OK", result.stdout)
+
+    def test_opportunity_format_hook_reports_missing_story_fields(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            project_root = Path(temp_dir)
+            report = project_root / "china-opportunity-briefings/report.md"
+            report.parent.mkdir(parents=True)
+            report.write_text(
+                "# 中资企业商机拓展简报\n",
+                encoding="utf-8",
+            )
+            patch = f"*** Begin Patch\n*** Update File: {report}\n*** End Patch"
+            result = self.run_hook(
+                OPPORTUNITY_FORMAT_CHECK,
+                {
+                    "hook_event_name": "PostToolUse",
+                    "cwd": str(project_root),
+                    "tool_input": patch,
+                },
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            output = json.loads(result.stdout)
+            self.assertIn(
+                "opportunity briefing format check FAILED",
+                output["systemMessage"],
+            )
+            self.assertEqual(
+                output["hookSpecificOutput"]["hookEventName"],
+                "PostToolUse",
+            )
 
 
 if __name__ == "__main__":

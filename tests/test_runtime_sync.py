@@ -41,7 +41,7 @@ class RuntimeSyncTests(unittest.TestCase):
             self.assertEqual(install.returncode, 0, install.stderr)
             manifest_path = project_root / ".codex/sci-research-runtime.json"
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-            self.assertEqual(len(manifest["managed_files"]), 9)
+            self.assertEqual(len(manifest["managed_files"]), 15)
             config_path = project_root / ".codex/config.toml"
             config = tomllib.loads(config_path.read_text(encoding="utf-8"))
             self.assertEqual(config["agents"]["max_threads"], 10)
@@ -125,7 +125,7 @@ class RuntimeSyncTests(unittest.TestCase):
             self.assertIn(obsolete_path.name, update.stdout)
             self.assertFalse(obsolete_path.exists())
             updated = json.loads(manifest_path.read_text(encoding="utf-8"))
-            self.assertEqual(len(updated["managed_files"]), 9)
+            self.assertEqual(len(updated["managed_files"]), 15)
             self.assertNotIn(obsolete_relative, updated["managed_files"])
 
     def test_refuses_to_overwrite_unmanaged_agent(self) -> None:

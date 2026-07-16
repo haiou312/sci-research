@@ -1,0 +1,7 @@
+interface:
+  display_name: "China Outbound Opportunity Briefing"
+  short_description: "UK and Europe commercial intelligence for Chinese enterprises"
+  default_prompt: "Use $sci-research:china-outbound-opportunity-briefing to prepare this week's Chinese enterprise opportunity briefing for the UK and Europe."
+
+policy:
+  allow_implicit_invocation: true

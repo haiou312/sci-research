@@ -4,15 +4,16 @@ The repository now uses native Codex plugin structure and TOML subagents. This n
 
 ## Completed
 
-- Nine namespaced native agents are defined in `.codex/agents/sci-research-*.toml` with an explicit GPT-5.6 Sol / Terra / Luna allocation (plus GPT-5.4 mini for Fact Manifest extraction) and per-agent reasoning effort.
+- Fifteen namespaced native agents are defined in `.codex/agents/sci-research-*.toml` with an explicit GPT-5.6 Sol / Terra / Luna allocation (plus GPT-5.4 mini for Fact Manifest extraction) and per-agent reasoning effort.
 - Marketplace installation is treated as bundle distribution, not agent registration. `$sci-research:setup-sci-research-runtime` installs and verifies the agent payload under the active project's `.codex/agents/`, plus project-scoped `agents.max_threads >= 10`, with dry-run, backup, conflict protection, hashes, and uninstall support.
-- The three pipeline skills select exact named custom-agent roles with `fork_turns="none"`, pass absolute runtime paths, pass upstream outputs through prompt text, and close each child after durable handoff so completed threads do not accumulate.
-- File-writing stages use `apply_patch`; the PostToolUse Markdown hook reports the resulting invalid state, and a direct pre-delivery check hard-stops export/email until it is corrected.
+- The four pipeline skills select exact named custom-agent roles with `fork_turns="none"`, pass absolute runtime paths, pass upstream outputs through prompt text, and close each child after durable handoff so completed threads do not accumulate.
+- File-writing stages use `apply_patch`; Pipeline C and F PostToolUse Markdown hooks report invalid output, and direct pre-delivery checks hard-stop export/email until it is corrected.
 - Plugin packaging, TOML, JSON, Node, Python and Bash syntax checks have passed.
 - The plugin has been installed successfully in isolated Codex homes.
 - Pipeline E uses one Luna Scanner to resolve the company and current executives through Yahoo Finance, then search exact-date non-mainland-China media and public social content.
-- Pipeline C and E default to user-level output directories; Pipeline D has separate input and output directories.
-- Pipeline D declares python-docx in requirements.txt and no longer installs packages during a run.
+- Pipeline C, E, and F default to user-level output directories; Pipeline D has separate input and output directories.
+- Pipelines D and F declare python-docx in requirements.txt and never install packages during a run.
+- Pipeline F defines five parallel discovery lanes, a deterministic Companies House collector/diff, a dedicated entity analyst, Verifier, Fact Manifest, Chinese Writer/Editor, a format gate, and institutional DOCX export.
 
 ## Remaining runtime validation
 
@@ -20,6 +21,7 @@ The repository now uses native Codex plugin structure and TOML subagents. This n
 2. Run a minimal Pipeline C invocation without email. Confirm sequential handoff, PostToolUse feedback, the direct format gate, and pandoc output.
 3. Install requirements.txt, then run Pipeline D against Pipeline C sample Markdown. Verify branded docx generation and email dry-run.
 4. Run Pipeline E. Verify Yahoo company/executive resolution, non-mainland-China media and public-social discovery, low/medium/high verification, clean-scan silence, and email dry-run.
+5. Run Pipeline F without email. Verify all five Scanner lanes, scoped Companies House API/watchlist coverage, identity confidence labels, format gate, image fallback, DOCX generation, and agent closure.
 
 ## Runtime assumptions to confirm
 

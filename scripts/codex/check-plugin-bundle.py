@@ -12,6 +12,7 @@ import tomllib
 
 
 REQUIRED_SKILLS = {
+    "china-outbound-opportunity-briefing",
     "daily-news-intelligence",
     "daily-briefing",
     "reputation-track",
@@ -20,11 +21,17 @@ REQUIRED_SKILLS = {
 
 REQUIRED_AGENTS = {
     "sci-research-briefing-curator",
+    "sci-research-companies-house-analyst",
     "sci-research-daily-editor",
     "sci-research-daily-fact-extractor",
     "sci-research-daily-news-scanner",
     "sci-research-daily-news-writer",
     "sci-research-news-verifier",
+    "sci-research-opportunity-editor",
+    "sci-research-opportunity-fact-extractor",
+    "sci-research-opportunity-scanner",
+    "sci-research-opportunity-verifier",
+    "sci-research-opportunity-writer",
     "sci-research-reputation-scanner",
     "sci-research-reputation-verifier",
     "sci-research-reputation-writer",
@@ -94,8 +101,8 @@ def validate(plugin_root: Path) -> tuple[int, int]:
                 command = hook.get("command")
                 if isinstance(command, str):
                     commands.append(command)
-    if len(commands) != 2:
-        fail(f"expected 2 hook commands, found {len(commands)}")
+    if len(commands) != 3:
+        fail(f"expected 3 hook commands, found {len(commands)}")
     for command in commands:
         if "$PLUGIN_ROOT" not in command:
             fail(f"hook command does not use $PLUGIN_ROOT: {command}")
