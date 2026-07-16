@@ -90,6 +90,66 @@ class HookTests(unittest.TestCase):
             self.assertEqual(result.returncode, 2)
             self.assertIn("daily-news format check FAILED", result.stderr)
 
+    def test_direct_format_check_treats_body_length_as_advisory(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            report = Path(temp_dir) / "daily-news/report.md"
+            report.parent.mkdir(parents=True)
+            report.write_text(
+                """# Japan Daily News Intelligence — July 16, 2026
+
+## 1. Economy & Markets
+
+### Bank of Japan keeps policy unchanged
+
+The Bank of Japan left policy unchanged Thursday.
+
+**References**
+
+[1] Reuters. (2026, July 16). Bank of Japan keeps policy unchanged. Reuters. https://example.com/story
+""",
+                encoding="utf-8",
+            )
+            result = subprocess.run(
+                ["node", str(FORMAT_CHECK), "--file", str(report)],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("FORMAT_OK", result.stdout)
+            self.assertIn("LENGTH_INFO: lang=en", result.stdout)
+            self.assertIn("(advisory)", result.stdout)
+
+    def test_direct_format_check_treats_chinese_length_as_advisory(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            report = Path(temp_dir) / "daily-news/report.md"
+            report.parent.mkdir(parents=True)
+            report.write_text(
+                """# 日本每日热点新闻 — 2026年7月16日
+
+## 一、经济与市场
+
+### 日本央行维持政策不变
+
+日本央行周四维持政策不变。
+
+**References**
+
+[1] Reuters. (2026, July 16). Bank of Japan keeps policy unchanged. Reuters. https://example.com/story
+""",
+                encoding="utf-8",
+            )
+            result = subprocess.run(
+                ["node", str(FORMAT_CHECK), "--file", str(report)],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("FORMAT_OK", result.stdout)
+            self.assertIn("LENGTH_INFO: lang=zh", result.stdout)
+            self.assertIn("(advisory)", result.stdout)
+
     def test_direct_opportunity_format_check_accepts_fixture(self) -> None:
         result = subprocess.run(
             [

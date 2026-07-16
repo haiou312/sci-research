@@ -11,7 +11,7 @@ Each story must use this exact block structure (`{references_marker}` comes from
 ```md
 ### <Story title in target language>
 
-<Body in target language. **Body length follows `references/language-spec.md` § Body Length Rules**: `en` target 300 words, accepted 250–350; `zh` target 500 Unicode Han characters, accepted 450–550; `ja` has no fixed band. The band is not a minimum — both under-length and over-length bodies are invalid. Leave the reader fully informed about the story: what happened, why it matters, what came before, who's affected, and what to watch next. No fixed paragraph count; use paragraph breaks freely when they help the reader follow the logic (narrative shifts, background segments, multi-party reactions). Open in medias res with a concrete fact (number / action / named person doing something) — no setup sentence. Close on the last substantive fact — no wrap-up. **Dig deeply into the few facts that drive the story** — explain mechanics, name affected parties, surface historical comparison, fold in the context the source assumes the reader knows. Short sentences carry weight, but the story is complete; don't sacrifice depth for brevity. **Enriched with background context from 1-3 WebSearch `search` actions per story plus `open_page` for every used result (default, not optional)** — what came before, broader pattern, comparable historical event, prior policy. What you find through search should land as substantive context for the reader, not as flavoring. Every search URL whose content supplied a fact in body MUST appear in References (proper APA, continuous `[N]`). Numbers, names, titles, dates, and direct quotes that you cite must trace to either the Verifier bundle (Lead facts) or to a verifiable search result (background context). Wrap any direct quote with the language's `quote_marks` and preserve speaker attribution.>
+<Body in natural target-language newsroom prose. Preserve the Fact Manifest's factual meaning while localizing names, titles, dates, times, currencies, and other expressions normally; do not retain English strings or add English parentheticals merely to satisfy literal matching. Let the story determine its paragraphing and final length. The planning targets in `references/language-spec.md` § Body Length Guidance are advisory, not validity bands. Explain what happened and the context a reader needs, without padding, repeated significance claims, or formulaic openings and endings. Supplemental WebSearch is optional: use it only when the supplied material lacks necessary context, open every source whose facts you use, and cite every such URL. Every factual claim must trace to the Verifier bundle, Fact Manifest, or an opened supplemental source. Wrap direct quotations with the language's canonical `quote_marks` and preserve attribution.>
 
 {references_marker}
 
@@ -28,7 +28,7 @@ Do not emit a trailing global references or sources section.
 
 **`[N]` numbering rule**: every reference line starts with `[N] ` where `N` runs **continuously from 1 across the entire document**, not per-story. The first reference of story 1 is `[1]`; if story 1 has 3 references, story 2's first reference is `[4]`. Multiple references per story are allowed and common when the Verifier delivers corroborating or claim-complementary sources.
 
-**Search URLs that supplied a fact in body MUST appear** in the references block. Writer **runs 1-3 supplemental WebSearch `search` actions per story by default and `open_page` for every used result** to enrich body prose with background context (what came before, broader pattern, prior policy). The references block contains: Verifier KEEP URLs (Lead + every Corroborated by URL) ∪ {search URLs whose content backed a body fact}.
+**Search URLs that supplied a fact in body MUST appear** in the references block. Supplemental search is optional and should be used only when the Verifier material and Fact Manifest do not provide context needed for a clear, accurate story. Open every result whose facts enter the body. The references block contains: Verifier KEEP URLs (Lead + every Corroborated by URL) ∪ {search URLs whose content backed a body fact}.
 
 If a category has fewer kept stories than `min_per_category` after Verifier Coverage Review, keep the section heading and append exactly one italic `gap_note` line before the next `---`.
 
@@ -57,7 +57,7 @@ The following markers must NOT appear anywhere in the output:
 | `**分析**` | Analysis block was removed in the new structure — body carries any "so what" inline |
 | `**Analysis**` | Same as above |
 
-The hook `scripts/hooks/daily-news-format-check.js` blocks the `apply_patch` operation if any of these appear.
+The PostToolUse hook `scripts/hooks/daily-news-format-check.js` reports these defects after an `apply_patch`; its direct `--file` mode blocks export and email until they are corrected.
 
 ## Reference Format Rules (CRITICAL)
 
@@ -142,11 +142,11 @@ The Bank of Japan held its policy rate at 0.5% for the third consecutive meeting
 ---
 ```
 
-(Note: `[3]`/`[4]` in the `lang=zh` example assumes the previous `lang=en` story consumed `[1]`/`[2]`. `[N]` is a **document-wide** continuous counter, never reset per story or per language. Body prose carries the news directly with no `**摘要**` / `**分析**` marker — opens in medias res with a concrete fact, closes on a substantive fact.)
+(Note: `[3]`/`[4]` in the `lang=zh` example assumes the previous `lang=en` story consumed `[1]`/`[2]`. `[N]` is a **document-wide** continuous counter, never reset per story or per language. Body prose carries the news directly with no `**摘要**` / `**分析**` marker.)
 
 ## Cited Search URLs
 
-Writer runs supplemental WebSearch `search` actions per story for background context and `open_page` for every used result. **Any URL that supplied a fact written in body prose is a first-class citation** and appears in the story's `**References**` block alongside Verifier KEEP URLs:
+When Writer uses supplemental WebSearch for necessary context, it opens every result whose facts enter the body. **Any URL that supplied a fact written in body prose is a first-class citation** and appears in the story's `**References**` block alongside Verifier KEEP URLs:
 
 - One APA reference line per cited search URL, with the next continuous `[N]` counter.
 - Outlet name = the URL's actual publisher.
@@ -183,10 +183,10 @@ Before calling `apply_patch`, count your own output:
 6. No `^> **来源**` / `^> **Source**` blockquote patterns.
 7. No `^*\s*来源[:：]` / `^*\s*Sources?[:：]` italic in-text citation patterns.
 8. Every URL in the references block is either a Verifier KEEP URL (Lead or Corroborated by) OR a search URL that supplied a fact in body. URLs that were opened but whose content wasn't used MUST NOT appear; URLs whose content was used MUST appear.
-9. Every `en` story body is 250–350 English words and every `zh` story body is 450–550 Unicode Han characters, counted per `references/language-spec.md` § Body Length Rules. `ja` has no body-length check.
+9. Every story is complete, relevant, and naturally paced. The approximate `en` and `zh` targets in `references/language-spec.md` § Body Length Guidance are planning aids only; do not pad, distort, or destructively trim a story to hit them.
 
 If any check fails, regenerate. A PostToolUse hook (`scripts/hooks/daily-news-format-check.js`) checks items 1, 2, 3, 4, 5, 6, and 7 mechanically after each edit and injects correction context into the task. Because PostToolUse runs after the edit, correct the resulting file before continuing. The orchestrator's direct `--file` check exits 2 on a violation and hard-stops export or email.
 
-Item 9 is also hook-enforced per story. The hook reports the story title, actual count, target, and accepted band.
+Item 9 is editorial rather than a validity gate. The direct hook may report aggregate body-length statistics for `en` and `zh`, but length alone does not fail export or email.
 
-**Item 8 is not hook-enforced** — verifying "every URL traces to Verifier KEEP OR backed a body fact" requires the Verifier-KEEP set, which the hook does not have. Item 8 is enforced at agent time by Writer's self-check (`.codex/agents/sci-research-daily-news-writer.toml` § Self-Check Before `apply_patch`, item 10) and verified by Editor's Pass 2 audit (`.codex/agents/sci-research-daily-editor.toml` § Pass 2 — Writer-search fact backing).
+**Item 8 is not hook-enforced** — verifying "every URL traces to Verifier KEEP OR backed a body fact" requires the Verifier-KEEP set, which the hook does not have. Item 8 is enforced by the Writer's citation contract and verified by Editor Pass 2.

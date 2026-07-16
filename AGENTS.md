@@ -27,8 +27,8 @@
 | sci-research-daily-news-scanner | gpt-5.6-luna | medium | 按栏目并行的高吞吐检索、日期核验与候选收集 |
 | sci-research-news-verifier | gpt-5.6-terra | high | 来源、影响力与去重规则裁决 |
 | sci-research-daily-fact-extractor | gpt-5.4-mini | medium | 结构化事实与引语抽取 |
-| sci-research-daily-news-writer | gpt-5.6-sol | high | 多语言新闻写作与背景整合 |
-| sci-research-daily-editor | gpt-5.6-sol | high | 事实、引语、引用与局部修订 |
+| sci-research-daily-news-writer | gpt-5.6-sol | high | 多语言母语化新闻写作与按需背景补充 |
+| sci-research-daily-editor | gpt-5.6-sol | high | 事实、来源、引语、格式与完整母语编辑 |
 | sci-research-briefing-curator | gpt-5.6-sol | high | 跨国筛选与品牌化改写 |
 | sci-research-reputation-scanner | gpt-5.6-luna | medium | Yahoo 企业/高管确认与非中国大陆媒体、公开社交媒体搜索 |
 | sci-research-reputation-verifier | gpt-5.6-terra | high | 声誉相关性、低中高严重度与去重判断 |

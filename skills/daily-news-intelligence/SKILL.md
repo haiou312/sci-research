@@ -19,8 +19,8 @@ Generate a professional dated daily report for institutional readers covering a 
 - Verifier (Scanner Batch in prompt) → credibility + new-information + daily-news-value + originality + dedup + final category routing → Coverage Review for short categories → Verifier Output Schema
 - Fact-Extractor (Verifier output + params) → fact-manifest YAML (single, language-agnostic — shared across bilingual halves)
 - **FAN OUT per `lang` in `langs` — PARALLEL** (concurrent Writer subagents in one orchestrator message; then concurrent Editor subagents after all Writers complete; see § Workflow Step 8 § Bilingual execution order for rationale):
-  - Writer (Verifier output + manifest path + that `lang`'s params) → one `apply_patch` operation creating or overwriting Markdown at `out_md_{lang}`
-  - Editor (`writer_md_{lang}` + manifest + `verifier_bundle` + lang/date/country) → in-place `apply_patch` operations across 5 passes (1 fact / 2 search-backing / 3 quote / 4 quote-mark / 5 local fluency)
+  - Writer (Verifier output + manifest path + that `lang`'s params) → native-language Markdown at `out_md_{lang}` through `apply_patch`
+  - Editor (`writer_md_{lang}` + manifest + `verifier_bundle` + lang/date/country) → in-place `apply_patch` operations across 5 passes (1 facts / 2 sources / 3 quotations / 4 structure and typography / 5 full native-language edit)
   - pandoc export `out_md_{lang}` → `out_docx_{lang}` (skip if pandoc missing; sequential bash loop is fine — pandoc is local + fast)
 - IF `--email` → send via `scripts/send-report-email.py` (dry-run or real). Single-lang body + 1-2 attachments. **Bilingual body (stacked primary+secondary)** + 2-4 attachments per § email-spec.md.
 - Verify: `ls` each generated `out_md_{lang}` / `out_docx_{lang}`, grep H2/H3 counts per file
@@ -204,9 +204,9 @@ Once all Scanner threads are closed, if the Scanner Batch contains zero candidat
    - The same Fact Manifest (path or content) — the **locked-fact contract**.
    - That invocation's runtime parameters: **`lang` = a SINGLE token** (`zh` / `en` / `ja` — NEVER the combined `zh+en` string; the Writer's Localisation Table has no combined column and would break), **`out_md` = the value of `out_md_{lang}`** (the Writer body's parameter is literally named `out_md`; pass this invocation's per-lang path into that slot), plus `country`, `date`, `min_per_category`. The Writer derives `country_display` / `date_display` itself from `lang` via the Localisation Table — by construction this matches the `country_display_{lang}` the orchestrator used to build `out_md_{lang}`, so the H1 and the filename agree.
 
-   Each Writer invocation **runs 1-3 supplemental WebSearch `search` actions per story by default and `open_page` for every result used in body prose** to enrich background context — what came before, broader pattern, prior policy. Each invocation generates its own background searches independently (no cross-lang sharing — keeps the prompt simple, accepts the duplicated web cost). **References = Verifier KEEP URLs ∪ {search URLs that supplied a fact in body}** — every search URL whose content backed a body fact MUST be cited with proper APA and continuous `[N]` (see `references/output-spec.md` § Cited Search URLs).
+   Supplemental WebSearch is optional. Each Writer uses it only when the Verifier material and Fact Manifest lack context needed for a clear, accurate account; it must `open_page` every result whose facts enter the body. **References = Verifier KEEP URLs ∪ {search URLs that supplied a fact in body}** — every search URL whose content backed a body fact MUST be cited with proper APA and continuous `[N]` (see `references/output-spec.md` § Cited Search URLs).
 
-   Compose narrative in `lang` per `references/language-spec.md`. Structure is `### title → body → **References**` per story — **no `**摘要**` / `**Summary**` / `**要約**` / `**分析**` / `**Analysis**` markers anywhere**. **Body length follows `references/language-spec.md` § Body Length Rules**: `en` targets 300 words and must stay within 250–350; `zh` targets 500 Unicode Han characters and must stay within 450–550; `ja` remains unrestricted. **Quote marks follow `references/language-spec.md` § Canonical Quote Marks** (en ASCII `""` / zh curly `“”` / ja corner `「」` — the format-check hook reports any non-canonical char immediately after the edit). When `lang=zh`, also comply with `references/language-spec.md` § Language-Specific Rules (official titles, country prefixes, time anchors, terminology, foreign media naming). Produce Markdown obeying `references/output-spec.md`. Use one `apply_patch` operation to create or overwrite the `out_md` path it was given (= this invocation's `out_md_{lang}`).
+   Compose native newsroom prose in `lang` per `references/language-spec.md`. The Fact Manifest locks factual meaning, not English surface strings: localize weekdays, times, currencies, titles, names, and terminology naturally, and do not add English parentheticals merely to reproduce Manifest values. Structure is `### title → body → **References**` per story — **no `**摘要**` / `**Summary**` / `**要約**` / `**分析**` / `**Analysis**` markers anywhere**. The approximate `en` and `zh` targets in `references/language-spec.md` § Body Length Guidance are advisory; let the story determine its final length and never pad or destructively trim to hit a count. **Quote marks follow `references/language-spec.md` § Canonical Quote Marks** (en ASCII `""` / zh curly `“”` / ja corner `「」` — the format-check hook reports any non-canonical char immediately after the edit). Produce Markdown obeying `references/output-spec.md`. Create or overwrite the assigned `out_md` with `apply_patch`, then make focused corrective patches if self-check or the hook identifies a defect.
 
    **Bilingual execution order — PARALLEL**. Spawn both Writer subagents in a single orchestrator message (multi-Agent-tool-uses in one turn). Each Writer is independent: separate `lang`, separate `out_md_{lang}`, no shared file, no shared state. The orchestrator awaits both invocations and proceeds when both have returned.
 
@@ -220,35 +220,35 @@ Once all Scanner threads are closed, if the Scanner Batch contains zero candidat
    **Cost paid for parallel** (honest accounting, not a reason to revert):
 
    - **Duplicated prompt work.** Parallel language instances do not share a sequential prompt-cache opportunity. Actual cost depends on the configured agent models and account pricing; measure it from the run rather than relying on a fixed estimate.
-   - **Concurrent web-call rate.** Parallel Writers increase WebSearch `search` / `open_page` concurrency. Keep the request rate within the account's current tool limits and tolerate individual retries without compromising one language's output.
+   - **Concurrent web-call rate.** When both Writers need supplemental research, parallel execution increases WebSearch `search` / `open_page` concurrency. Keep the request rate within the account's current tool limits and tolerate individual retries without compromising one language's output.
 
    **Failure mode** (per the Failure Modes table): if either parallel Writer fails, the orchestrator preserves the surviving lang's output, surfaces the failed lang's error, and defaults to halting Step 8.5 + Step 10 with a clear report.
 
    After all Writer results and expected Markdown files have been captured, close every Writer thread before Step 8.5. Close a failed Writer thread before applying the failure policy.
 
-8.5. **Fact-check + local-fluency editor pass** (Editor stage — **fans out per `lang` in `langs`** when `is_bilingual`; **PARALLEL like Writer**, same rationale as Step 8 § Bilingual execution order). Wait for Step 8 to fully complete first — Editor needs its `writer_md_path` to exist on disk. Then spawn all `sci-research-daily-editor` (`.codex/agents/sci-research-daily-editor.toml`) subagents in a single orchestrator message (multi-Agent-tool-uses in one turn) per § Subagent Dispatch Rule.
+8.5. **Fact-check + native-language editor pass** (Editor stage — **fans out per `lang` in `langs`** when `is_bilingual`; **PARALLEL like Writer**, same rationale as Step 8 § Bilingual execution order). Wait for Step 8 to fully complete first — Editor needs its `writer_md_path` to exist on disk. Then spawn all `sci-research-daily-editor` (`.codex/agents/sci-research-daily-editor.toml`) subagents in a single orchestrator message (multi-Agent-tool-uses in one turn) per § Subagent Dispatch Rule.
 
    **For each `lang` in `langs`** (single-lang: 1 invocation; bilingual: 2 invocations dispatched concurrently in a single message) launch a separate Editor subagent, each receiving:
    - `writer_md_path` = this lang's `out_md_{lang}` (the file the matching Writer just produced).
    - `manifest_path` (same single manifest from Step 7.5).
    - `verifier_bundle` (same Verifier output verbatim, inline).
-   - That invocation's `lang` (a SINGLE token — `zh` / `en` / `ja`, never the combined `zh+en`; the Editor's Pass 4 quote-mark table and Pass 5 foreign-residue check are keyed on a single lang), `date`, `country`.
+   - That invocation's `lang` (a SINGLE token — `zh` / `en` / `ja`, never the combined `zh+en`; the Editor applies the relevant language's typography and native editorial conventions), `date`, `country`.
 
    Each Editor patches its own MD in place using `apply_patch` across **five sequential passes**:
 
    | Pass | Purpose |
    |------|---------|
-   | 1 | Verifier-locked fact verification (drift back to manifest values) |
-   | 2 | Writer-search fact backing (may add new search URLs to References + renumber `[N]`) |
-   | 3 | Quote verbatim check (degrade to indirect speech if source disagrees) |
-   | 4 | Quote-mark normalization (canonical per `references/language-spec.md`) |
-   | 5 | Local-fluency / logic-gap repair under closed five-class defect whitelist: `pass2-cut-gap` · `foreign-residue` · `inconsistent-name` · `filler-marker` · `awkward-connector` |
+   | 1 | Fact Manifest semantic fidelity and natural localization |
+   | 2 | Material claim source backing; search only when existing evidence is insufficient |
+   | 3 | Quotation meaning, attribution, and target-language rendering |
+   | 4 | Required structure, references, numbering, quote marks, and typography |
+   | 5 | Full native-language editorial pass for Chinese, English, or Japanese |
 
-   **Budgets.** Pass 2 + Pass 3 combined ≤ 2 WebSearch `search` + 4 `open_page` actions per story. Pass 5 is style-only (zero web-search actions) and is capped at **3 Edits / story** and **`2 × story_count` Edits / document**.
+   The Editor searches only to resolve a material factual or quotation issue, not to satisfy a quota. Pass 5 uses no web research because facts and evidence are already settled.
 
-   **Pass 5 rollback.** Any Pass-5 patch that violates its six invariants is reverted: manifest facts preserved · References byte-identical · paragraph count preserved · `### title` preserved · quote-mark pairs balanced · no prohibited marker introduced. On unrecoverable failure, Pass 5 aborts gracefully and the pipeline continues with Passes 1-4's changes only.
+   Pass 5 has no defect whitelist, edit quota, paragraph-count lock, or body-length rollback. It may rewrite sentences, merge or split paragraphs, and improve headlines whenever needed for genuinely native prose. It must preserve the event, factual meaning, uncertainty, attribution, source coverage, category, story order, and required Markdown structure.
 
-   **Reporting.** The Editor prints a structured stdout report (drift counts, refs added, claims cut / weakened, quote-mark fixes, per-class Pass-5 totals); the orchestrator logs it but does not gate on it. The format-check hook fires after every `apply_patch` and validates the resulting file — if a patch produces a malformed state, the hook reports the violation and the Editor must correct that file before continuing.
+   **Reporting.** The Editor prints a structured stdout report covering factual corrections, references added, claims removed or qualified, quotation fixes, structural fixes, and representative native-language edits; the orchestrator logs it but does not gate on it. The format-check hook fires after every `apply_patch` and validates the resulting file — if a patch produces a malformed state, the hook reports the violation and the Editor must correct that file before continuing.
 
    After all Editor reports and edited Markdown files have been captured, close every Editor thread before Step 9. Close a failed Editor thread before applying its failure policy.
 
@@ -305,7 +305,7 @@ Once all Scanner threads are closed, if the Scanner Batch contains zero candidat
 | Verifier (Step 7) | `sci-research-news-verifier` (`.codex/agents/sci-research-news-verifier.toml`) | `references/rubric.md`, `references/schemas.md` |
 | Fact-Extractor (Step 7.5) | `sci-research-daily-fact-extractor` (`.codex/agents/sci-research-daily-fact-extractor.toml`) | (Verifier output only — agent prompt has full schema) |
 | Writer (Step 8 — **× len(langs)** in bilingual mode) | `sci-research-daily-news-writer` (`.codex/agents/sci-research-daily-news-writer.toml`) | `references/language-spec.md`, `references/output-spec.md`, `references/verification.md`, Fact Manifest from Step 7.5 |
-| Editor (Step 8.5 — **× len(langs)** in bilingual mode) | `sci-research-daily-editor` (`.codex/agents/sci-research-daily-editor.toml`) | Writer's MD (per lang), Fact Manifest (shared), Verifier bundle (verbatim, shared), `references/language-spec.md` § Canonical Quote Marks (Pass 4) + § Language Rules (Pass 5 foreign-residue / inconsistent-name detection) |
+| Editor (Step 8.5 — **× len(langs)** in bilingual mode) | `sci-research-daily-editor` (`.codex/agents/sci-research-daily-editor.toml`) | Writer's MD (per lang), Fact Manifest (shared), Verifier bundle (verbatim, shared), `references/language-spec.md` and `references/output-spec.md` |
 | Email sender (Step 10) | — (Bash + `scripts/send-report-email.py`) | `references/email-spec.md` |
 | Orchestrator delivery check | — | `references/verification.md` |
 
@@ -324,7 +324,7 @@ Scattered through the Workflow above; consolidated here for quick scanning. **No
 | `--lang` has an unknown token (e.g. `zh+ko`) | REJECT at Step 1. Report which token is invalid; the supported set is `zh / en / ja`. |
 | `--lang` repeats a token (e.g. `zh+zh`) | REJECT at Step 1. Report: "bilingual mode requires two distinct languages." |
 | Bilingual: one Writer succeeds, the other fails | Report which `lang` failed and why. Do NOT delete the succeeding-lang's MD. Skip pandoc + email for the failing lang; the email Step 10 must still run for the succeeding lang (single-lang fallback body) OR halt entirely — orchestrator choice, default: halt + report. |
-| Editor Pass 5 unrecoverable failure (per lang) | Abort Pass 5 for that lang only. Pipeline continues with Passes 1-4's changes for that lang. Other lang(s) unaffected. Log it; do not gate the run. |
+| Editor fails for one language | Preserve that language's Writer Markdown, report the Editor error, and do not treat the unedited draft as fully verified. Other language runs remain unaffected. |
 | `pandoc` not installed | Skip docx export for ALL langs. Markdown(s) remain valid output. Report: "pandoc not found — .docx export skipped." |
 | `pandoc` exits non-zero on one lang | Report the error for that lang. Continue with the next lang. Do NOT delete any Markdown file. |
 | Email script exits non-zero (codes 1-5 or 7-9) | Halt and report per `references/email-spec.md` § Exit Code Handling. **Never** delete or modify any local `.md` / `.docx`. **Never** fall back to inline SMTP — the PreToolUse hook will reject it anyway. |
@@ -336,7 +336,7 @@ Scattered through the Workflow above; consolidated here for quick scanning. **No
 | `references/schemas.md` | Category Scanner Output Schema, mechanical Scanner Batch Schema, Verifier Output Schema | Scanner, Orchestrator, Verifier |
 | `references/rubric.md` | Verifier-only source, geography, news-value, coverage, deduplication, and final category rules | Verifier |
 | `references/output-spec.md` | Required Markdown Output, Markdown Syntax Contract, Invalid + Valid examples (`lang=en`, `lang=zh`), APA 7th Reference Format | Writer |
-| `references/language-spec.md` | Localisation Table, Derived Display Fields, Filename Pattern, Language Rules, Title Length Rules, Body Length Rules, Writing Standard, **Language-Specific Rules — `lang=zh` only** (quote marks, official titles, country prefixes, time anchors, terminology precision, foreign media naming) | Writer |
+| `references/language-spec.md` | Localisation Table, Derived Display Fields, Filename Pattern, Language Rules, headline guidance, Body Length Guidance, Writing Standard, and language-specific conventions | Writer, Editor |
 | `references/verification.md` | Output Rules, Writer Self-Check, End-to-End Verification, Flow Diagram, Recommended Agent Assignment, Invocation Examples | Writer (self-check), Orchestrator (delivery check) |
 | `references/email-spec.md` | Email subject / body templates, env var contract, attachment selection, exit-code handling, security | Orchestrator (Step 10 only when `email` is set) |
 
