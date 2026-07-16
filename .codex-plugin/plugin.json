@@ -1,7 +1,7 @@
 {
   "name": "sci-research",
-  "version": "1.20.1+codex.20260716104258",
-  "description": "Three independent multi-agent news pipelines plus a project-scoped Codex runtime setup. Pipeline C provides daily news intelligence; Pipeline E uses high-freedom company and executive reputation scanning with low, medium, and high verification.",
+  "version": "1.20.1+codex.20260716112934",
+  "description": "Three specialised multi-agent news workflows plus a project-scoped Codex runtime setup. Pipeline C uses parallel category-scoped news Scanners before editorial verification; Pipeline E uses high-freedom company and executive reputation scanning with low, medium, and high verification.",
   "author": {
     "name": "Peter Wang"
   },
@@ -24,7 +24,7 @@
   "interface": {
     "displayName": "Sci-Research News Intelligence",
     "shortDescription": "Daily news intelligence, branded briefings, and reputation monitoring",
-    "longDescription": "Three independent pipelines: daily-news-intelligence (dated single-country briefing with a high-freedom authoritative-media Scanner and editorial Verifier), daily-briefing (multi-country branded SPD Bank Word doc), and reputation-track (Yahoo-resolved company and executive monitoring across non-mainland-China media and public social content, followed by low/medium/high verification and HTML email). A setup skill installs the namespaced TOML custom agents into the active project before first run.",
+    "longDescription": "Three specialised workflows: daily-news-intelligence (dated single-country briefing with parallel category-scoped authoritative-media Scanners and one editorial Verifier), daily-briefing (multi-country branded SPD Bank Word doc), and reputation-track (Yahoo-resolved company and executive monitoring across non-mainland-China media and public social content, followed by low/medium/high verification and HTML email). A setup skill installs the namespaced TOML custom agents into the active project before first run.",
     "developerName": "Peter Wang",
     "category": "Productivity",
     "capabilities": [

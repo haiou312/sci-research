@@ -1,37 +1,77 @@
-# Schemas - Scanner Bundle and Verifier Output Formats
+# Schemas - Category Scanner, Scanner Batch, and Verifier Formats
 
-The Scanner uses the first schema. The Verifier consumes it and emits the second.
+Each category-scoped Scanner uses the first schema. The orchestrator wraps all category outputs verbatim in the second schema. The Verifier consumes that Scanner Batch and emits the third schema.
 
-## Scanner Bundle Schema
+## Category Scanner Output Schema
 
-Return one English bundle grouped by the category used to discover each candidate. The category is provisional; the Verifier owns final routing and deduplication.
+Return one English output for the single assigned category. The searched category is provisional; the Verifier owns final routing and cross-category deduplication.
 
 ```
-## Scan Report
+## Category Scan Report
+- Status: <complete | failed>
 - Country: <country>
 - Geography scope: <country | Europe-ex-UK>
 - Date: <YYYY-MM-DD>
-- Categories processed: <N>
+- Searched category: <category id>
 - Candidates found: <M>
-- Candidate counts by searched category: one `id=<n>` token per category in active-category order
+- Search actions: <non-negative integer>
+- Open-page attempts: <non-negative integer>
+- Open-page successes: <non-negative integer>
+- Open-page failures: <non-negative integer>
 
 ## Stories
 
 ### [<searched category>] <English headline>
-- Candidate ID: <unique integer within this bundle>
+- Candidate ID: <category-prefixed ID unique within the Scanner Batch, such as econ-1>
 - Publish date (verified): <ISO timestamp or local date>
 - Source: <media organisation>
 - URL: <full canonical or readable syndicated https URL>
 - Byline: <author, organisation byline, or "No byline">
+- Open-page result: verified-readable
 - Factual excerpt: <verbatim text from the readable article body>
 - Key facts: <concise English account of what the article reports>
 
 ... (repeat for every qualifying URL; do not merge possible duplicates) ...
 
-## Coverage Notes
+## Coverage Note
 
-- <category id>: <brief description of what was found, or why authoritative exact-date reporting with readable factual body was sparse>
+- <category id>: <brief description of what was found, why authoritative exact-date reporting with readable factual body was sparse, or why Status is failed>
 ```
+
+Rules:
+
+- `Status: complete` requires meaningful search execution, even when `Candidates found: 0`.
+- `Status: failed` means the Scanner could not complete discovery because of a tool or runtime failure; it is not evidence that the category had no qualifying news.
+- `Status: complete` requires `Search actions >= 1`. Count individual queries, not batched tool calls.
+- Count `Open-page attempts` by individual URL, not batched tool calls.
+- `Open-page successes + Open-page failures` must equal `Open-page attempts`.
+- `Candidates found` must not exceed `Open-page successes`.
+
+## Scanner Batch Schema
+
+The orchestrator creates one Scanner Batch after all category Scanner invocations finish. It may calculate only the batch header totals and wrap category outputs in active-category order. It must not rewrite, summarize, deduplicate, reroute, or otherwise transform any category output.
+
+```
+## Scanner Batch
+- Country: <country>
+- Geography scope: <country | Europe-ex-UK>
+- Date: <YYYY-MM-DD>
+- Categories requested: <N>
+- Category outputs complete: <N>
+- Candidates found: <M>
+- Candidate counts by searched category: one `id=<n>` token per category in active-category order
+- Tool totals: search=<n> | open_attempts=<n> | open_successes=<n> | open_failures=<n>
+
+## Category Outputs
+
+<!-- BEGIN CATEGORY OUTPUT: <category id> -->
+<complete Category Scanner Output reproduced verbatim>
+<!-- END CATEGORY OUTPUT: <category id> -->
+
+... (repeat in active-category order) ...
+```
+
+The batch is valid only when every requested category has one `Status: complete` output. Candidate IDs remain category-prefixed and unchanged.
 
 ## Verifier Output Schema
 

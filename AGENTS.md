@@ -22,7 +22,7 @@
 
 | Agent | 模型 | effort | 取舍 |
 |---|---|---:|---|
-| sci-research-daily-news-scanner | gpt-5.6-luna | medium | 高吞吐检索、日期核验与候选汇总 |
+| sci-research-daily-news-scanner | gpt-5.6-luna | medium | 按栏目并行的高吞吐检索、日期核验与候选收集 |
 | sci-research-news-verifier | gpt-5.6-terra | high | 来源、影响力与去重规则裁决 |
 | sci-research-daily-fact-extractor | gpt-5.4-mini | medium | 结构化事实与引语抽取 |
 | sci-research-daily-news-writer | gpt-5.6-sol | high | 多语言新闻写作与背景整合 |
@@ -36,17 +36,18 @@
 
 ### C — Daily News Intelligence
 
-流程：Scanner → Verifier → Fact Extractor → Writer × language → Editor × language → pandoc → 可选邮件。
+流程：Scanner × category → 机械汇总 → Verifier → Fact Extractor → Writer × language → Editor × language → pandoc → 可选邮件。
 
-- Scanner、Verifier、Fact Extractor 只运行一次；双语模式下 Writer 和 Editor 按语言并行。
-- Scanner 使用简短、高自由度提示：每个栏目只给一句大致搜索方向，由 GPT-5.6 Luna 自行决定查询、媒体、语言、深度和跟进路径。
+- Scanner 按 active category 一栏一个并行运行；该 fan-out 每份报告只执行一次。Verifier、Fact Extractor 各运行一次；双语模式下 Writer 和 Editor 按语言并行。
+- 每个 Scanner 使用简短、高自由度提示，只接收一个栏目及其一句大致搜索方向，由 GPT-5.6 Luna 自行决定查询、媒体、语言、深度和跟进路径。
 - Scanner 只执行这些硬门槛：日期必须精确等于目标日；来源必须是权威媒体；页面必须有可读事实正文；付费或仅摘要线索必须找到权威免费同事件报道，否则删除；不得编造。
 - Scanner 不做新闻价值评分、交易或影响门槛、候选配额、去重、Lead 选择、最终分类或 `china_nexus`/`ipo_ma` 路由；每个合格 URL 独立交给 Verifier。
+- 编排器只按栏目顺序原样包裹各 Scanner 输出并计算汇总计数，不新增 Merger agent，不改写、去重或路由候选；这些判断仍由 Verifier 完成。
 - country=China 必须采用外部视角：只查询和使用外国媒体，不查询或使用中国本土媒体及中国政府域名。
 - country=Europe 使用 Europe-ex-UK 地域契约：英国为唯一或主要地域主体的事件必须排除，且该门槛不得被 Coverage Review 放宽；英国媒体仍可作为欧洲新闻来源，英国仅作为背景或外部交易对手时不自动排除。
 - 非中国报告有 6 个栏目；中国报告在第 5 位增加 china_nexus，并保留 ipo_ma。
 - Verifier 独立判断来源可信度、新闻价值和具体新事实，并负责 Lead 选择、同事件去重、最终栏目路由、`china_nexus`/`ipo_ma` 资格及 Coverage Review。
-- Scanner Bundle 与 Verifier KEEP/DROP 报告必须原样保存到日报目录的 `audit/*.txt`；不要使用 `.md`，避免 Pipeline D 将审计文件当作国家日报。
+- Scanner Batch（含每栏原始输出及 search/open_page 计数）与 Verifier KEEP/DROP 报告必须原样保存到日报目录的 `audit/*.txt`；不要使用 `.md`，避免 Pipeline D 将审计文件当作国家日报。
 - Writer 必须遵守 Fact Manifest；Editor 使用 apply_patch 运行五道检查。引用、引号和输出格式规范以 skills/daily-news-intelligence/references/ 为准。
 - --email-attach none 表示仅发送正文，必须省略 --attach。
 

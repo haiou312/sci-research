@@ -1,6 +1,6 @@
 # sci-research
 
-> A **Codex plugin** with **three independent multi-agent pipelines** for daily news intelligence, branded briefings, and company reputation monitoring.
+> A **Codex plugin** with **three specialised multi-agent workflows** for daily news intelligence, branded briefings, and company reputation monitoring.
 
 Given a country, a company, or a date, this plugin orchestrates specialised agents to produce a polished, sourced deliverable — daily news briefing, branded Word document, or reputational risk email.
 
@@ -19,7 +19,7 @@ Given a country, a company, or a date, this plugin orchestrates specialised agen
 | **Default lang** | `zh` | `zh` | `zh` |
 | **Languages** | zh / en / ja + 6 bilingual combos (`zh+en` …) | zh / en | zh / en |
 
-All three pipelines are **completely independent** — they don't share agents and changes to one don't affect the others.
+The three pipelines use separate agent chains and stage contracts. Pipeline D intentionally consumes Pipeline C report files, while the pipelines also share a small amount of delivery infrastructure such as email guards and runtime setup.
 
 Pipeline C also writes raw Scanner and Verifier audit artifacts under `daily-news/{date}/audit/` as `.txt` files. They show the Scanner candidate pool and coverage notes, then the Verifier's source assessment, KEEP/DROP reasons, Coverage Review decisions, and remaining gaps; Pipeline D ignores them because it reads report Markdown rather than audit text files.
 
@@ -28,14 +28,14 @@ Pipeline C also writes raw Scanner and Verifier audit artifacts under `daily-new
 ## Why This Plugin
 
 - **9 specialised agents** across three pipelines, each agent narrowly scoped
-- **High-freedom Luna Scanner** — one short direction per category, with no outlet list, source tier, candidate quota, impact threshold, deduplication, or routing logic
+- **Parallel high-freedom Luna Scanners** — one focused agent and one short direction per category, with no outlet list, source tier, candidate quota, impact threshold, deduplication, or routing logic
 - **Per-URL date verification** in `$sci-research:daily-news-intelligence` — neighbouring days are discarded
 - **Readable free reporting** — paid or stub-only leads are replaced with an authoritative free same-event article or excluded
 - **Editorial second-pass filter** (`sci-research-news-verifier`) for daily news — evidence fit / new information / contextual news value / originality / dedup
 - **Fact Manifest + 5-pass Editor** — numbers / names / dates / quotes locked to a verbatim YAML manifest, then fact-checked and style-repaired post-Writer
 - **External-view China gate** — `$sci-research:daily-news-intelligence --country "China"` uses foreign media only and excludes Chinese-domestic outlets and Chinese government domains
 - **Free-prose Writer** — daily news Writer composes explanatory prose in the target language, not a mechanical translation
-- **Bilingual mode (1.18.0+)** — `--lang zh+en` runs upstream once, fans Writer/Editor out per language in parallel, ships one email with a stacked bilingual body + up to 4 attachments
+- **Bilingual mode (1.18.0+)** — `--lang zh+en` runs the category Scanner fan-out once per report, then fans Writer/Editor out per language in parallel and ships one email with a stacked bilingual body + up to 4 attachments
 - **Branded Word output** via SPD Bank template (`$sci-research:daily-briefing`)
 - **Gmail SMTP email delivery** built into all three pipelines
 - **Quality hooks** enforce daily-news Markdown format and email-send safety
@@ -62,7 +62,7 @@ python3 --version
 node --version
 ```
 
-These three commands must succeed. Node.js is required by the quality hooks. Python is required by the runtime setup, email scripts, and Pipeline D.
+These three commands must succeed. Python **3.11 or newer** is required because the runtime installer parses TOML with the standard-library `tomllib` module. Node.js is required by the quality hooks.
 
 Check the optional Pipeline C docx exporter separately:
 
@@ -92,7 +92,7 @@ codex plugin list
 
 Confirm that `sci-research@sci-research-marketplace` is shown as `installed, enabled`. Record the displayed version; it should match `.codex-plugin/plugin.json` in the marketplace revision.
 
-#### Step 4 — Create and enter the dedicated runtime workspace
+#### Step 4 — Create and enter a runtime workspace
 
 ```bash
 mkdir -p ~/.sci-research
@@ -100,9 +100,9 @@ cd ~/.sci-research
 codex
 ```
 
-For the Codex macOS App, run only `mkdir -p ~/.sci-research`, then open `~/.sci-research` as the workspace in the App instead of running the `codex` CLI command.
+`~/.sci-research` is the recommended default, not a mandatory location. For the Codex macOS App, run only `mkdir -p ~/.sci-research`, then open it as the workspace in the App instead of running the `codex` CLI command.
 
-The same workspace must be used for runtime setup and pipeline execution. The default report directories also live under `~/.sci-research/reports/`.
+Whichever workspace you choose must be used for both runtime setup and pipeline execution because the custom agents are project-scoped. To run the plugin in another workspace, install the runtime there as well. The default report directories remain under `~/.sci-research/reports/` unless overridden.
 
 #### Step 5 — Install the project-scoped agents from inside Codex
 
@@ -115,9 +115,11 @@ Use $sci-research:setup-sci-research-runtime to install the project-scoped runti
 The setup performs a bundle check and dry-run before installing. It creates:
 
 ```text
-~/.sci-research/.codex/agents/sci-research-*.toml
-~/.sci-research/.codex/sci-research-runtime.json
+<runtime-workspace>/.codex/agents/sci-research-*.toml
+<runtime-workspace>/.codex/sci-research-runtime.json
 ```
+
+With the recommended default workspace, `<runtime-workspace>` is `~/.sci-research`.
 
 It does not modify global `~/.codex/config.toml`, install Python packages, or run a news pipeline. If it reports an unmanaged-file conflict or a locally modified managed agent, resolve the named file instead of overwriting it manually.
 
@@ -136,7 +138,7 @@ Review and trust the two Sci-Research hooks if Codex asks:
 
 #### Step 7 — Start a new Codex task in the same workspace
 
-End the current task, keep `~/.sci-research` as the workspace, and start a new task. Project custom agents are discovered when a task starts; the setup task is not accepted as proof that the new agent registry has loaded.
+End the current task, keep the same runtime workspace open, and start a new task. Project custom agents are discovered when a task starts; the setup task is not accepted as proof that the new agent registry has loaded.
 
 In the new task, run a runtime-only check:
 
@@ -158,7 +160,7 @@ Do not add `--email` to the first run. Pipeline C uses its default output direct
 
 ### Updating an Existing Git Marketplace Installation
 
-An update has three distinct steps: refresh the Git marketplace snapshot, reinstall the plugin cache version, and resync the project agents.
+An update crosses two task-reload boundaries. First refresh and reinstall the plugin outside the old task. Then start a fresh setup task to update the project agents. Finally start another fresh task to run a pipeline with the updated agent registry.
 
 #### Step 1 — Refresh the Git marketplace
 
@@ -172,41 +174,92 @@ The correct subcommand is `upgrade`. Codex does not provide `codex plugin update
 
 ```bash
 codex plugin add sci-research@sci-research-marketplace
-codex plugin list
+codex plugin list --marketplace sci-research-marketplace
 ```
 
-Confirm that the displayed plugin version changed. If it did not, confirm that the pushed `.codex-plugin/plugin.json` has a new `+codex.<cachebuster>` suffix.
+Confirm that the displayed plugin version changed and the plugin is installed and enabled. If it did not change, confirm that the pushed `.codex-plugin/plugin.json` has a new `+codex.<cachebuster>` suffix.
 
-#### Step 3 — Update the project-scoped agents
+#### Step 3 — Start a fresh setup task
 
-Open `~/.sci-research` in Codex and enter:
+Close or leave any Codex task that was open before Step 2. Open the runtime workspace, normally `~/.sci-research`, and start a **new task**. This boundary is required so the updated setup skill and plugin bundle are loaded.
+
+#### Step 4 — Update and check the project-scoped agents
+
+In that new setup task, enter:
 
 ```text
 Use $sci-research:setup-sci-research-runtime to update and check the project-scoped runtime in this workspace.
 ```
 
-The updater backs up managed files before replacing them and refuses to overwrite local changes. Review `/hooks` again if Codex requests trust for the updated hook definitions.
+The updater backs up managed files before replacing them, refuses to overwrite local changes, and verifies that the runtime manifest version and agent hashes match the newly installed plugin. Review `/hooks` again if Codex requests trust for updated hook definitions.
 
-#### Step 4 — Start another new task
+#### Step 5 — Start a fresh pipeline task
 
-Start a new Codex task in `~/.sci-research` after every plugin/runtime update. The new task is the boundary where updated skills, hooks, and project agents are all loaded together.
+End the setup task and start another new task in the same workspace before running Pipeline C, D, or E. This second boundary loads the newly copied project agents. A successful runtime check inside the setup task does not prove that the setup task itself has refreshed its agent registry.
+
+#### Diagnose a partial update
+
+The installed plugin and project runtime must report the same version. Check the plugin in the shell:
+
+```bash
+codex plugin list --marketplace sci-research-marketplace
+```
+
+Then use a fresh Codex task in the runtime workspace:
+
+```text
+Use $sci-research:setup-sci-research-runtime to check the project-scoped runtime in this workspace. Do not run a news pipeline.
+```
+
+A version mismatch, missing agent, or agent hash mismatch means the update stopped before runtime resync. Repeat Steps 3-5; do not run a pipeline from the half-updated workspace.
 
 ### Local Marketplace Development
 
-Use this instead of the GitHub marketplace flow when testing an unpushed checkout:
+Use this instead of the GitHub marketplace flow when testing an unpushed checkout. The local checkout and Git marketplace both declare the name `sci-research-marketplace`, so only one of those sources can be configured under that name at a time.
 
 ```bash
 git clone https://github.com/haiou312/sci-research.git
 cd sci-research
+codex plugin marketplace list
+```
+
+If `sci-research-marketplace` is already listed, remove that configured source before adding the checkout:
+
+```bash
+codex plugin marketplace remove sci-research-marketplace
+```
+
+The command removes the configured marketplace source, not your checkout. Then register and install the local source:
+
+```bash
 codex plugin marketplace add "$PWD"
+python3 scripts/codex/update-plugin-cachebuster.py
+codex plugin add sci-research@sci-research-marketplace
+codex plugin list --marketplace sci-research-marketplace
+```
+
+After each checkout change:
+
+```bash
+python3 scripts/codex/update-plugin-cachebuster.py
 codex plugin add sci-research@sci-research-marketplace
 ```
 
-After changing the checkout, update the cachebuster in `.codex-plugin/plugin.json`, run `codex plugin add sci-research@sci-research-marketplace` again, then repeat runtime setup in `~/.sci-research`. `marketplace upgrade` refreshes Git marketplaces and is not needed for a local-path marketplace.
+Then follow the same two-task sequence as a normal update: start a fresh setup task, update/check the runtime, end that task, and start a fresh pipeline task. `marketplace upgrade` is only for Git marketplace sources and is not used while the configured source is the local path.
+
+To switch back to the Git marketplace:
+
+```bash
+codex plugin marketplace remove sci-research-marketplace
+codex plugin marketplace add haiou312/sci-research --ref main
+codex plugin add sci-research@sci-research-marketplace
+```
+
+Then repeat the setup-task and pipeline-task boundaries so the runtime and loaded agents match the restored Git version.
 
 ### Pipeline D Dependency (optional)
 
-Pipeline D alone requires `python-docx`. If no source checkout exists yet, create one, then install the declared dependency before starting Codex:
+Pipeline D alone requires the additional `python-docx` package. If no source checkout exists yet, create one, then install the declared dependency before starting Codex:
 
 ```bash
 git clone https://github.com/haiou312/sci-research.git /path/to/sci-research
@@ -318,15 +371,15 @@ $sci-research:reputation-track --company "9988.HK" --date 2026-05-10 --lang en -
 ### Pipeline C — `$sci-research:daily-news-intelligence`
 
 ```
-sci-research-daily-news-scanner → sci-research-news-verifier → sci-research-daily-fact-extractor → sci-research-daily-news-writer → sci-research-daily-editor → pandoc → email (optional)
-   (Luna / medium)      (Terra / high)  (5.4 mini / medium)    (Sol / high, ×langs) (Sol / high, ×langs)
+sci-research-daily-news-scanner ×categories → mechanical batch → sci-research-news-verifier → sci-research-daily-fact-extractor → sci-research-daily-news-writer → sci-research-daily-editor → pandoc → email (optional)
+   (Luna / medium, parallel)                               (Terra / high)  (5.4 mini / medium)    (Sol / high, ×langs) (Sol / high, ×langs)
 
-Bilingual mode (--lang zh+en …): Scanner/Verifier/Fact-Extractor run ONCE; Writer ×langs in parallel → Editor ×langs in parallel → pandoc ×langs
+Bilingual mode (--lang zh+en …): the category Scanner fan-out runs once per report; Verifier/Fact-Extractor run once; Writer ×langs in parallel → Editor ×langs in parallel → pandoc ×langs
 ```
 
 | Agent | Codex configuration | Role |
 |---|---|---|
-| `sci-research-daily-news-scanner` | gpt-5.6-luna / medium | Single high-freedom agent scanning all active categories sequentially. It follows one short direction per category and only hard-gates exact date, authoritative media, readable body, paid-to-free replacement, China foreign-media-only sourcing, and Europe-ex-UK scope. Every qualifying URL is handed to the Verifier separately |
+| `sci-research-daily-news-scanner` | gpt-5.6-luna / medium | One parallel instance per active category. Each instance follows one short category direction; hard-gates exact date, authoritative media, readable body, paid-to-free replacement, China foreign-media-only sourcing, and Europe-ex-UK scope; and reports search/open-page counts. The orchestrator mechanically wraps all outputs before handing every qualifying URL to the Verifier |
 | `sci-research-news-verifier` | gpt-5.6-terra / high | Editorial second-pass filter: independent source assessment, concrete new information, contextual daily-news value, originality/corroboration, Lead selection, deduplication, final category routing, and Coverage Review for short categories |
 | `sci-research-daily-fact-extractor` | gpt-5.4-mini / medium | Extracts every number / name / date / quote from the Verifier KEEP set into a locked-values YAML Fact Manifest (no web access) |
 | `sci-research-daily-news-writer` | gpt-5.6-sol / high | Consumes Verifier KEEP set + Fact Manifest, composes explanatory prose in target language with 1-3 background searches per story, emits Markdown + APA refs. One instance per language in bilingual mode |
@@ -444,6 +497,7 @@ sci-research/
 ├── hooks/hooks.json                         # Plugin lifecycle hook config
 ├── scripts/
 │   ├── codex/check-plugin-bundle.py         # Installed-cache integrity check
+│   ├── codex/update-plugin-cachebuster.py    # Refresh local-development plugin version suffix
 │   ├── hooks/                               # Hook implementations (Node.js)
 │   │   ├── daily-news-format-check.js
 │   │   └── email-send-guard.js
@@ -483,11 +537,11 @@ sci-research/
 
 ## Requirements
 
-- [Codex](https://developers.openai.com/codex) CLI
+- [Codex](https://developers.openai.com/codex) CLI for marketplace installation and updates; pipelines may run in the CLI or macOS App after setup
 - Node.js ≥ 18 (for hook scripts)
-- Python 3 (for email delivery scripts + Pipeline D docx generation; only required when `--email` or Pipeline D is used)
+- Python ≥ 3.11 (required by runtime setup; also used by email delivery and Pipeline D)
 - Pipeline D dependency (install or update from the plugin root): `python3 -m pip install --user --upgrade -r requirements.txt`
-- `pandoc` (for Markdown → docx conversion in Pipeline C)
+- `pandoc` is optional; without it Pipeline C still produces Markdown but skips docx export
 - Internet access (for WebSearch `search` / `open_page`)
 - Gmail SMTP credentials (only when `--email` is used; see `.env.example`)
 - No separate social-media MCP configuration is required. Pipeline E uses public, openable social content discovered through WebSearch.

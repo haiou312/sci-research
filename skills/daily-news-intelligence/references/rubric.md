@@ -1,6 +1,6 @@
 # Rubric - Verifier Editorial Rules
 
-Loaded by the Verifier, not the Scanner. The Scanner's complete instructions are intentionally short and live in `.codex/agents/sci-research-daily-news-scanner.toml`; do not apply this document's editorial, deduplication, routing, or materiality rules during discovery.
+Loaded by the Verifier, not the category Scanners. The Scanner's complete instructions are intentionally short and live in `.codex/agents/sci-research-daily-news-scanner.toml`; do not apply this document's editorial, deduplication, routing, or materiality rules during discovery.
 
 This document defines final admission rules without an outlet whitelist, source tiers, fixed per-domain query plan, or mechanical impact thresholds.
 
@@ -114,7 +114,7 @@ When a category remains short, record the gap instead of admitting weak evidence
 
 ## Date Verification Rules
 
-- The Scanner admits only exact-date candidates; the Verifier revalidates that decision.
+- Each category Scanner admits only exact-date candidates; the Verifier revalidates that decision.
 - Every candidate URL must pass an `open_page` round trip on the canonical article or document.
 - The extracted publication date must equal `date` in either the outlet's local timezone or UTC.
 - Neighbouring days do not qualify.
@@ -124,7 +124,7 @@ When a category remains short, record the gap instead of admitting weak evidence
 ## Category Coverage Rules
 
 - The active category set comes from `references/language-spec.md`: six categories for a non-China report and seven for a China report.
-- Scanner searches every active category and returns every candidate that passes its short hard-rule set.
+- One category Scanner searches each active category and returns every candidate that passes its short hard-rule set.
 - Verifier aims for at least `min_per_category` KEEP stories per category, using Coverage Review when necessary.
 - Every story belongs to exactly one category by dominant frame.
 - Underfilled categories carry the localized `gap_note`; never pad them with untrustworthy, off-date, or out-of-scope material.

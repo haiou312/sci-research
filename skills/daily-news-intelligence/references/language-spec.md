@@ -141,7 +141,7 @@ out_docx_en         = {out_dir}Japan-daily-news-2026-05-21.docx
 
 ### Pipeline behaviour
 
-- **Upstream (Scanner / Verifier / Fact-Extractor)**: runs **once** regardless of `is_bilingual`. These three stages are English language-agnostic; their output is the same for `zh` / `en` / `ja` / `zh+en`.
+- **Upstream (category Scanner fan-out / Verifier / Fact-Extractor)**: the complete Scanner fan-out runs **once per report** regardless of `is_bilingual`, followed by one Verifier and one Fact-Extractor. These stages are English language-agnostic; their output is the same for `zh` / `en` / `ja` / `zh+en`.
 - **Per-lang (Writer / Editor / pandoc)**: fans out **once per lang** in `langs` order. The orchestrator invokes the Writer subagent for each lang separately, then Editor for each lang separately, then pandoc for each lang separately. Each Writer/Editor invocation still sees a single `lang` — the agents themselves are unchanged.
 - **Email (Step 10)**: collects every per-lang file into a single email per § email-spec.md § Bilingual Subject + Body Templates.
 - **Self-check (filename)**: the rule `lang is zh or ja and country segment is ASCII` is checked **per generated file**, not on the combined `--lang` string.
