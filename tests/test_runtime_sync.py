@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 import subprocess
@@ -39,7 +40,7 @@ class RuntimeSyncTests(unittest.TestCase):
             self.assertEqual(install.returncode, 0, install.stderr)
             manifest_path = project_root / ".codex/sci-research-runtime.json"
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-            self.assertEqual(len(manifest["managed_files"]), 10)
+            self.assertEqual(len(manifest["managed_files"]), 9)
 
             check = self.run_sync(project_root, "--check")
             self.assertEqual(check.returncode, 0, check.stderr)
@@ -89,6 +90,36 @@ class RuntimeSyncTests(unittest.TestCase):
                 )
             )
             self.assertEqual(len(backups), 1)
+
+    def test_update_removes_obsolete_managed_agent(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            project_root = Path(temp_dir)
+            first = self.run_sync(project_root)
+            self.assertEqual(first.returncode, 0, first.stderr)
+
+            manifest_path = project_root / ".codex/sci-research-runtime.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            obsolete_relative = (
+                ".codex/agents/sci-research-reputation-resolver.toml"
+            )
+            obsolete_path = project_root / obsolete_relative
+            obsolete_content = b"name = 'sci-research-reputation-resolver'\n"
+            obsolete_path.write_bytes(obsolete_content)
+            manifest["managed_files"][obsolete_relative] = hashlib.sha256(
+                obsolete_content
+            ).hexdigest()
+            manifest_path.write_text(
+                json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
+            )
+
+            update = self.run_sync(project_root)
+            self.assertEqual(update.returncode, 0, update.stderr)
+            self.assertIn("REMOVE:", update.stdout)
+            self.assertIn(obsolete_path.name, update.stdout)
+            self.assertFalse(obsolete_path.exists())
+            updated = json.loads(manifest_path.read_text(encoding="utf-8"))
+            self.assertEqual(len(updated["managed_files"]), 9)
+            self.assertNotIn(obsolete_relative, updated["managed_files"])
 
     def test_refuses_to_overwrite_unmanaged_agent(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

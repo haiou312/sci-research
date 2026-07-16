@@ -18,6 +18,18 @@ REQUIRED_SKILLS = {
     "setup-sci-research-runtime",
 }
 
+REQUIRED_AGENTS = {
+    "sci-research-briefing-curator",
+    "sci-research-daily-editor",
+    "sci-research-daily-fact-extractor",
+    "sci-research-daily-news-scanner",
+    "sci-research-daily-news-writer",
+    "sci-research-news-verifier",
+    "sci-research-reputation-scanner",
+    "sci-research-reputation-verifier",
+    "sci-research-reputation-writer",
+}
+
 
 def fail(message: str) -> None:
     raise ValueError(message)
@@ -64,8 +76,14 @@ def validate(plugin_root: Path) -> tuple[int, int]:
         if name in names:
             fail(f"duplicate agent name: {name}")
         names.add(name)
-    if len(names) != 10:
-        fail(f"expected 10 agents, found {len(names)}")
+    missing_agents = sorted(REQUIRED_AGENTS - names)
+    unexpected_agents = sorted(names - REQUIRED_AGENTS)
+    if missing_agents or unexpected_agents:
+        fail(
+            "agent payload mismatch: "
+            f"missing={missing_agents or 'none'} "
+            f"unexpected={unexpected_agents or 'none'}"
+        )
 
     hooks_path = plugin_root / "hooks/hooks.json"
     hooks = json.loads(hooks_path.read_text(encoding="utf-8"))

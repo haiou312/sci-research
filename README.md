@@ -14,7 +14,7 @@ Given a country, a company, or a date, this plugin orchestrates specialised agen
 |---|---|---|---|
 | **Purpose** | Single-country daily news briefing | Multi-country branded briefing (SPD Bank) | Company reputation risk monitor |
 | **Time focus** | Single date | Single date (reads existing reports) | Single date |
-| **Sources** | Authoritative media with exact-date and readable-body verification | Country reports from Pipeline C | News (T1-T4) + Reddit + X |
+| **Sources** | Authoritative media with exact-date and readable-body verification | Country reports from Pipeline C | Yahoo identity + non-mainland-China media + public social media |
 | **Output** | 6/7-section Markdown + docx (+email); mono- or bilingual | 13-15-story branded Word document (+email) | Inline HTML email (only when negative) |
 | **Default lang** | `zh` | `zh` | `zh` |
 | **Languages** | zh / en / ja + 6 bilingual combos (`zh+en` …) | zh / en | zh / en |
@@ -27,7 +27,7 @@ Pipeline C also writes raw Scanner and Verifier audit artifacts under `daily-new
 
 ## Why This Plugin
 
-- **10 specialised agents** across three pipelines, each agent narrowly scoped
+- **9 specialised agents** across three pipelines, each agent narrowly scoped
 - **High-freedom Luna Scanner** — one short direction per category, with no outlet list, source tier, candidate quota, impact threshold, deduplication, or routing logic
 - **Per-URL date verification** in `$sci-research:daily-news-intelligence` — neighbouring days are discarded
 - **Readable free reporting** — paid or stub-only leads are replaced with an authoritative free same-event article or excluded
@@ -48,7 +48,7 @@ Pipeline C also writes raw Scanner and Verifier audit artifacts under `daily-new
 Sci-Research has two deployment layers:
 
 1. The Codex marketplace installs the plugin skills and hooks.
-2. The runtime setup skill copies the plugin's 10 namespaced TOML agents into the project where the pipelines will run.
+2. The runtime setup skill copies the plugin's 9 namespaced TOML agents into the project where the pipelines will run.
 
 Marketplace installation alone is therefore not sufficient. Complete every step below before the first pipeline run.
 
@@ -144,7 +144,7 @@ In the new task, run a runtime-only check:
 Use $sci-research:setup-sci-research-runtime to check the project-scoped runtime in this workspace. Do not run a news pipeline.
 ```
 
-The check must report 10 agents and a matching plugin version before first use.
+The check must report 9 agents and a matching plugin version before first use.
 
 #### Step 8 — Run a no-email smoke test
 
@@ -297,19 +297,18 @@ $sci-research:daily-briefing --date 2026-05-11 --countries "中国,日本,韩国
 ### Pipeline E — `$sci-research:reputation-track` (Company Reputation Risk Monitor)
 
 ```
-$sci-research:reputation-track --company "<name|ticker>" [--date YYYY-MM-DD] [--lang zh|en] \
-  [--sources news,reddit,x] [--severity-min low|medium|high] \
-  [--email <a@x.com>] [--email-dry-run]
+$sci-research:reputation-track --company "<name|ticker>" --email <a@x.com> \
+  [--date YYYY-MM-DD] [--lang zh|en] [--email-dry-run]
 ```
 
-Resolves the company + executives, scans News + Reddit + X for adverse content, classifies category and severity. **Silent when clean** — only emails a report if negative findings exist.
+Uses Yahoo Finance to confirm the company and current executives, then searches exact-date non-mainland-China media and public social media. A Verifier keeps genuine reputation risks and grades them `high`, `medium`, or `low`. **Silent when clean** — HTML and email are produced only when findings exist.
 
 ```text
-# Scan Tesla for today's negative coverage
+# Monitor Tesla and its current executives today
 $sci-research:reputation-track --company "TSLA" --email you@gmail.com
 
-# Scan Alibaba for a specific date, low-severity threshold
-$sci-research:reputation-track --company "BABA" --date 2026-05-10 --severity-min low --lang en
+# English dry-run for a specific date
+$sci-research:reputation-track --company "9988.HK" --date 2026-05-10 --lang en --email you@gmail.com --email-dry-run
 ```
 
 ---
@@ -347,17 +346,18 @@ daily-news-reports/YYYY-MM-DD/*.md  (existing country reports)
 ### Pipeline E — `$sci-research:reputation-track`
 
 ```
-sci-research-reputation-resolver → sci-research-reputation-scanner × requested sources (parallel; default: news / reddit / x) → sci-research-reputation-classifier → sci-research-reputation-writer → email (only if findings)
-   (Terra / high)      (Luna / medium)                                                              (Terra / high)          (Terra / medium)
+sci-research-reputation-scanner → sci-research-reputation-verifier → sci-research-reputation-writer → email
+       (Luna / medium)                    (Terra / high)                    (Terra / medium)
 ```
 
-Silent exit when `total_items_kept == 0`. Reddit and X use Codex WebSearch `search` to discover publicly indexed posts and `open_page` to inspect canonical threads. Unindexed, login-gated, or unopenable content is recorded as a coverage gap.
+The Scanner resolves the company and current key executives through Yahoo Finance, then freely searches exact-date non-mainland-China media and public social content about every subject. It excludes mainland Chinese media, mainland Chinese government domains, and mainland Chinese social platforms. Hong Kong, Macao, Taiwan, and all other countries and regions remain eligible.
+
+The Verifier removes non-risk content, deduplicates events, and grades findings `high`, `medium`, or `low`. There is no source matrix, outlet tier, risk-category taxonomy, `critical` level, confidence score, or minimum-severity filter. `findings: []` exits silently.
 
 | Agent | Codex configuration |
 |---|---|
-| `sci-research-reputation-resolver` | gpt-5.6-terra / high |
 | `sci-research-reputation-scanner` | gpt-5.6-luna / medium |
-| `sci-research-reputation-classifier` | gpt-5.6-terra / high |
+| `sci-research-reputation-verifier` | gpt-5.6-terra / high |
 | `sci-research-reputation-writer` | gpt-5.6-terra / medium |
 
 ---
@@ -381,7 +381,6 @@ The Scanner does not score news value, enforce transaction or impact thresholds,
 Detailed rules:
 - Pipeline C Scanner hard rules and category directions: [`.codex/agents/sci-research-daily-news-scanner.toml`](./.codex/agents/sci-research-daily-news-scanner.toml)
 - Pipeline C Verifier editorial rules: [`skills/daily-news-intelligence/references/rubric.md`](./skills/daily-news-intelligence/references/rubric.md)
-- Pipeline E news tiering: [`skills/reputation-track/references/news-source.md`](./skills/reputation-track/references/news-source.md)
 
 ---
 
@@ -409,9 +408,8 @@ sci-research/
 │   ├── sci-research-daily-news-writer.toml
 │   ├── sci-research-daily-editor.toml
 │   ├── sci-research-briefing-curator.toml
-│   ├── sci-research-reputation-resolver.toml
 │   ├── sci-research-reputation-scanner.toml
-│   ├── sci-research-reputation-classifier.toml
+│   ├── sci-research-reputation-verifier.toml
 │   └── sci-research-reputation-writer.toml
 ├── skills/                                  # 3 pipelines + project runtime setup
 │   ├── daily-news-intelligence/             # Pipeline C
@@ -436,10 +434,7 @@ sci-research/
 │   │   ├── SKILL.md
 │   │   ├── agents/openai.yaml
 │   │   └── references/                      # Pipeline E specs
-│   │       ├── entity-resolution.md
-│   │       ├── source-matrix.md
-│   │       ├── news-source.md
-│   │       ├── negativity-rubric.md
+│   │       ├── severity-rules.md
 │   │       ├── html-template.md
 │   │       ├── email-spec.md
 │   │       └── schemas.md
@@ -478,10 +473,9 @@ sci-research/
 | Pipeline C email delivery / bilingual email | `skills/daily-news-intelligence/references/email-spec.md` + `scripts/send-report-email.py` |
 | Pipeline D brand template | `skills/daily-briefing/template/briefing-template.docx` |
 | Pipeline D curator rules | `.codex/agents/sci-research-briefing-curator.toml` |
-| Pipeline E negativity rubric | `skills/reputation-track/references/negativity-rubric.md` |
-| Pipeline E news source tiering | `skills/reputation-track/references/news-source.md` |
+| Pipeline E search and mainland-China exclusions | `.codex/agents/sci-research-reputation-scanner.toml` |
+| Pipeline E severity judgement | `skills/reputation-track/references/severity-rules.md` + `.codex/agents/sci-research-reputation-verifier.toml` |
 | Pipeline E HTML email template | `skills/reputation-track/references/html-template.md` |
-| Pipeline E entity resolution | `skills/reputation-track/references/entity-resolution.md` + `.codex/agents/sci-research-reputation-resolver.toml` |
 | New output language (Pipeline C) | `.codex/agents/sci-research-daily-news-writer.toml` + `skills/daily-news-intelligence/references/language-spec.md` |
 | Adding hook / changing email-send guard | `scripts/hooks/email-send-guard.js` + the relevant SKILL.md email step |
 
@@ -496,7 +490,7 @@ sci-research/
 - `pandoc` (for Markdown → docx conversion in Pipeline C)
 - Internet access (for WebSearch `search` / `open_page`)
 - Gmail SMTP credentials (only when `--email` is used; see `.env.example`)
-- No separate social-media MCP configuration is required. Pipeline E's Reddit/X coverage is limited to publicly indexed, openable content.
+- No separate social-media MCP configuration is required. Pipeline E uses public, openable social content discovered through WebSearch.
 
 ---
 

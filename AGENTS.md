@@ -28,9 +28,8 @@
 | sci-research-daily-news-writer | gpt-5.6-sol | high | 多语言新闻写作与背景整合 |
 | sci-research-daily-editor | gpt-5.6-sol | high | 事实、引语、引用与局部修订 |
 | sci-research-briefing-curator | gpt-5.6-sol | high | 跨国筛选与品牌化改写 |
-| sci-research-reputation-resolver | gpt-5.6-terra | high | 实体消歧与高管核验 |
-| sci-research-reputation-scanner | gpt-5.6-luna | medium | 高吞吐多源候选收集与日期筛选 |
-| sci-research-reputation-classifier | gpt-5.6-terra | high | 保守的负面分类与证据判断 |
+| sci-research-reputation-scanner | gpt-5.6-luna | medium | Yahoo 企业/高管确认与非中国大陆媒体、公开社交媒体搜索 |
+| sci-research-reputation-verifier | gpt-5.6-terra | high | 声誉相关性、低中高严重度与去重判断 |
 | sci-research-reputation-writer | gpt-5.6-terra | medium | 专业风险邮件渲染 |
 
 ## 流水线契约
@@ -61,12 +60,14 @@
 
 ### E — Reputation Track
 
-流程：Resolver → Scanner × requested sources → Classifier → Writer → 可选邮件。
+流程：Scanner → Verifier → Writer → 邮件。
 
-- News 使用 T1–T4；Reddit 与 X 使用 WebSearch `search` 发现、`open_page` 核验公开且可打开的原帖或线程。
-- 不使用 MCP、平台 API、浏览器自动化或直接抓取。未被索引、需登录、无法抓取或无法核验日期的社交内容必须记录为 coverage gap。
-- --sources 是 news,reddit,x 的非空子集；仅启动被请求的 Scanner。
-- total_items_kept == 0 时静默退出，不写 HTML、不发邮件。
+- Scanner 使用 Yahoo Finance 确认企业正式名称、Ticker 和当前高管，然后自由搜索目标日关于企业及高管的非中国大陆媒体报道与公开社交媒体内容。
+- 排除中国大陆媒体、中国大陆政府域名和中国大陆社交平台；香港、澳门、台湾及其他国家和地区的媒体可用。Yahoo Finance 只用于身份和高管确认。
+- Scanner 不使用来源矩阵、T1–T4、固定查询、平台配额或候选上限，也不判断负面程度或去重。
+- Verifier 只保留真实声誉风险，判断 `low`、`medium`、`high`，合并同一事件，并确保社交媒体说法不被写成已确认事实。
+- 不使用 `critical`、七类风险 taxonomy、confidence、来源加权、--sources 或 --severity-min。
+- `findings: []` 时静默退出，不写 HTML、不发邮件；有结果时 Writer 生成简洁 HTML，必须由受控邮件脚本发送。
 
 ## 默认目录
 
@@ -116,6 +117,6 @@
 2. Runtime 验证：在隔离 workspace 安装、检查、升级、冲突与卸载；新 task 逐一验证命名 agent selector、模型与 effort。
 3. C 最小首跑：无邮件，确认原生 agent 串联、apply_patch、hook、直接格式门与 pandoc 输出。
 4. D 验证：先安装 requirements.txt，使用 C 产出的样例 Markdown，邮件只做 dry-run。
-5. E 验证：测试 News、Reddit、X 的 WebSearch `search` / `open_page` 路径、干净结果静默退出与邮件 dry-run。
+5. E 验证：测试 Yahoo 企业/高管确认、非中国大陆媒体与公开社交媒体搜索、低中高判断、干净结果静默退出与邮件 dry-run。
 
 当前只完成了静态与安装打包验证；三条流水线的真实端到端首跑仍待执行。

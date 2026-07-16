@@ -1,7 +1,7 @@
 interface:
   display_name: "Reputation Track"
-  short_description: "Company reputation monitoring across News, Reddit, and X"
-  default_prompt: "Use $sci-research:reputation-track to monitor Acme Corp for reputational risks today."
+  short_description: "Company and executive reputation monitoring"
+  default_prompt: "Use $sci-research:reputation-track to monitor Acme Corp and its executives today, then email the HTML alert."
 
 policy:
   allow_implicit_invocation: true
