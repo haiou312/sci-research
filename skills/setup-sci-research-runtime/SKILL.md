@@ -1,16 +1,18 @@
 ---
 name: setup-sci-research-runtime
-description: "Install, update, verify, or remove the project-scoped Codex agent runtime required by the Sci-Research marketplace skills. Use when Sci-Research reports missing named agents, after installing or updating the plugin, or when preparing a dedicated ~/.sci-research workspace."
+description: "Install, update, verify, or remove the project-scoped Codex agents and concurrency config required by the Sci-Research marketplace skills. Use when Sci-Research reports missing named agents or agent thread limits, after installing or updating the plugin, or when preparing a dedicated ~/.sci-research workspace."
 ---
 
 # Setup Sci-Research Runtime
 
-Install the plugin's native Codex agents into the current workspace. This skill configures the runtime only; it never runs Pipelines C, D, or E.
+Install the plugin's native Codex agents and required subagent concurrency setting into the current workspace. This skill configures the runtime only; it never runs Pipelines C, D, or E.
 
 ## Rules
 
 - Default `PROJECT_ROOT` to the current working directory. Use another directory only when the user explicitly names it.
 - Install only under `${PROJECT_ROOT}/.codex/`; never modify `~/.codex/config.toml`, global agents, MCP servers, prompts, Git hooks, or Python packages.
+- Pipeline C needs seven concurrent Scanner threads for China. Require project config `agents.max_threads >= 10`; keep `agents.max_depth = 1` in a newly created config because Sci-Research does not use recursive delegation.
+- If `${PROJECT_ROOT}/.codex/config.toml` is absent, create it from the bundled runtime template. If it already exists, validate `agents.max_threads >= 10` and preserve the file byte-for-byte. Stop with the exact required TOML block when an existing config is missing the setting or sets it below 10.
 - Resolve `SKILL_DIR` as the absolute directory containing this `SKILL.md`, and derive `PLUGIN_ROOT` from it. Never hard-code a marketplace cache version.
 - Run the bundle checker before install or update.
 - Run a dry-run before applying changes.
@@ -53,8 +55,8 @@ Run only when the user explicitly asks to remove the runtime:
 python3 "$SYNC" --project-root "$PROJECT_ROOT" --uninstall
 ```
 
-Uninstall removes only files recorded in the runtime manifest and refuses to delete locally modified files.
+Uninstall removes only files recorded in the runtime manifest and refuses to delete locally modified agent files. It removes `.codex/config.toml` only when setup created it and its content is unchanged; user-owned or modified config is retained.
 
 ## Completion
 
-Report the project root, plugin version, number of installed agents, manifest path, and backup path when one was created. Remind the user to review `/hooks` when hook trust is pending. Do not claim the pipelines are ready until a new task successfully spawns a named Sci-Research agent.
+Report the project root, plugin version, number of installed agents, verified `max_threads`, manifest path, and backup path when one was created. Remind the user to review `/hooks` when hook trust is pending. Do not claim the pipelines are ready until a new task successfully spawns a named Sci-Research agent.

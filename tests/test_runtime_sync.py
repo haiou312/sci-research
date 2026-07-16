@@ -6,6 +6,7 @@ from pathlib import Path
 import subprocess
 import sys
 import tempfile
+import tomllib
 import unittest
 
 
@@ -41,14 +42,20 @@ class RuntimeSyncTests(unittest.TestCase):
             manifest_path = project_root / ".codex/sci-research-runtime.json"
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
             self.assertEqual(len(manifest["managed_files"]), 9)
+            config_path = project_root / ".codex/config.toml"
+            config = tomllib.loads(config_path.read_text(encoding="utf-8"))
+            self.assertEqual(config["agents"]["max_threads"], 10)
+            self.assertTrue(manifest["runtime_config"]["created_by_plugin"])
 
             check = self.run_sync(project_root, "--check")
             self.assertEqual(check.returncode, 0, check.stderr)
             self.assertIn("RUNTIME_OK", check.stdout)
+            self.assertIn("max_threads=10", check.stdout)
 
             uninstall = self.run_sync(project_root, "--uninstall")
             self.assertEqual(uninstall.returncode, 0, uninstall.stderr)
             self.assertFalse(manifest_path.exists())
+            self.assertFalse(config_path.exists())
             for relative in manifest["managed_files"]:
                 self.assertFalse((project_root / relative).exists())
 
@@ -149,6 +156,62 @@ class RuntimeSyncTests(unittest.TestCase):
             result = self.run_sync(project_root, "--uninstall")
             self.assertEqual(result.returncode, 2)
             self.assertIn("modified locally", result.stderr)
+
+    def test_preserves_valid_existing_runtime_config(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            project_root = Path(temp_dir)
+            config_path = project_root / ".codex/config.toml"
+            config_path.parent.mkdir(parents=True)
+            original = "[agents]\nmax_threads = 12\nmax_depth = 2\n"
+            config_path.write_text(original, encoding="utf-8")
+
+            install = self.run_sync(project_root)
+            self.assertEqual(install.returncode, 0, install.stderr)
+            self.assertEqual(config_path.read_text(encoding="utf-8"), original)
+            manifest = json.loads(
+                (project_root / ".codex/sci-research-runtime.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            self.assertFalse(manifest["runtime_config"]["created_by_plugin"])
+
+            uninstall = self.run_sync(project_root, "--uninstall")
+            self.assertEqual(uninstall.returncode, 0, uninstall.stderr)
+            self.assertTrue(config_path.exists())
+            self.assertIn("RETAINED_CONFIG", uninstall.stdout)
+
+    def test_refuses_runtime_config_below_required_thread_limit(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            project_root = Path(temp_dir)
+            config_path = project_root / ".codex/config.toml"
+            config_path.parent.mkdir(parents=True)
+            config_path.write_text(
+                "[agents]\nmax_threads = 6\nmax_depth = 1\n",
+                encoding="utf-8",
+            )
+
+            result = self.run_sync(project_root)
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("agents.max_threads >= 10", result.stderr)
+            self.assertFalse(
+                (project_root / ".codex/sci-research-runtime.json").exists()
+            )
+
+    def test_modified_plugin_created_config_is_retained_on_uninstall(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            project_root = Path(temp_dir)
+            install = self.run_sync(project_root)
+            self.assertEqual(install.returncode, 0, install.stderr)
+            config_path = project_root / ".codex/config.toml"
+            config_path.write_text(
+                "[agents]\nmax_threads = 12\nmax_depth = 1\n",
+                encoding="utf-8",
+            )
+
+            uninstall = self.run_sync(project_root, "--uninstall")
+            self.assertEqual(uninstall.returncode, 0, uninstall.stderr)
+            self.assertTrue(config_path.exists())
+            self.assertIn("RETAINED_CONFIG", uninstall.stdout)
 
 
 if __name__ == "__main__":

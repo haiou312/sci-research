@@ -90,8 +90,9 @@ Every stage runs as a **native Codex custom agent** installed by `$sci-research:
 2. Set `fork_turns="none"` so the selected role's TOML model, reasoning effort, and developer instructions are applied instead of inheriting a full parent history.
 3. Start every spawn prompt with absolute `plugin_root: {PLUGIN_ROOT}` and `skill_root: {SKILL_DIR}`, then pass that stage's injected parameters + the verbatim upstream output (per the handoff list below).
 4. Wait for the subagent's result, then feed it into the next stage.
+5. After the result and any required output file have been captured and validated, call `close_agent` for that child before spawning the next stage. For a parallel group, close every child after all required outputs are captured. Close a failed or schema-invalid attempt before retrying it. A completed child is not considered to have released its thread slot until `close_agent` succeeds; if closing fails, halt before starting more agents.
 
-If the active Codex surface exposes no custom-agent selector, rejects the role as unknown, or cannot start it with `fork_turns="none"`, halt with a runtime-compatibility error. Do not fall back to `default`, `worker`, `explorer`, another generic subagent, or an embedded copy of the TOML instructions.
+If the active Codex surface exposes no custom-agent selector, rejects the role as unknown, cannot start it with `fork_turns="none"`, or cannot close a completed child, halt with a runtime-compatibility error. Do not fall back to `default`, `worker`, `explorer`, another generic subagent, or an embedded copy of the TOML instructions.
 
 Model allocation is set per-agent in the TOML: Scanner = `gpt-5.6-luna / medium`; Verifier = `gpt-5.6-terra / high`; Fact-Extractor = `gpt-5.4-mini / medium`; Writer and Editor = `gpt-5.6-sol / high`. Do NOT pass a model argument at spawn time. Native Codex subagents receive their tools directly (no embed workaround).
 
@@ -174,7 +175,11 @@ After all category outputs are complete, mechanically assemble one Scanner Batch
 - Place each complete Category Scanner Output verbatim between its matching BEGIN/END markers.
 - Do not summarize, rewrite, deduplicate, merge, score, or reroute any candidate.
 
-Use `apply_patch` to create or overwrite `SCANNER_AUDIT` with the full Scanner Batch verbatim. This artifact records the complete candidate pool, per-category coverage notes, and `search` / `open_page` action counts. If the Scanner Batch contains zero candidates across all categories, stop and report: "No news candidates found for {country} on {date}. The date may be a future date, a holiday, or WebSearch may be temporarily unavailable." Do not proceed to the Verifier.
+Use `apply_patch` to create or overwrite `SCANNER_AUDIT` with the full Scanner Batch verbatim. This artifact records the complete candidate pool, per-category coverage notes, and `search` / `open_page` action counts.
+
+After `SCANNER_AUDIT` is durable, close every category Scanner thread before Step 7. For a failed or invalid category attempt, close that attempt before launching its retry.
+
+Once all Scanner threads are closed, if the Scanner Batch contains zero candidates across all categories, stop and report: "No news candidates found for {country} on {date}. The date may be a future date, a holiday, or WebSearch may be temporarily unavailable." Do not proceed to the Verifier.
 
 3–6. **[Category Scanner internal]** Free-form discovery plus the short hard-rule checks happen independently inside each category Scanner. The orchestrator waits for the complete fan-out, validates every output, then creates the mechanical Scanner Batch.
 
@@ -182,7 +187,11 @@ Use `apply_patch` to create or overwrite `SCANNER_AUDIT` with the full Scanner B
 
    After receiving the Verifier output, use `apply_patch` to create or overwrite `VERIFIER_AUDIT` with the full Verifier output verbatim. Do not summarize or reformat it. This is the durable KEEP/DROP audit for the run and must be written before Fact-Extractor starts.
 
+   Close the Verifier thread after `VERIFIER_AUDIT` is durable and before spawning Fact-Extractor.
+
 7.5. **Extract Fact Manifest** (Fact-Extractor stage). Spawn `sci-research-daily-fact-extractor` (`.codex/agents/sci-research-daily-fact-extractor.toml`) per § Subagent Dispatch Rule with the Verifier's full output included verbatim in its prompt plus `country`, `date`, `lang`, and `out_manifest`. Resolve `out_manifest` to `${OUT_DIR}/fact-manifest-{country_slug}-{date}.yaml` where `{country_slug}` is the lowercase ASCII slug of `country` (e.g. `japan`, `united-kingdom`, `china`). The agent emits a YAML Fact Manifest — one entry per KEPT story listing every number, date, named person, institution, product, and direct quote in the Verifier's `factual_excerpt`, each anchored to its source URL with a verbatim excerpt (see `.codex/agents/sci-research-daily-fact-extractor.toml` for the full schema). The Fact-Extractor calls `apply_patch` once and returns confirmation. The orchestrator captures the manifest path for downstream stages (Writer in Step 8; Editor in the future Step 8.5).
+
+   Confirm that `out_manifest` exists and is readable, then close the Fact-Extractor thread before spawning Writer.
 
 8. **Translate and write the report** (Writer stage — **fans out per `lang` in `langs`** when `is_bilingual`). Spawn `sci-research-daily-news-writer` (`.codex/agents/sci-research-daily-news-writer.toml`) per § Subagent Dispatch Rule. Ensure the output directory exists:
    ```bash
@@ -215,6 +224,8 @@ Use `apply_patch` to create or overwrite `SCANNER_AUDIT` with the full Scanner B
 
    **Failure mode** (per the Failure Modes table): if either parallel Writer fails, the orchestrator preserves the surviving lang's output, surfaces the failed lang's error, and defaults to halting Step 8.5 + Step 10 with a clear report.
 
+   After all Writer results and expected Markdown files have been captured, close every Writer thread before Step 8.5. Close a failed Writer thread before applying the failure policy.
+
 8.5. **Fact-check + local-fluency editor pass** (Editor stage — **fans out per `lang` in `langs`** when `is_bilingual`; **PARALLEL like Writer**, same rationale as Step 8 § Bilingual execution order). Wait for Step 8 to fully complete first — Editor needs its `writer_md_path` to exist on disk. Then spawn all `sci-research-daily-editor` (`.codex/agents/sci-research-daily-editor.toml`) subagents in a single orchestrator message (multi-Agent-tool-uses in one turn) per § Subagent Dispatch Rule.
 
    **For each `lang` in `langs`** (single-lang: 1 invocation; bilingual: 2 invocations dispatched concurrently in a single message) launch a separate Editor subagent, each receiving:
@@ -238,6 +249,8 @@ Use `apply_patch` to create or overwrite `SCANNER_AUDIT` with the full Scanner B
    **Pass 5 rollback.** Any Pass-5 patch that violates its six invariants is reverted: manifest facts preserved · References byte-identical · paragraph count preserved · `### title` preserved · quote-mark pairs balanced · no prohibited marker introduced. On unrecoverable failure, Pass 5 aborts gracefully and the pipeline continues with Passes 1-4's changes only.
 
    **Reporting.** The Editor prints a structured stdout report (drift counts, refs added, claims cut / weakened, quote-mark fixes, per-class Pass-5 totals); the orchestrator logs it but does not gate on it. The format-check hook fires after every `apply_patch` and validates the resulting file — if a patch produces a malformed state, the hook reports the violation and the Editor must correct that file before continuing.
+
+   After all Editor reports and edited Markdown files have been captured, close every Editor thread before Step 9. Close a failed Editor thread before applying its failure policy.
 
 9. **Export to Word** (**fans out per `lang` in `langs`** when `is_bilingual`). First verify pandoc is available:
    ```bash

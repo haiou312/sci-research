@@ -57,6 +57,8 @@ Use the exact custom-agent selector with `fork_turns="none"`:
 
 Do not pass model overrides, use generic agents, or embed agent bodies in spawn prompts. Every prompt begins with absolute `plugin_root` and `skill_root`.
 
+After each result and required output file have been captured, call `close_agent` before spawning the next stage. Close failed attempts before retrying or stopping. A completed child still occupies a thread slot until it is closed; halt if `close_agent` fails.
+
 ## Workflow
 
 1. Validate `company`, ISO `date`, `lang`, and recipient `email`. Default `date` to today.
@@ -72,7 +74,7 @@ Do not pass model overrides, use generic agents, or embed agent bodies in spawn 
    - chooses its own queries, languages, sources, platforms, depth, and follow-up paths;
    - does not judge negativity, severity, or duplicate events.
 
-   If `status: needs-clarification`, stop and report `resolution_note`.
+   Capture the complete Scanner output and its status, then close the Scanner thread. If `status: needs-clarification`, stop and report `resolution_note`; otherwise continue to Step 3.
 
 3. Spawn `sci-research-reputation-verifier` with the full Scanner output verbatim.
 
@@ -85,6 +87,8 @@ Do not pass model overrides, use generic agents, or embed agent bodies in spawn 
    - preserves allegations as allegations and labels social content as posts, complaints, or discussions.
 
    There is no T1-T4 system, source matrix, risk-category taxonomy, `critical` level, confidence score, source-based severity adjustment, or minimum-severity filter.
+
+   Capture the complete Verifier output, then close the Verifier thread before evaluating the empty-findings branch.
 
 4. If the Verifier returns `findings: []`, exit silently. Do not create the output directory, write HTML, or send email.
 
@@ -99,7 +103,7 @@ Do not pass model overrides, use generic agents, or embed agent bodies in spawn 
 
    The Writer uses one `apply_patch` operation and renders findings in `high`, `medium`, `low` order under `references/html-template.md`.
 
-7. Verify that `out_html` starts with `<!DOCTYPE html>` and contains `company_display`. If invalid, retry the Writer once; never email malformed HTML.
+7. Verify that `out_html` starts with `<!DOCTYPE html>` and contains `company_display`, capture the validation result, then close the Writer thread. If invalid, retry only after the first thread is closed; validate and close the retry as well. Never email malformed HTML.
 
 8. Build the automatic subject from `references/email-spec.md`, then send with:
 

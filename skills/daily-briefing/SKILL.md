@@ -46,6 +46,8 @@ Pipeline D uses the installed `sci-research-briefing-curator` custom agent. Sele
 
 If the active Codex surface exposes no custom-agent selector, rejects the role as unknown, or cannot start it with `fork_turns="none"`, halt. Do not substitute a generic agent or embed the curator TOML instructions in the prompt.
 
+After the curator result and output file have been captured and validated, call `close_agent` before continuing. If the curator fails, close its thread before stopping or retrying; halt if the completed child cannot be closed.
+
 ## Workflow
 
 1. **Validate params and bundled resources.** Default `date` to today (`date +%Y-%m-%d`). Parse `countries` into a comma-separated list. Confirm that `SKILL_DIR` is the absolute directory containing this `SKILL.md`, derive every bundled-resource path once, then expand `~` and substitute `{date}` in `source_dir` / `out_dir`. Create `OUT_DIR`. Compute derived fields:
@@ -151,7 +153,7 @@ If the active Codex surface exposes no custom-agent selector, rejects the role a
    免责声明：...
    ```
    
-   If the Agent output file is empty or missing, stop and report: "Curator agent produced no output."
+   Check the output path, capture whether it is valid, then close the curator thread. If the Agent output file is empty or missing, stop and report: "Curator agent produced no output." Otherwise continue to Step 7.
 
 7. **Generate branded docx.** Use the curator output file from Step 6:
    ```bash

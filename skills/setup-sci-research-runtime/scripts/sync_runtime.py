@@ -20,6 +20,11 @@ SCHEMA_VERSION = 1
 PLUGIN_NAME = "sci-research"
 MANIFEST_RELATIVE = Path(".codex/sci-research-runtime.json")
 BACKUP_ROOT_RELATIVE = Path(".codex/sci-research-backups")
+CONFIG_RELATIVE = Path(".codex/config.toml")
+CONFIG_TEMPLATE_RELATIVE = Path(
+    "skills/setup-sci-research-runtime/runtime/config.toml"
+)
+MIN_AGENT_THREADS = 10
 
 
 class RuntimeErrorWithContext(RuntimeError):
@@ -98,6 +103,42 @@ def load_source_agents(plugin_root: Path) -> dict[str, dict[str, Any]]:
     return result
 
 
+def load_agent_thread_limit(path: Path) -> int:
+    try:
+        data = tomllib.loads(path.read_text(encoding="utf-8"))
+    except (OSError, tomllib.TOMLDecodeError) as exc:
+        raise RuntimeErrorWithContext(
+            f"Invalid Codex runtime config {path}: {exc}"
+        ) from exc
+    agents = data.get("agents")
+    max_threads = agents.get("max_threads") if isinstance(agents, dict) else None
+    if (
+        isinstance(max_threads, bool)
+        or not isinstance(max_threads, int)
+        or max_threads < MIN_AGENT_THREADS
+    ):
+        raise RuntimeErrorWithContext(
+            f"Codex runtime config must set agents.max_threads >= "
+            f"{MIN_AGENT_THREADS}: {path}\n"
+            "Add or update:\n"
+            "[agents]\n"
+            f"max_threads = {MIN_AGENT_THREADS}\n"
+            "max_depth = 1"
+        )
+    return max_threads
+
+
+def load_config_template(plugin_root: Path) -> Path:
+    template = plugin_root / CONFIG_TEMPLATE_RELATIVE
+    load_agent_thread_limit(template)
+    data = tomllib.loads(template.read_text(encoding="utf-8"))
+    if data["agents"].get("max_depth") != 1:
+        raise RuntimeErrorWithContext(
+            f"Runtime config template must set agents.max_depth = 1: {template}"
+        )
+    return template
+
+
 def manifest_files(manifest: dict[str, Any]) -> dict[str, str]:
     files = manifest.get("managed_files")
     if not isinstance(files, dict):
@@ -113,6 +154,68 @@ def manifest_files(manifest: dict[str, Any]) -> dict[str, str]:
             )
         result[relative] = digest
     return result
+
+
+def manifest_runtime_config(
+    manifest: dict[str, Any] | None,
+) -> dict[str, Any] | None:
+    if not manifest:
+        return None
+    value = manifest.get("runtime_config")
+    if value is None:
+        return None
+    if not isinstance(value, dict):
+        raise RuntimeErrorWithContext(
+            "Runtime manifest contains an invalid runtime_config object"
+        )
+    path = value.get("path")
+    minimum = value.get("minimum_max_threads")
+    created = value.get("created_by_plugin")
+    digest = value.get("sha256")
+    if (
+        path != str(CONFIG_RELATIVE)
+        or isinstance(minimum, bool)
+        or not isinstance(minimum, int)
+        or minimum < 1
+        or not isinstance(created, bool)
+        or (created and (not isinstance(digest, str) or not digest))
+    ):
+        raise RuntimeErrorWithContext(
+            "Runtime manifest contains invalid runtime_config metadata"
+        )
+    return value
+
+
+def plan_runtime_config(
+    project_root: Path,
+    template: Path,
+    old_manifest: dict[str, Any] | None,
+) -> tuple[bool, dict[str, Any]]:
+    destination = project_root / CONFIG_RELATIVE
+    old_state = manifest_runtime_config(old_manifest)
+    if not destination.exists():
+        return True, {
+            "path": str(CONFIG_RELATIVE),
+            "minimum_max_threads": MIN_AGENT_THREADS,
+            "created_by_plugin": True,
+            "sha256": sha256(template),
+        }
+
+    load_agent_thread_limit(destination)
+    created_by_plugin = False
+    recorded_hash: str | None = None
+    if old_state and old_state["created_by_plugin"]:
+        recorded_hash = old_state["sha256"]
+        created_by_plugin = sha256(destination) == recorded_hash
+
+    state: dict[str, Any] = {
+        "path": str(CONFIG_RELATIVE),
+        "minimum_max_threads": MIN_AGENT_THREADS,
+        "created_by_plugin": created_by_plugin,
+    }
+    if created_by_plugin and recorded_hash:
+        state["sha256"] = recorded_hash
+    return False, state
 
 
 def atomic_copy(source: Path, destination: Path) -> None:
@@ -150,6 +253,7 @@ def build_manifest(
     project_root: Path,
     version: str,
     source_agents: dict[str, dict[str, Any]],
+    runtime_config: dict[str, Any],
 ) -> dict[str, Any]:
     managed = {
         str(Path(".codex/agents") / filename): item["sha256"]
@@ -162,6 +266,7 @@ def build_manifest(
         "project_root": str(project_root),
         "installed_at": datetime.now(UTC).isoformat(),
         "managed_files": managed,
+        "runtime_config": runtime_config,
     }
 
 
@@ -176,6 +281,7 @@ def validate_existing_manifest(manifest: dict[str, Any], manifest_path: Path) ->
             f"Runtime manifest belongs to another plugin: {manifest_path}"
         )
     manifest_files(manifest)
+    manifest_runtime_config(manifest)
 
 
 def plan_install(
@@ -248,11 +354,16 @@ def make_backup(
 def install(project_root: Path, plugin_root: Path, dry_run: bool) -> int:
     version = load_plugin_version(plugin_root)
     source_agents = load_source_agents(plugin_root)
+    config_template = load_config_template(plugin_root)
     manifest_path = project_root / MANIFEST_RELATIVE
     old_manifest = load_json(manifest_path) if manifest_path.exists() else None
     if old_manifest:
         validate_existing_manifest(old_manifest, manifest_path)
     copies, removals = plan_install(project_root, source_agents, old_manifest)
+    create_config, runtime_config = plan_runtime_config(
+        project_root, config_template, old_manifest
+    )
+    config_path = project_root / CONFIG_RELATIVE
 
     action = "DRY-RUN" if dry_run else "INSTALL"
     print(f"{action}: project_root={project_root}")
@@ -263,6 +374,16 @@ def install(project_root: Path, plugin_root: Path, dry_run: bool) -> int:
         print(f"REMOVE: {destination}")
     if not copies and not removals:
         print("AGENTS: already match the installed plugin payload")
+    if create_config:
+        print(
+            f"CONFIG: create {config_path} with "
+            f"agents.max_threads={MIN_AGENT_THREADS}"
+        )
+    else:
+        print(
+            f"CONFIG: verified {config_path} "
+            f"agents.max_threads>={MIN_AGENT_THREADS}"
+        )
     print(f"MANIFEST: {manifest_path}")
     if dry_run:
         return 0
@@ -278,6 +399,7 @@ def install(project_root: Path, plugin_root: Path, dry_run: bool) -> int:
         and old_manifest.get("plugin_version") == version
         and old_manifest.get("project_root") == str(project_root)
         and manifest_files(old_manifest) == expected_files
+        and old_manifest.get("runtime_config") == runtime_config
     ):
         print(f"ALREADY_INSTALLED: agents={len(source_agents)}")
         print("RESTART_REQUIRED: start a new Codex task in this project")
@@ -288,11 +410,16 @@ def install(project_root: Path, plugin_root: Path, dry_run: bool) -> int:
         manifest_path,
         [destination for _, destination in copies] + removals,
     )
+    if create_config:
+        atomic_copy(config_template, config_path)
     for source, destination in copies:
         atomic_copy(source, destination)
     for destination in removals:
         destination.unlink()
-    atomic_write_json(manifest_path, build_manifest(project_root, version, source_agents))
+    atomic_write_json(
+        manifest_path,
+        build_manifest(project_root, version, source_agents, runtime_config),
+    )
     print(f"INSTALLED: agents={len(source_agents)}")
     if backup:
         print(f"BACKUP: {backup}")
@@ -303,6 +430,7 @@ def install(project_root: Path, plugin_root: Path, dry_run: bool) -> int:
 def check(project_root: Path, plugin_root: Path) -> int:
     version = load_plugin_version(plugin_root)
     source_agents = load_source_agents(plugin_root)
+    load_config_template(plugin_root)
     manifest_path = project_root / MANIFEST_RELATIVE
     if not manifest_path.exists():
         raise RuntimeErrorWithContext(
@@ -311,6 +439,7 @@ def check(project_root: Path, plugin_root: Path) -> int:
     manifest = load_json(manifest_path)
     validate_existing_manifest(manifest, manifest_path)
     problems: list[str] = []
+    thread_limit: int | None = None
     if manifest.get("project_root") != str(project_root):
         problems.append(
             f"project root mismatch: installed={manifest.get('project_root')} "
@@ -333,11 +462,28 @@ def check(project_root: Path, plugin_root: Path) -> int:
             problems.append(f"missing agent: {destination}")
         elif sha256(destination) != expected_hash:
             problems.append(f"agent hash mismatch: {destination}")
+    config_path = project_root / CONFIG_RELATIVE
+    try:
+        thread_limit = load_agent_thread_limit(config_path)
+    except RuntimeErrorWithContext as exc:
+        problems.append(str(exc))
+    runtime_config = manifest_runtime_config(manifest)
+    if runtime_config is None:
+        problems.append(
+            "runtime manifest does not record the project-scoped Codex config; "
+            "rerun runtime setup"
+        )
+    elif runtime_config["minimum_max_threads"] != MIN_AGENT_THREADS:
+        problems.append(
+            "runtime manifest records a different minimum thread limit; "
+            "rerun runtime setup"
+        )
     if problems:
         raise RuntimeErrorWithContext("Runtime check failed:\n- " + "\n- ".join(problems))
     print(
         f"RUNTIME_OK: project_root={project_root} plugin_version={version} "
-        f"agents={len(expected_files)} manifest={manifest_path}"
+        f"agents={len(expected_files)} max_threads={thread_limit} "
+        f"manifest={manifest_path}"
     )
     return 0
 
@@ -350,6 +496,7 @@ def uninstall(project_root: Path) -> int:
     manifest = load_json(manifest_path)
     validate_existing_manifest(manifest, manifest_path)
     managed = manifest_files(manifest)
+    runtime_config = manifest_runtime_config(manifest)
     targets: list[Path] = []
     for relative, installed_hash in managed.items():
         destination = project_root / relative
@@ -360,10 +507,20 @@ def uninstall(project_root: Path) -> int:
                 f"Managed agent was modified locally; refusing to remove: {destination}"
             )
         targets.append(destination)
-    backup = make_backup(project_root, manifest_path, targets)
+    config_path = project_root / CONFIG_RELATIVE
+    remove_config = False
+    if runtime_config and runtime_config["created_by_plugin"] and config_path.exists():
+        remove_config = sha256(config_path) == runtime_config["sha256"]
+    backup_targets = targets + ([config_path] if remove_config else [])
+    backup = make_backup(project_root, manifest_path, backup_targets)
     for destination in targets:
         destination.unlink()
         print(f"REMOVED: {destination}")
+    if remove_config:
+        config_path.unlink()
+        print(f"REMOVED: {config_path}")
+    elif config_path.exists():
+        print(f"RETAINED_CONFIG: {config_path}")
     manifest_path.unlink()
     print(f"UNINSTALLED: project_root={project_root} agents={len(targets)}")
     if backup:

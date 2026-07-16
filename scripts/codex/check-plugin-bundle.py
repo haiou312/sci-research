@@ -112,6 +112,25 @@ def validate(plugin_root: Path) -> tuple[int, int]:
     )
     if not setup_script.is_file():
         fail(f"runtime sync script is missing: {setup_script}")
+    runtime_config = (
+        plugin_root
+        / "skills/setup-sci-research-runtime/runtime/config.toml"
+    )
+    try:
+        config = tomllib.loads(runtime_config.read_text(encoding="utf-8"))
+    except (OSError, tomllib.TOMLDecodeError) as exc:
+        fail(f"runtime config template is invalid: {runtime_config}: {exc}")
+    agents = config.get("agents")
+    max_threads = agents.get("max_threads") if isinstance(agents, dict) else None
+    max_depth = agents.get("max_depth") if isinstance(agents, dict) else None
+    if (
+        isinstance(max_threads, bool)
+        or not isinstance(max_threads, int)
+        or max_threads < 10
+    ):
+        fail("runtime config template must set agents.max_threads >= 10")
+    if max_depth != 1:
+        fail("runtime config template must set agents.max_depth = 1")
     return len(skill_names), len(names)
 
 

@@ -48,7 +48,7 @@ Pipeline C also writes raw Scanner and Verifier audit artifacts under `daily-new
 Sci-Research has two deployment layers:
 
 1. The Codex marketplace installs the plugin skills and hooks.
-2. The runtime setup skill copies the plugin's 9 namespaced TOML agents into the project where the pipelines will run.
+2. The runtime setup skill copies the plugin's 9 namespaced TOML agents into the project where the pipelines will run and ensures enough project-scoped subagent concurrency for Pipeline C.
 
 Marketplace installation alone is therefore not sufficient. Complete every step below before the first pipeline run.
 
@@ -116,12 +116,15 @@ The setup performs a bundle check and dry-run before installing. It creates:
 
 ```text
 <runtime-workspace>/.codex/agents/sci-research-*.toml
+<runtime-workspace>/.codex/config.toml
 <runtime-workspace>/.codex/sci-research-runtime.json
 ```
 
 With the recommended default workspace, `<runtime-workspace>` is `~/.sci-research`.
 
-It does not modify global `~/.codex/config.toml`, install Python packages, or run a news pipeline. If it reports an unmanaged-file conflict or a locally modified managed agent, resolve the named file instead of overwriting it manually.
+The project config sets `agents.max_threads = 10` and `agents.max_depth = 1`. China reports need seven concurrent category Scanner threads; the extra slots allow clean stage handoff without using recursive delegation. If `.codex/config.toml` already exists, setup preserves it byte-for-byte and requires `agents.max_threads >= 10`; a lower or missing value produces the exact TOML block to add.
+
+It does not modify global `~/.codex/config.toml`, install Python packages, or run a news pipeline. If it reports an unmanaged-file conflict, a locally modified managed agent, or an insufficient existing thread limit, resolve the named file instead of overwriting it manually.
 
 #### Step 6 — Review plugin hooks
 
@@ -146,7 +149,7 @@ In the new task, run a runtime-only check:
 Use $sci-research:setup-sci-research-runtime to check the project-scoped runtime in this workspace. Do not run a news pipeline.
 ```
 
-The check must report 9 agents and a matching plugin version before first use.
+The check must report 9 agents, `max_threads` of at least 10, and a matching plugin version before first use.
 
 #### Step 8 — Run a no-email smoke test
 
@@ -191,7 +194,7 @@ In that new setup task, enter:
 Use $sci-research:setup-sci-research-runtime to update and check the project-scoped runtime in this workspace.
 ```
 
-The updater backs up managed files before replacing them, refuses to overwrite local changes, and verifies that the runtime manifest version and agent hashes match the newly installed plugin. Review `/hooks` again if Codex requests trust for updated hook definitions.
+The updater backs up managed files before replacing them, refuses to overwrite local changes, and verifies that the runtime manifest version, agent hashes, and project thread limit match the newly installed plugin. Review `/hooks` again if Codex requests trust for updated hook definitions.
 
 #### Step 5 — Start a fresh pipeline task
 
@@ -493,6 +496,7 @@ sci-research/
 │   │       └── schemas.md
 │   └── setup-sci-research-runtime/           # Installs/checks project-scoped agents
 │       ├── SKILL.md
+│       ├── runtime/config.toml                # Project-scoped agent concurrency template
 │       └── scripts/sync_runtime.py
 ├── hooks/hooks.json                         # Plugin lifecycle hook config
 ├── scripts/

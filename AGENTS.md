@@ -10,9 +10,10 @@
 | D | $sci-research:daily-briefing | 多国品牌新闻简报 | SPD Bank 品牌 docx、可选邮件 |
 | E | $sci-research:reputation-track | 公司声誉风险监测 | 仅命中负面时生成 HTML 邮件正文 |
 
-所有子 agent 都是带 `sci-research-` 命名空间的原生 Codex TOML 定义，源文件位于 `.codex/agents/*.toml`。Marketplace 更新后先用 `$sci-research:setup-sci-research-runtime` 同步到运行 workspace 的 `.codex/agents/`，再新开 Codex task。
+所有子 agent 都是带 `sci-research-` 命名空间的原生 Codex TOML 定义，源文件位于 `.codex/agents/*.toml`。Marketplace 更新后先用 `$sci-research:setup-sci-research-runtime` 同步到运行 workspace 的 `.codex/agents/`，并校验项目级 `.codex/config.toml` 中 `agents.max_threads >= 10`，再新开 Codex task。
 
 - 每个 stage 通过 custom-agent selector 启动其精确命名 role，并使用 `fork_turns="none"`；模型与 model_reasoning_effort 从 TOML 读取。`task_name` 仅是线程标签。
+- 每个 stage 的输出和文件交接完成后必须调用 `close_agent`；并行组全部收齐后逐一关闭，失败或 schema 无效的尝试也要先关闭再重试。关闭失败时停止继续 spawn。
 - 上游输出原样传给下游 prompt；不要改成通用子 agent 或将 agent body 内嵌到 prompt。
 - 所有文件创建或修改均使用 apply_patch。不要在 prompt 中要求 Write 或 Edit 工具。
 
@@ -109,13 +110,13 @@
 | D docx 模板与生成器 | skills/daily-briefing/template/、skills/daily-briefing/scripts/generate-branded-docx.py |
 | E 编排与来源规则 | skills/reputation-track/SKILL.md、skills/reputation-track/references/ |
 | E agent 行为 | .codex/agents/sci-research-reputation-*.toml |
-| Runtime 安装与检查 | skills/setup-sci-research-runtime/、scripts/codex/check-plugin-bundle.py |
+| Runtime 安装与检查 | skills/setup-sci-research-runtime/、skills/setup-sci-research-runtime/runtime/config.toml、scripts/codex/check-plugin-bundle.py |
 | 插件清单与市场条目 | .codex-plugin/plugin.json、.agents/plugins/marketplace.json |
 
 ## 验证顺序
 
 1. 静态检查：TOML、JSON、Python、Node、Bash 语法与 git diff --check。
-2. Runtime 验证：在隔离 workspace 安装、检查、升级、冲突与卸载；新 task 逐一验证命名 agent selector、模型与 effort。
+2. Runtime 验证：在隔离 workspace 安装、检查、升级、配置冲突与卸载；确认 `agents.max_threads >= 10`，并在新 task 逐一验证命名 agent selector、模型、effort 与 close-agent 生命周期。
 3. C 最小首跑：无邮件，确认原生 agent 串联、apply_patch、hook、直接格式门与 pandoc 输出。
 4. D 验证：先安装 requirements.txt，使用 C 产出的样例 Markdown，邮件只做 dry-run。
 5. E 验证：测试 Yahoo 企业/高管确认、非中国大陆媒体与公开社交媒体搜索、低中高判断、干净结果静默退出与邮件 dry-run。

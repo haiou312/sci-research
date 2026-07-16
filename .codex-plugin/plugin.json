@@ -1,6 +1,6 @@
 {
   "name": "sci-research",
-  "version": "1.20.1+codex.20260716112934",
+  "version": "1.20.1+codex.20260716120357",
   "description": "Three specialised multi-agent news workflows plus a project-scoped Codex runtime setup. Pipeline C uses parallel category-scoped news Scanners before editorial verification; Pipeline E uses high-freedom company and executive reputation scanning with low, medium, and high verification.",
   "author": {
     "name": "Peter Wang"
