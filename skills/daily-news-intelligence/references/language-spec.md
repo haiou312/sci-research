@@ -45,7 +45,7 @@ active(country) = [econ, politics, tech, society]
 - **Non-China report** → 6 categories: `econ, politics, tech, society, ipo_ma, other`.
 - **China report** → 7 categories: `econ, politics, tech, society, china_nexus, ipo_ma, other`.
 
-`china_nexus` appears **only** in a `--country China` report. `ipo_ma` appears in **every** report (always, regardless of country). `other` is always the final catch-all. Eligibility, scope, exclusions, and the China-report `china_nexus`↔`ipo_ma` routing tie-break are defined in `references/rubric.md` § Conditional and Topical Categories — this file owns only identity, naming, order, and numbering.
+`china_nexus` appears **only** in a `--country China` report. `ipo_ma` appears in **every** report (always, regardless of country). `other` is always the final catch-all. Scanner receives only the one-line discovery directions in its TOML; Verifier applies final eligibility and the `china_nexus`↔`ipo_ma` routing tie-break from `references/rubric.md` § Conditional and Topical Categories. This file owns only identity, naming, order, and numbering.
 
 ### H2 numbering convention
 

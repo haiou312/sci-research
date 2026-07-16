@@ -14,25 +14,26 @@ Given a country, a company, or a date, this plugin orchestrates specialised agen
 |---|---|---|---|
 | **Purpose** | Single-country daily news briefing | Multi-country branded briefing (SPD Bank) | Company reputation risk monitor |
 | **Time focus** | Single date | Single date (reads existing reports) | Single date |
-| **Sources** | Adaptive official + accountable media discovery (per-URL date verification) | Country reports from Pipeline C | News (T1-T4) + Reddit + X |
+| **Sources** | Authoritative media with exact-date and readable-body verification | Country reports from Pipeline C | News (T1-T4) + Reddit + X |
 | **Output** | 6/7-section Markdown + docx (+email); mono- or bilingual | 13-15-story branded Word document (+email) | Inline HTML email (only when negative) |
 | **Default lang** | `zh` | `zh` | `zh` |
 | **Languages** | zh / en / ja + 6 bilingual combos (`zh+en` …) | zh / en | zh / en |
 
 All three pipelines are **completely independent** — they don't share agents and changes to one don't affect the others.
 
-Pipeline C also writes raw Scanner and Verifier audit artifacts under `daily-news/{date}/audit/` as `.txt` files. They show the candidate pool, source assessment, KEEP/DROP reasons, Coverage Review decisions, and remaining gaps; Pipeline D ignores them because it reads report Markdown rather than audit text files.
+Pipeline C also writes raw Scanner and Verifier audit artifacts under `daily-news/{date}/audit/` as `.txt` files. They show the Scanner candidate pool and coverage notes, then the Verifier's source assessment, KEEP/DROP reasons, Coverage Review decisions, and remaining gaps; Pipeline D ignores them because it reads report Markdown rather than audit text files.
 
 ---
 
 ## Why This Plugin
 
 - **10 specialised agents** across three pipelines, each agent narrowly scoped
-- **Credibility-first Pipeline C** — adaptive discovery across official primary sources and accountable international, national, regional, and specialist media; no fixed outlet whitelist or tier score
+- **High-freedom Luna Scanner** — one short direction per category, with no outlet list, source tier, candidate quota, impact threshold, deduplication, or routing logic
 - **Per-URL date verification** in `$sci-research:daily-news-intelligence` — neighbouring days are discarded
+- **Readable free reporting** — paid or stub-only leads are replaced with an authoritative free same-event article or excluded
 - **Editorial second-pass filter** (`sci-research-news-verifier`) for daily news — evidence fit / new information / contextual news value / originality / dedup
 - **Fact Manifest + 5-pass Editor** — numbers / names / dates / quotes locked to a verbatim YAML manifest, then fact-checked and style-repaired post-Writer
-- **External-view China gate** — `$sci-research:daily-news-intelligence --country "China"` searches eligible external media and official sources by principle, while excluding Chinese-domestic outlets and Chinese government domains
+- **External-view China gate** — `$sci-research:daily-news-intelligence --country "China"` uses foreign media only and excludes Chinese-domestic outlets and Chinese government domains
 - **Free-prose Writer** — daily news Writer composes explanatory prose in the target language, not a mechanical translation
 - **Bilingual mode (1.18.0+)** — `--lang zh+en` runs upstream once, fans Writer/Editor out per language in parallel, ships one email with a stacked bilingual body + up to 4 attachments
 - **Branded Word output** via SPD Bank template (`$sci-research:daily-briefing`)
@@ -264,7 +265,7 @@ $sci-research:daily-news-intelligence --country "Japan" --lang en
 $sci-research:daily-news-intelligence --country "China" --lang zh+en --email boss@company.com
 ```
 
-**Note on `--country "China"`**: Pipeline C scans China from an outside-observer perspective. Chinese-domestic outlets and Chinese government domains are **not queried**. The Scanner otherwise searches eligible external official sources and accountable international, national, regional, and specialist media adaptively; there is no fixed external outlet list.
+**Note on `--country "China"`**: Pipeline C scans China from an outside-observer perspective. The Scanner uses foreign media only; Chinese-domestic outlets and Chinese government domains are **not queried or used**. There is no fixed foreign-outlet list.
 
 ### Pipeline D — `$sci-research:daily-briefing` (Multi-Country Branded Word Document)
 
@@ -326,8 +327,8 @@ Bilingual mode (--lang zh+en …): Scanner/Verifier/Fact-Extractor run ONCE; Wri
 
 | Agent | Codex configuration | Role |
 |---|---|---|
-| `sci-research-daily-news-scanner` | gpt-5.6-luna / medium | Single agent scanning all active categories sequentially. Adaptive English WebSearch across official and accountable media sources, exact per-URL date verification, a broad candidate buffer, paywall handling, source-provenance assessment, and internal cross-category dedup + routing → unified Scanner Bundle |
-| `sci-research-news-verifier` | gpt-5.6-terra / high | Editorial second-pass filter: source credibility/evidence fit, concrete new information, contextual daily-news value, originality/corroboration, dedup/category validation, and Coverage Review for short categories |
+| `sci-research-daily-news-scanner` | gpt-5.6-luna / medium | Single high-freedom agent scanning all active categories sequentially. It follows one short direction per category and only hard-gates exact date, authoritative media, readable body, paid-to-free replacement, China foreign-media-only sourcing, and Europe-ex-UK scope. Every qualifying URL is handed to the Verifier separately |
+| `sci-research-news-verifier` | gpt-5.6-terra / high | Editorial second-pass filter: independent source assessment, concrete new information, contextual daily-news value, originality/corroboration, Lead selection, deduplication, final category routing, and Coverage Review for short categories |
 | `sci-research-daily-fact-extractor` | gpt-5.4-mini / medium | Extracts every number / name / date / quote from the Verifier KEEP set into a locked-values YAML Fact Manifest (no web access) |
 | `sci-research-daily-news-writer` | gpt-5.6-sol / high | Consumes Verifier KEEP set + Fact Manifest, composes explanatory prose in target language with 1-3 background searches per story, emits Markdown + APA refs. One instance per language in bilingual mode |
 | `sci-research-daily-editor` | gpt-5.6-sol / high | 5-pass post-Writer editor: manifest-fact drift / search-fact backing / quote verbatim / quote-mark normalization / local fluency repair. `apply_patch`-only. One instance per language in bilingual mode |
@@ -361,24 +362,25 @@ Silent exit when `total_items_kept == 0`. Reddit and X use Codex WebSearch `sear
 
 ---
 
-## Source Credibility System
+## Pipeline C Discovery And Verification
 
-### Pipeline C (Principle-Driven, Date-Verified)
+The Pipeline C Scanner is intentionally short. GPT-5.6 Luna chooses its own queries, media sources, search languages, search depth, and follow-up paths. Each category receives only one sentence describing the general subject area.
 
-Pipeline C does not maintain an outlet whitelist or T1-T4 score. The Scanner searches broadly and adaptively, preferring:
+The Scanner applies only these hard rules:
 
-- official primary records for an institution's own action, filing, decision, or data;
-- accountable international and national media;
-- reputable regional/local media with direct event knowledge;
-- reputable financial, legal, technology, scientific, and industry publications;
-- transparent attributed syndication when the original is inaccessible.
+- the article publication date must equal the requested date;
+- the source must be authoritative, editorially accountable media;
+- the page must expose enough readable article body to verify facts;
+- a paid or stub-only lead must be replaced with an authoritative free same-event article;
+- China reports use foreign media only;
+- Europe reports exclude UK-only and UK-primary events, while UK media may report eligible non-UK European events;
+- unverifiable facts, dates, sources, and URLs must never be invented.
 
-It excludes unverifiable pages, PR-wire material as sole reporting, content farms, scraped/anonymous rewrites, unsupported blogs, social posts, forums, and aggregators. A named reporter is not mandatory for an established organisation-byline report. The Verifier judges claim-level evidence and daily briefing value contextually rather than applying fixed market, deal-value, or outlet-prestige thresholds.
-
-**For `country = China`**: the external-view gate still excludes Chinese-domestic media and Chinese government domains, but eligible external discovery is adaptive rather than limited to a fixed list.
+The Scanner does not score news value, enforce transaction or impact thresholds, decide final category eligibility, merge duplicate coverage, choose a Lead, or route `china_nexus` and `ipo_ma`. It returns each qualifying URL separately. The Verifier then judges credibility and news value, selects Leads, deduplicates events, performs final category routing, and runs Coverage Review.
 
 Detailed rules:
-- Pipeline C: [`skills/daily-news-intelligence/references/rubric.md`](./skills/daily-news-intelligence/references/rubric.md) + [`.codex/agents/sci-research-daily-news-scanner.toml`](./.codex/agents/sci-research-daily-news-scanner.toml) § Operating Principle
+- Pipeline C Scanner hard rules and category directions: [`.codex/agents/sci-research-daily-news-scanner.toml`](./.codex/agents/sci-research-daily-news-scanner.toml)
+- Pipeline C Verifier editorial rules: [`skills/daily-news-intelligence/references/rubric.md`](./skills/daily-news-intelligence/references/rubric.md)
 - Pipeline E news tiering: [`skills/reputation-track/references/news-source.md`](./skills/reputation-track/references/news-source.md)
 
 ---
@@ -468,8 +470,9 @@ sci-research/
 
 | Goal | Edit |
 |---|---|
-| Pipeline C source eligibility / date verification | `.codex/agents/sci-research-daily-news-scanner.toml` + `skills/daily-news-intelligence/references/rubric.md` |
-| Pipeline C external-view China rules | `.codex/agents/sci-research-daily-news-scanner.toml` § China external-view rule + `skills/daily-news-intelligence/references/rubric.md` |
+| Pipeline C Scanner hard rules / category directions | `.codex/agents/sci-research-daily-news-scanner.toml` |
+| Pipeline C Verifier source / news-value / dedup / routing rules | `skills/daily-news-intelligence/references/rubric.md` + `.codex/agents/sci-research-news-verifier.toml` |
+| Pipeline C external-view China rules | `.codex/agents/sci-research-daily-news-scanner.toml` § China report + `skills/daily-news-intelligence/references/rubric.md` § China External-View Gate |
 | Pipeline C output format / Markdown contract | `skills/daily-news-intelligence/references/output-spec.md` |
 | Pipeline C language localisation / bilingual mode | `skills/daily-news-intelligence/references/language-spec.md` (§ Bilingual Mode) |
 | Pipeline C email delivery / bilingual email | `skills/daily-news-intelligence/references/email-spec.md` + `scripts/send-report-email.py` |

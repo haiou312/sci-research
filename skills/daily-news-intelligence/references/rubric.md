@@ -1,15 +1,8 @@
-# Rubric - Source Credibility, Geography, News Value, and Coverage
+# Rubric - Verifier Editorial Rules
 
-Loaded by the Scanner and Verifier. This document defines outcome-based admission rules. It intentionally does not contain an outlet whitelist, source tiers, fixed per-domain query plan, or mechanical impact thresholds.
+Loaded by the Verifier, not the Scanner. The Scanner's complete instructions are intentionally short and live in `.codex/agents/sci-research-daily-news-scanner.toml`; do not apply this document's editorial, deduplication, routing, or materiality rules during discovery.
 
-## Source Discovery Model
-
-The Scanner searches adaptively across the open web and official channels. It may use broad topic queries, entity-led follow-ups, official-document searches, local terminology, and sector-specific searches based on what the day's results reveal.
-
-- Prefer official primary records, established international or national media, and reputable regional or specialist publications.
-- Do not require a source to appear on a predefined list.
-- Do not stop discovery when `min_per_category` candidates have been found. The per-category discovery target is `max(min_per_category * 2, 6)` distinct date-verified events when credible material exists.
-- Search quality is evaluated by the resulting evidence, not by compliance with a fixed query sequence.
+This document defines final admission rules without an outlet whitelist, source tiers, fixed per-domain query plan, or mechanical impact thresholds.
 
 ## Source Eligibility
 
@@ -17,20 +10,19 @@ Classify each Lead into exactly one `Source class`:
 
 | Source class | Meaning |
 |---|---|
-| `official-primary` | Government, regulator, central bank, legislature, court, statistics authority, exchange, filing system, or other primary institutional record reporting its own action or data |
 | `established-media` | Accountable international or national newsroom with an established reporting record |
 | `reputable-regional` | Accountable regional or local newsroom with identifiable provenance and direct relevance to the event |
 | `reputable-specialist` | Established trade, legal, financial, scientific, technology, or industry publication with subject-matter reporting responsibility |
-| `sanctioned-syndication` | Transparent, attributed full-text syndication of an eligible original when the original is inaccessible or paywalled |
+| `sanctioned-syndication` | Transparent, attributed syndication with enough readable factual body when the original is inaccessible or paywalled |
 
 Eligibility principles:
 
 - A personal byline is useful but not mandatory. An established outlet's organisation byline is acceptable.
-- Source authority is claim-specific. Official records are authoritative for their own decisions, filings, statistics, and statements; independent reporting is preferable for disputed effects, criticism, or broader interpretation.
+- Source authority is claim-specific. Media reporting should clearly attribute official decisions, filings, statistics, and statements; disputed effects, criticism, and broader interpretation require credible reporting support.
 - Regional and specialist sources may Lead when they directly report an in-scope event and have accountable editorial provenance.
-- A company filing or official company statement can establish what the company announced. Material consequences or contested claims should be corroborated when practical.
+- A media report may rely on a filing or official statement for what an institution or company announced. Material consequences or contested claims should be corroborated when practical.
 - Transparent syndication is eligible when attribution is clear. Prefer the original URL when it is usable; otherwise retain the original under `Corroborated by` when known.
-- Paywall status is not a credibility score. A paywalled source may Lead under `Body-source: paywall-stub`, with retrievable same-event and background support added downstream.
+- Scanner admits only media reporting with enough readable factual body. When the original is paywalled, an authoritative free same-event report or transparent attributed syndication must supply the candidate body.
 
 Hard-reject as a Lead:
 
@@ -42,7 +34,7 @@ Hard-reject as a Lead:
 
 ## Geographic Scope Gate
 
-The gate runs after date verification and before editorial selection. Scanner applies it to every candidate; Verifier independently revalidates it. Coverage Review may never relax it.
+The Verifier applies this gate after revalidating the date and before editorial selection. Coverage Review may never relax it.
 
 For ordinary single-country reports:
 
@@ -62,8 +54,10 @@ For `geography_scope = Europe-ex-UK`:
 For `country = China`:
 
 - Do not query or admit Chinese domestic media or Chinese government domains as report sources.
-- Chinese domestic actions must be reported through eligible external media, international organisations, foreign official institutions, or other non-prohibited external sources.
+- Chinese domestic actions must be reported through eligible foreign media.
 - This restriction applies across all categories and cannot be relaxed for coverage.
+
+The Scanner already applies the same foreign-media-only rule. The Verifier revalidates it.
 
 ## Editorial Selection Rubric
 
@@ -71,7 +65,7 @@ The Verifier applies five checks. A story must pass all five, except that Covera
 
 ### 1. Credible evidence
 
-The source must fit one eligible `Source class`, support the asserted event, expose a verifiable date, and provide identifiable provenance. Sensitive allegations and disputed claims require an accessible primary record or credible independent corroboration.
+The source must fit one eligible `Source class`, support the asserted event, expose a verifiable date, and provide identifiable provenance. Sensitive allegations and disputed claims require clearly identified documentary evidence or credible independent corroboration.
 
 ### 2. Concrete new information
 
@@ -100,7 +94,7 @@ Categorical rejects:
 
 ### 4. Originality and corroboration
 
-Select the Lead with the clearest claim-level evidence and most useful retrievable body. Official primary evidence and independent reporting may coexist as references because they serve different purposes. Do not use a global prestige score.
+Select the Lead with the clearest claim-level evidence and most useful retrievable body. Do not use a global prestige score.
 
 ### 5. Deduplication
 
@@ -110,7 +104,7 @@ Merge only the same underlying event: substantially the same actors, action, and
 
 If the primary Verifier pass leaves a category below `min_per_category`:
 
-1. Reconsider candidates rejected only as `No-meaningful-news-value` or provisionally labelled `routine` by the Scanner.
+1. Reconsider candidates rejected only as `No-meaningful-news-value` during the primary Verifier pass.
 2. KEEP as `coverage-keep` when the candidate still has an eligible source, exact date, correct geography, a concrete new fact, and identifiable relevance to the category.
 3. Regional, specialist, institutional, and company-level developments may qualify; national-scale impact is not required.
 4. Never restore source-provenance failures, off-date or geography failures, China external-view violations, exact duplicates, routine PR, opinion-only pieces, unsupported rumours, or fabricated/unverifiable material.
@@ -120,6 +114,7 @@ When a category remains short, record the gap instead of admitting weak evidence
 
 ## Date Verification Rules
 
+- The Scanner admits only exact-date candidates; the Verifier revalidates that decision.
 - Every candidate URL must pass an `open_page` round trip on the canonical article or document.
 - The extracted publication date must equal `date` in either the outlet's local timezone or UTC.
 - Neighbouring days do not qualify.
@@ -129,12 +124,14 @@ When a category remains short, record the gap instead of admitting weak evidence
 ## Category Coverage Rules
 
 - The active category set comes from `references/language-spec.md`: six categories for a non-China report and seven for a China report.
-- Scanner aims for `max(min_per_category * 2, 6)` distinct credible candidates per category when available.
+- Scanner searches every active category and returns every candidate that passes its short hard-rule set.
 - Verifier aims for at least `min_per_category` KEEP stories per category, using Coverage Review when necessary.
 - Every story belongs to exactly one category by dominant frame.
 - Underfilled categories carry the localized `gap_note`; never pad them with untrustworthy, off-date, or out-of-scope material.
 
 ## Conditional and Topical Categories
+
+The following are Verifier routing and final-admission rules. The Scanner does not apply them while discovering candidates.
 
 ### `china_nexus` - China-Nexus Finance and Investment
 

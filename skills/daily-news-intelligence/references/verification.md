@@ -59,12 +59,11 @@ Both files must exist. Then spot-check the Markdown:
 ┌────────────────────────────────────────┐
 │ Step 2: Scanner (single agent, all     │
 │  active categories sequentially)       │
-│  Adaptive broad source discovery       │
-│  Candidate buffer beyond final minimum │
+│  GPT-5.6 Luna free-form discovery      │
+│  One-line category directions only     │
 │  WebSearch open_page → per-URL date    │
-│  verification                           │
-│  Cross-category dedup + routing        │
-│  china_nexus↔ipo_ma routing            │
+│  + authoritative/readable-body checks  │
+│  No dedup or final category routing     │
 │  Emit one unified Scanner Bundle       │
 └──────────────────┬─────────────────────┘
                    │
@@ -72,7 +71,7 @@ Both files must exist. Then spot-check the Markdown:
 ┌────────────────────────────────────────┐
 │ Step 7: Verifier stage                 │
 │  Credibility + New information +       │
-│  Contextual news value + Dedup          │
+│  News value + Dedup + final routing     │
 │  Coverage Review for short categories  │
 │  Emit KEEP set + Dropped list          │
 └──────────────────┬─────────────────────┘
@@ -116,8 +115,8 @@ Both files must exist. Then spot-check the Markdown:
 
 | Stage | Dispatch | Model | Rationale (the embedded body encodes this) |
 |-------|----------|-------|--------------------------------------------|
-| Scanner (single agent, all active categories sequentially) | `.codex/agents/sci-research-daily-news-scanner.toml` subagent | `gpt-5.6-luna / medium` | Single-date scanner across all active categories. Searches adaptively without a fixed outlet list, prefers official primary and accountable established/regional/specialist sources, targets a broad candidate buffer, verifies every URL's exact date and geography, and performs cross-category dedup + `china_nexus`↔`ipo_ma` routing before emitting the Scanner Bundle |
-| Verifier | `.codex/agents/sci-research-news-verifier.toml` subagent | `gpt-5.6-terra / high` | News-desk filter encoding source credibility/evidence fit, concrete new information, contextual daily-news value, originality/corroboration, and dedup/category validation. Coverage Review may admit credible narrower developments when a category is short, without relaxing date, geography, provenance, or factual support |
+| Scanner (single agent, all active categories sequentially) | `.codex/agents/sci-research-daily-news-scanner.toml` subagent | `gpt-5.6-luna / medium` | Short, high-freedom prompt: one sentence per category plus exact-date, authoritative-media, readable-body, paid-to-free replacement, China foreign-media-only, and Europe-ex-UK hard rules. It returns every qualifying URL separately and does not score, deduplicate, or final-route candidates |
+| Verifier | `.codex/agents/sci-research-news-verifier.toml` subagent | `gpt-5.6-terra / high` | News-desk filter encoding source credibility/evidence fit, concrete new information, contextual daily-news value, originality/corroboration, Lead selection, deduplication, and final category routing. Coverage Review may admit credible narrower developments when a category is short, without relaxing date, geography, provenance, or factual support |
 | Fact-Extractor | `.codex/agents/sci-research-daily-fact-extractor.toml` subagent | `gpt-5.4-mini / medium` | Extracts every hard fact + direct quote from the Verifier KEEP set into a locked-values YAML manifest. Pure transformation — no web, no narrative. The manifest is the Writer's locked-values contract and the Editor's Pass-1 ground truth |
 | Writer | `.codex/agents/sci-research-daily-news-writer.toml` subagent | `gpt-5.6-sol / high` | Daily briefing writer. Body encodes the Localisation Table, Category Catalog & country-derived active-category ordering, Markdown Syntax Contract, APA 7th format, Writing Standard, search-for-background contract, citation contract (search URLs that supplied a body fact MUST be in References), and self-check protocol |
 | Editor | `.codex/agents/sci-research-daily-editor.toml` subagent | `gpt-5.6-sol / high` | Five-pass editor (fact verification / search-backing / quote verbatim / quote-mark normalization / local-fluency repair). Uses `apply_patch` only. Pass 5 is style-only with closed defect-class whitelist and six rollback invariants; aborts gracefully without blocking the pipeline |

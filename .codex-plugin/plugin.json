@@ -1,7 +1,7 @@
 {
   "name": "sci-research",
-  "version": "1.20.1+codex.20260715145501",
-  "description": "Three independent multi-agent news pipelines plus a project-scoped Codex runtime setup. Skills orchestrate namespaced TOML custom agents with date verification, source-credibility assessment, editorial filtering, Fact Manifest discipline, and lifecycle quality hooks.",
+  "version": "1.20.1+codex.20260716100612",
+  "description": "Three independent multi-agent news pipelines plus a project-scoped Codex runtime setup. Pipeline C combines high-freedom exact-date media discovery with editorial verification, Fact Manifest discipline, and lifecycle quality hooks.",
   "author": {
     "name": "Peter Wang"
   },
@@ -24,7 +24,7 @@
   "interface": {
     "displayName": "Sci-Research News Intelligence",
     "shortDescription": "Daily news intelligence, branded briefings, and reputation monitoring",
-    "longDescription": "Three independent pipelines: daily-news-intelligence (dated single-country briefing, mono- or bilingual, adaptively sourced and date-verified), daily-briefing (multi-country branded SPD Bank Word doc), and reputation-track (company adverse-media + social monitoring, HTML email only when negative). A setup skill installs the namespaced TOML custom agents into the active project before first run.",
+    "longDescription": "Three independent pipelines: daily-news-intelligence (dated single-country briefing with a high-freedom authoritative-media Scanner, editorial Verifier, and mono- or bilingual output), daily-briefing (multi-country branded SPD Bank Word doc), and reputation-track (company adverse-media + social monitoring, HTML email only when negative). A setup skill installs the namespaced TOML custom agents into the active project before first run.",
     "developerName": "Peter Wang",
     "category": "Productivity",
     "capabilities": [

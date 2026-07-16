@@ -1,11 +1,11 @@
 ---
 name: daily-news-intelligence
-description: "Generate a dated single-country daily news briefing (daily news, news intelligence, daily briefing, country news report, 每日新闻, 每日情报, デイリーニュース). Five-stage Scanner → Verifier → Fact Extractor → Writer → Editor pipeline: adaptive English WebSearch with per-URL date verification, credibility and editorial review, target-language Markdown, final fact/style checks, and optional docx/email delivery. Supports scheduled/automated execution."
+description: "Generate a dated single-country daily news briefing (daily news, news intelligence, daily briefing, country news report, 每日新闻, 每日情报, デイリーニュース). Five-stage Scanner → Verifier → Fact Extractor → Writer → Editor pipeline: high-freedom multilingual WebSearch with per-URL date verification, credibility and editorial review, target-language Markdown, final fact/style checks, and optional docx/email delivery. Supports scheduled/automated execution."
 ---
 
 # Daily News Intelligence (Single Country)
 
-Generate a professional dated daily report for institutional readers covering a single country or region. Designed for both interactive and **scheduled/automated** execution. Evidence collection is always performed in English against verified live web sources; the final report is translated into the requested target language at the end.
+Generate a professional dated daily report for institutional readers covering a single country or region. Designed for both interactive and **scheduled/automated** execution. Scanner and Verifier output is English, but search may use any language that improves discovery; the final report is written in the requested target language.
 
 ## Quick Reference (Orchestrator Checklist)
 
@@ -14,9 +14,9 @@ Generate a professional dated daily report for institutional readers covering a 
 **Pipeline flow** (high-level — Workflow below has the numbered procedure with bash commands):
 
 - Validate params → parse `lang` as `langs = lang.split('+')` (single or bilingual) → expand `~` → compute derived fields per `lang` (incl. `active_categories`)
-- Launch ONE Scanner with all active categories (6 or 7); it searches them sequentially using adaptive source discovery, aims for a broad per-category candidate buffer, performs cross-category dedup + routing internally, and emits one unified Scanner Bundle
+- Launch ONE Scanner with all active categories (6 or 7); GPT-5.6 Luna searches them freely under the short hard-rule set in its TOML and emits every qualifying URL as a separate candidate
 - IF Scanner Bundle has no stories → STOP with message
-- Verifier (Scanner Bundle in prompt) → credibility + new-information + daily-news-value + originality + dedup review → Coverage Review for short categories → Verifier Output Schema
+- Verifier (Scanner Bundle in prompt) → credibility + new-information + daily-news-value + originality + dedup + final category routing → Coverage Review for short categories → Verifier Output Schema
 - Fact-Extractor (Verifier output + params) → fact-manifest YAML (single, language-agnostic — shared across bilingual halves)
 - **FAN OUT per `lang` in `langs` — PARALLEL** (concurrent Writer subagents in one orchestrator message; then concurrent Editor subagents after all Writers complete; see § Workflow Step 8 § Bilingual execution order for rationale):
   - Writer (Verifier output + manifest path + that `lang`'s params) → one `apply_patch` operation creating or overwriting Markdown at `out_md_{lang}`
@@ -35,16 +35,18 @@ Evidence priority order:
 
 Apply a two-stage filter before anything reaches the Writer:
 
-- **Stage 1 (Scanner, single agent)**: one Scanner across all active categories sequentially. It searches broadly without a fixed outlet list or source tiers, prefers official primary channels and accountable international, national, regional, and specialist media, verifies each URL's date and geography, then performs cross-category dedup + `china_nexus`↔`ipo_ma` routing. It aims for `max(min_per_category * 2, 6)` distinct candidates per category when credible material exists.
+- **Stage 1 (Scanner, single agent)**: GPT-5.6 Luna freely searches every active category using only these hard gates: exact target date, authoritative media, enough readable factual body, free same-event replacement for paid/stub reporting, foreign-media-only sourcing for China, and Europe-ex-UK event scope. Category guidance is one sentence per category.
 - **Stage 2 (Verifier)**: source credibility and evidence fit + concrete new information + daily briefing value + originality/corroboration + dedup/category validation. It uses contextual editorial judgement rather than fixed impact numbers or outlet grades, then runs Coverage Review for any category below `min_per_category`.
 
 Hard rules:
 
 - Do not admit a candidate without passing the date-verification gate.
+- Scanner candidates must come from authoritative media and contain readable factual body text; paid/stub leads require a free authoritative same-event replacement.
+- A China Scanner uses foreign media only and does not query or use Chinese domestic media or Chinese government domains.
 - When normalized `country == Europe`, apply the hard `Europe-ex-UK` geography gate in `references/rubric.md`: a UK-only or UK-primary event is out of scope. Outlet nationality is not event geography, so UK publications remain valid sources for in-scope European events.
 - Do not pad a category with untrustworthy, off-date, out-of-scope, or fact-free material.
 - Do not merge unrelated events into one synthetic story.
-- Cross-category dedup and routing happen inside the Scanner before the Verifier.
+- Same-event deduplication, Lead selection, final category routing, `china_nexus` boundaries, and IPO/M&A eligibility happen in the Verifier, not the Scanner.
 - The Writer must read the Verifier's KEEP set, never the Scanner Bundle directly.
 
 ## Input Parameters
@@ -95,7 +97,7 @@ Model allocation is set per-agent in the TOML: Scanner = `gpt-5.6-luna / medium`
 
 The orchestrator passes data between stages via the subagent **prompt text** — not environment variables. Every prompt includes the runtime-path header above. Specifically:
 
-- **Orchestrator → Scanner**: the orchestrator launches ONE Scanner subagent with **all** `active_categories` plus `country`, `date`, `min_per_category`, and `geography_scope`. The Scanner processes all categories sequentially, performs cross-category dedup + routing internally, and returns a unified Scanner Bundle (`references/schemas.md` § Scanner Bundle Schema).
+- **Orchestrator → Scanner**: the orchestrator launches ONE Scanner subagent with **all** `active_categories` plus `country`, `date`, and `geography_scope`. The Scanner searches all categories under its short hard-rule set and returns every qualifying URL as a separate entry in one Scanner Bundle (`references/schemas.md` § Scanner Bundle Schema).
 - **Scanner → Verifier**: the orchestrator includes the Scanner's full Scanner Bundle verbatim plus `country`, `min_per_category`, and `geography_scope` in the Verifier agent's prompt.
 - **Verifier → Fact-Extractor**: The orchestrator includes the Verifier's full output verbatim plus runtime parameters (`country`, `date`, `lang`) and `out_manifest` (target YAML path, e.g. `${OUT_DIR}/fact-manifest-{country_slug}-{date}.yaml`) in the Fact-Extractor agent's prompt. The Fact-Extractor writes the manifest to `out_manifest` and returns confirmation.
 - **Verifier + Fact-Extractor → Writer (per `lang` in `langs`)**: For each `lang` the orchestrator launches a separate Writer subagent with the same Verifier full output, the same Fact Manifest content (read from `out_manifest`) or its absolute path, plus that invocation's runtime parameters: a **single `lang` token** (never the combined `zh+en` string), `out_md_{lang}` **passed into the Writer body's generically-named `out_md` parameter**, plus `country`, `date`, `min_per_category`. Single-lang: 1 Writer invocation. **Bilingual: N Writer invocations dispatched CONCURRENTLY** — emit multiple Agent tool calls in a single orchestrator message so they run in parallel. See § Workflow Step 8 § Bilingual execution order for rationale. (The Writer / Editor agent bodies are pure single-lang by design — they need no bilingual awareness; all bilingual logic lives in this orchestrator.)
@@ -152,21 +154,17 @@ The orchestrator must not summarise, truncate, or reformat the upstream output �
 
    Audit artifacts use `.txt`, not `.md`, so Pipeline D never mistakes them for country reports. If directory creation fails, stop and report the error.
 
-2. **Scan candidates** (Scanner stage, English only — SINGLE AGENT). Launch **ONE Scanner subagent** for the full report. **Spawn `sci-research-daily-news-scanner` (`.codex/agents/sci-research-daily-news-scanner.toml`) — see § Subagent Dispatch Rule.** The Scanner prompt carries **all** `active_categories` plus `country`, `date`, `min_per_category`, and `geography_scope`; it processes each category sequentially using adaptive broad discovery, applies the hard date and geography gates, classifies source provenance, then performs cross-category dedup + routing and returns a unified Scanner Bundle (`references/schemas.md` § Scanner Bundle Schema). It does not use a fixed outlet matrix, per-domain sweep, or source tier.
+2. **Scan candidates** (Scanner stage, English output — SINGLE AGENT). Launch **ONE `sci-research-daily-news-scanner` subagent** for the full report per § Subagent Dispatch Rule. Pass only `country`, `date`, `active_categories`, and `geography_scope` after the runtime-path header. Its TOML intentionally contains short one-line category directions and only the confirmed hard rules; do not add search plans, outlet lists, source grades, materiality tests, transaction thresholds, routing rules, or dedup instructions to the spawn prompt.
 
-   **Per-category specifics:**
-   - **Corporate IPO & M&A** — runs in every report; country-anchored. Search official filings/disclosures and accountable business, legal, financial, regional, and specialist reporting adaptively. Eligibility is contextual; no fixed transaction-value floor decides whether an event is newsworthy.
-   - **China-Nexus** — runs **only in a China report**; **not** `{country}`-anchored (region-unbounded global topical sweep). It follows the China external-view rule and searches eligible external official and media sources without a fixed domain list.
+The Scanner uses GPT-5.6 Luna's judgement to search broadly. Each admitted URL must be authoritative media reporting published on the exact target date with readable factual body text. Paid/stub reporting must be replaced by a readable free authoritative report of the same event. China uses foreign media only; Europe excludes UK-only or UK-primary events. Every qualifying URL remains a separate candidate for Verifier review.
 
-   Authoritative rules (source eligibility, China-aid exclusion + key-industry carve-out, contextual IPO/M&A materiality, and `china_nexus`↔`ipo_ma` routing) live in `references/rubric.md` § Conditional and Topical Categories.
+If the Scanner Bundle contains no stories, stop and report: "No news candidates found for {country} on {date}. The date may be a future date, a holiday, or WebSearch may be temporarily unavailable." Do not proceed to the Verifier.
 
-The Scanner aims for `max(min_per_category * 2, 6)` distinct, credible, date-verified events per category when available. If the Scanner Bundle contains no stories, stop and report: "No news candidates found for {country} on {date}. The date may be a future date, a holiday, or WebSearch may be temporarily unavailable." Do not proceed to the Verifier.
+After receiving a non-empty Scanner Bundle, use `apply_patch` to create or overwrite `SCANNER_AUDIT` with the full Scanner output verbatim. Do not summarize or reformat it. This artifact records the candidate pool and per-category coverage notes.
 
-After receiving a non-empty Scanner Bundle, use `apply_patch` to create or overwrite `SCANNER_AUDIT` with the full Scanner output verbatim. Do not summarize or reformat it. This artifact records admitted candidates, rejection counts, source assessments, and discovery gaps.
+3–6. **[Scanner internal]** Free-form discovery plus the short hard-rule checks happen inside the Scanner. The orchestrator waits for the complete Scanner Bundle before proceeding.
 
-3–6. **[Scanner internal]** Adaptive discovery, per-URL date verification, hard geography filtering, source-eligibility assessment, candidate-buffer enforcement, per-category dedup, cross-category dedup, and `china_nexus`↔`ipo_ma` routing all happen inside the Scanner per `.codex/agents/sci-research-daily-news-scanner.toml`. The orchestrator waits for the Scanner Bundle before proceeding.
-
-7. **Quality filter** (Verifier stage). Spawn `sci-research-news-verifier` (`.codex/agents/sci-research-news-verifier.toml`) per § Subagent Dispatch Rule with the **Scanner Bundle** (`references/schemas.md` § Scanner Bundle Schema) included verbatim in its prompt plus `country`, `min_per_category`, and `geography_scope`. The Verifier re-applies the hard geography and China external-view gates, then evaluates source credibility/evidence fit, concrete new information, contextual daily briefing value, originality/corroboration, and dedup/category placement. It does not use outlet tiers, fixed financial thresholds, or a named-byline requirement. If a category is short, Coverage Review may admit credible narrower regional, specialist, institutional, or company-level developments, but never relaxes date, geography, source provenance, factual support, or true-duplicate rules. Hard-paywall Leads (`Body-source: paywall-stub`) flow through unchanged; the Writer's mandatory background-search obligation and Editor quote checks handle body depth and quote retrievability. The Verifier emits the schema from `references/schemas.md`, including a complete DROP audit and any remaining coverage gaps.
+7. **Quality filter** (Verifier stage). Spawn `sci-research-news-verifier` (`.codex/agents/sci-research-news-verifier.toml`) per § Subagent Dispatch Rule with the **Scanner Bundle** (`references/schemas.md` § Scanner Bundle Schema) included verbatim in its prompt plus `country`, `min_per_category`, and `geography_scope`. The Verifier independently assesses source credibility, revalidates date and geography, evaluates concrete new information and contextual daily-briefing value, selects Leads from same-event candidate URLs, performs final dedup and category routing, and applies the `china_nexus` and `ipo_ma` rules in `references/rubric.md`. If a category is short, Coverage Review may admit credible narrower regional, specialist, institutional, or company-level developments, but never relaxes date, geography, source provenance, factual support, or true-duplicate rules. The Verifier emits the schema from `references/schemas.md`, including a complete DROP audit and any remaining coverage gaps.
 
    After receiving the Verifier output, use `apply_patch` to create or overwrite `VERIFIER_AUDIT` with the full Verifier output verbatim. Do not summarize or reformat it. This is the durable KEEP/DROP audit for the run and must be written before Fact-Extractor starts.
 
@@ -276,7 +274,7 @@ After receiving a non-empty Scanner Bundle, use `apply_patch` to create or overw
 
 | Stage | Recommended Agent | Required References |
 |-------|-------------------|---------------------|
-| Scanner (Step 2, single agent — all active categories sequentially) | `sci-research-daily-news-scanner` (`.codex/agents/sci-research-daily-news-scanner.toml`) (see § Subagent Dispatch Rule) | `references/rubric.md`, `references/schemas.md` |
+| Scanner (Step 2, single agent — all active categories sequentially) | `sci-research-daily-news-scanner` (`.codex/agents/sci-research-daily-news-scanner.toml`) (see § Subagent Dispatch Rule) | `references/schemas.md` |
 | Verifier (Step 7) | `sci-research-news-verifier` (`.codex/agents/sci-research-news-verifier.toml`) | `references/rubric.md`, `references/schemas.md` |
 | Fact-Extractor (Step 7.5) | `sci-research-daily-fact-extractor` (`.codex/agents/sci-research-daily-fact-extractor.toml`) | (Verifier output only — agent prompt has full schema) |
 | Writer (Step 8 — **× len(langs)** in bilingual mode) | `sci-research-daily-news-writer` (`.codex/agents/sci-research-daily-news-writer.toml`) | `references/language-spec.md`, `references/output-spec.md`, `references/verification.md`, Fact Manifest from Step 7.5 |
@@ -292,7 +290,7 @@ Scattered through the Workflow above; consolidated here for quick scanning. **No
 
 | Condition | Handling |
 |-----------|----------|
-| Scanner Bundle empty (main + reserve) | STOP. Report: "No news candidates found for {country} on {date}. The date may be a future date, a holiday, or WebSearch may be temporarily unavailable." Do not proceed to Verifier. |
+| Scanner Bundle empty | STOP. Report: "No news candidates found for {country} on {date}. The date may be a future date, a holiday, or WebSearch may be temporarily unavailable." Do not proceed to Verifier. |
 | `mkdir -p "$OUT_DIR"` fails (permissions / read-only FS) | STOP. Report the OS error. Do not silently fall back to a different path. |
 | `--lang` has 3+ tokens (e.g. `zh+en+ja`) | REJECT at Step 1. Report: "1.18.0 supports at most 2-language combos (zh+en, en+zh, zh+ja, ja+zh, en+ja, ja+en). 3-language combos are not implemented in this release." |
 | `--lang` has an unknown token (e.g. `zh+ko`) | REJECT at Step 1. Report which token is invalid; the supported set is `zh / en / ja`. |
@@ -308,7 +306,7 @@ Scattered through the Workflow above; consolidated here for quick scanning. **No
 | File | Contents | Consumed by |
 |------|----------|-------------|
 | `references/schemas.md` | Scanner Bundle Schema (all categories), Verifier Output Schema | Scanner, Verifier |
-| `references/rubric.md` | Adaptive Source Discovery Model, Source Eligibility, Geographic and China external-view gates, contextual Editorial Selection Rubric, Coverage Review, Date Verification Rules, Category Coverage Rules, Conditional and Topical Categories | Scanner, Verifier |
+| `references/rubric.md` | Verifier-only source, geography, news-value, coverage, deduplication, and final category rules | Verifier |
 | `references/output-spec.md` | Required Markdown Output, Markdown Syntax Contract, Invalid + Valid examples (`lang=en`, `lang=zh`), APA 7th Reference Format | Writer |
 | `references/language-spec.md` | Localisation Table, Derived Display Fields, Filename Pattern, Language Rules, Title Length Rules, Body Length Rules, Writing Standard, **Language-Specific Rules — `lang=zh` only** (quote marks, official titles, country prefixes, time anchors, terminology precision, foreign media naming) | Writer |
 | `references/verification.md` | Output Rules, Writer Self-Check, End-to-End Verification, Flow Diagram, Recommended Agent Assignment, Invocation Examples | Writer (self-check), Orchestrator (delivery check) |

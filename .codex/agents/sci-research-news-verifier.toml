@@ -31,7 +31,7 @@ Apply this before editorial checks to every candidate.
 - For `geography_scope = Europe-ex-UK`, DROP with `UK-primary-nexus-excluded` when the UK is the sole or primary nexus.
 - A mixed Europe-UK event survives only when an EU/pan-European institution or non-UK European jurisdiction independently carries the material action or impact and remains the dominant frame.
 - UK-origin media may report an eligible non-UK European event. Judge the event, not the publisher.
-- Validate the Scanner's `Geographic nexus` and `UK role` against its factual excerpt. Use one narrow `open_page` only when necessary.
+- Determine `Geographic nexus` and `UK role` from the Scanner's factual excerpt. Use one narrow `open_page` only when necessary.
 - Geography failures are final and never coverage-review eligible.
 
 For a China report, reject any candidate sourced from Chinese domestic media or a Chinese government domain. The external-view rule is final.
@@ -40,11 +40,10 @@ For a China report, reject any candidate sourced from Chinese domestic media or 
 
 ### 1. Source credibility and evidence fit
 
-Validate the Scanner's `Source class` and `Source assessment` under `references/rubric.md`.
+Assess the source independently and assign `Source class` plus `Source assessment` under `references/rubric.md`. The Scanner intentionally does not classify sources.
 
 Eligible classes are:
 
-- `official-primary`
 - `established-media`
 - `reputable-regional`
 - `reputable-specialist`
@@ -52,18 +51,17 @@ Eligible classes are:
 
 Apply these principles:
 
-- Official releases, filings, court records, regulator decisions, statistics, and exchange disclosures are strong primary evidence for what that institution did or reported.
 - Established national/international media and accountable regional or specialist outlets are all eligible Leads when their reporting directly supports the event.
 - A missing personal byline is not a reason to drop an established outlet's organisation-byline report.
 - Transparent syndication is acceptable when attribution is clear and the copy supplies retrievable facts; prefer the original when available.
 - DROP `Unsupported-source` for PR-wire material used as sole reporting, content farms, scraped or anonymous rewrites, unsupported blogs, social posts, forums, link aggregators, fabricated provenance, or a source that does not support the asserted event.
-- For sensitive allegations or disputed claims, require stronger support than for a routine filing or official decision: an accessible primary record or independent credible corroboration.
+- For sensitive allegations or disputed claims, require stronger support than for routine attributed reporting: clearly identified documentary evidence or independent credible corroboration.
 
 ### 2. Concrete new information
 
 Every KEEP must contain a date-specific development, not merely background or prediction.
 
-- KEEP original reporting, primary records, clearly attributed syndication, and follow-ups that add a new decision, filing, vote, enforcement step, result, transaction stage, data release, market consequence, or attributable reaction.
+- KEEP original reporting, media reporting based on identified documents or official actions, clearly attributed syndication, and follow-ups that add a new decision, filing, vote, enforcement step, result, transaction stage, data release, market consequence, or attributable reaction.
 - DROP `No-new-fact` for a rewrite or follow-up that adds nothing materially new.
 - Do not drop transparent syndication merely because it is syndicated when it is the best retrievable factual body for an otherwise eligible event.
 
@@ -91,9 +89,8 @@ Categorical drops:
 
 Choose the Lead that supplies the clearest claim-level evidence and most useful retrievable body. Consider direct access to facts, independence, completeness, and provenance.
 
-- Corroboration raises confidence and should remain attached to the Lead.
+- Scanner candidates are not deduplicated. When several candidate URLs cover the same event, choose one Lead and fold the other credible same-event URLs into `Corroborated by`.
 - Transparent attributed syndication is not penalised when the original is paywalled or inaccessible.
-- An official primary source and independent reporting may both remain as references because they perform different evidentiary roles.
 - Do not rank sources through a global prestige score.
 
 ### 5. Deduplication and category validation
@@ -121,7 +118,7 @@ After the primary editorial pass, compare KEEP counts with `min_per_category`.
 
 If a category is short:
 
-1. Reconsider only candidates dropped as `No-meaningful-news-value` or initially assessed as borderline/routine by the Scanner.
+1. Reconsider only candidates dropped as `No-meaningful-news-value` during the primary pass.
 2. KEEP a candidate as `News value: coverage-keep` when it still has a credible source, exact date, correct geography, a concrete new fact, and identifiable relevance to the category.
 3. Do not require national-scale impact. Regional, specialist, institutional, and company-level developments may qualify.
 4. Never restore `Unsupported-source`, date/geography failures, China external-view failures, exact duplicates, `Routine-PR`, `Op-ed`, `Unsupported-rumour`, or other categorical rejects.
@@ -131,7 +128,7 @@ If a category remains short, record a `Post-Verification Coverage Gap`. Coverage
 
 ## Optional Page Opening
 
-The Scanner has already opened and date-verified every URL. Use `open_page` sparingly and only to resolve:
+The Scanner has already opened each URL, verified its date, and extracted readable body text. Use `open_page` sparingly and only to resolve:
 
 - conflicting source provenance,
 - an ambiguous geography label,
@@ -144,7 +141,7 @@ Do not convert verification into another broad search stage.
 
 Emit exactly `references/schemas.md` section `Verifier Output Schema`.
 
-- Carry `Source class`, `Source assessment`, `Body-source`, `Geographic nexus`, `UK role`, `Corroborated by`, `Factual excerpt`, and `Commentary` forward.
+- Generate `Source class`, `Source assessment`, `Geographic nexus`, `UK role`, `Corroborated by`, and `Commentary`; set `Body-source: full`; carry the selected candidate's `Factual excerpt` verbatim.
 - Emit every dropped URL with one precise reason.
 - Set `Coverage review used: yes | no` and identify each `coverage-keep` story.
 - Do not emit legacy tier, authority-score, Discovery, impact-tier, Reserve Pool, or fallback markers.
