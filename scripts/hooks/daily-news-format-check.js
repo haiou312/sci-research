@@ -14,12 +14,14 @@
  *   - References without [N] continuous numbering
  *   - References lines without a URL
  *   - Mismatched count between ### story titles and **References** blocks
+ *   - English story bodies below 250 words
+ *   - Chinese story bodies below 400 Unicode Han characters
  *   - Prohibited markers: **摘要** / **Summary** / **要約** / **分析** / **Analysis**
  *     (1.9.x+ structure: body prose follows `### title` directly; no
  *     summary/analysis markers anywhere)
  *
- * Direct `--file` mode also reports advisory en/zh body-length statistics.
- * Length alone is never a format violation.
+ * Direct `--file` mode also reports en/zh body-length statistics.
+ * Minimum length is enforced per story; there is no maximum.
  *
  * Trigger: Codex PostToolUse:apply_patch when the file path is under daily-news/
  *          (or the legacy daily-news-reports/ path)
@@ -95,7 +97,7 @@ function runFileCheck(filePath) {
       const lengthInfo = summarizeBodyLengths(content, detectLang(content));
       if (lengthInfo) {
         process.stdout.write(
-          `LENGTH_INFO: lang=${lengthInfo.lang} stories=${lengthInfo.stories} target~${lengthInfo.target} ${lengthInfo.unit}; min=${lengthInfo.min}, max=${lengthInfo.max}, average=${lengthInfo.average} (advisory)\n`
+          `LENGTH_INFO: lang=${lengthInfo.lang} stories=${lengthInfo.stories} target~${lengthInfo.target} ${lengthInfo.unit}; required>=${lengthInfo.minimum}, min=${lengthInfo.min}, max=${lengthInfo.max}, average=${lengthInfo.average}\n`
         );
       }
     } catch (error) {
@@ -156,16 +158,16 @@ function collectPatchedFilePaths(data) {
 // report which adds 海外涉华财经与外交 at position 5) — see
 // skills/daily-news-intelligence/references/language-spec.md § Category Catalog &
 // Selection. This hook is intentionally category-count agnostic: it validates
-// ###↔**References** parity, [N] continuity, prohibited markers, and quote chars,
-// never the number or names of H2 sections. Body length is advisory only.
+// ###↔**References** parity, [N] continuity, prohibited markers, quote chars, and
+// en/zh per-story minimum length, never the number or names of H2 sections.
 //
 // Prohibited markers (1.9.x+ structure): body prose follows `### title` directly.
 // No summary/analysis marker is permitted anywhere in the output.
 const PROHIBITED_MARKERS = /^\*\*(?:摘要|Summary|要約|分析|Analysis)\*\*$/gm;
 const REFERENCES_MARKER_LINE = "**References**"; // language-independent per spec
 const BODY_LENGTH_TARGETS = {
-  en: { target: 300, unit: "English words" },
-  zh: { target: 500, unit: "Han characters" },
+  en: { target: 300, minimum: 250, unit: "English words" },
+  zh: { target: 500, minimum: 400, unit: "Han characters" },
 };
 
 function countMatches(content, regex) {
@@ -278,11 +280,38 @@ function summarizeBodyLengths(content, lang) {
     lang,
     stories: counts.length,
     target: target.target,
+    minimum: target.minimum,
     unit: target.unit,
     min: Math.min(...counts),
     max: Math.max(...counts),
     average: Math.round(total / counts.length),
   };
+}
+
+function checkMinimumBodyLengths(content, lang) {
+  const target = BODY_LENGTH_TARGETS[lang];
+  if (!target) return [];
+
+  const violations = [];
+  const stories = extractStoryBodies(content);
+  const expectedStories = countMatches(content, /^### /gm);
+  if (stories.length !== expectedStories) {
+    violations.push(
+      `Could not isolate every story body for minimum-length checking: parsed ${stories.length} of ${expectedStories}. Each story must use \`### title → body → **References**\` with standalone \`---\` separators.`
+    );
+  }
+
+  for (const { title, body } of stories) {
+    const count =
+      lang === "en" ? countEnglishWords(body) : countHanCharacters(body);
+    if (count < target.minimum) {
+      violations.push(
+        `Story "${title}" body length is ${count} ${target.unit}; minimum ${target.minimum}, target about ${target.target}. Add relevant sourced substance; do not pad or repeat content.`
+      );
+    }
+  }
+
+  return violations;
 }
 
 // Canonical quote chars per lang (mirrors language-spec.md § Canonical Quote Marks).
@@ -493,10 +522,12 @@ function validate(filePath, content) {
 
   // 7. Quote-mark canonical char enforcement (per language-spec.md § Canonical Quote Marks)
   // 8. Reference-coverage heuristic backstop (PR #5).
+  // 9. Per-story hard minimum length (en/zh only; no maximum).
   const lang = detectLang(content);
   if (lang) {
     violations.push(...validateQuoteMarks(content, lang));
     violations.push(...checkReferenceCoverage(content, lang));
+    violations.push(...checkMinimumBodyLengths(content, lang));
   }
 
   return violations;
@@ -562,6 +593,7 @@ if (require.main === module) {
 }
 
 module.exports = {
+  checkMinimumBodyLengths,
   summarizeBodyLengths,
   countEnglishWords,
   countHanCharacters,

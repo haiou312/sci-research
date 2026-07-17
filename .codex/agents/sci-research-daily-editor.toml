@@ -47,7 +47,8 @@ If a required input or runtime path is missing, stop and report it.
 - Keep every Verifier Lead and corroborating URL in the relevant References block.
 - Supplemental references may be added only when their opened pages support facts retained in the body.
 - Maintain the required H1/H2/story/References structure and continuous `[N]` numbering.
-- Body length targets are advisory. Never retain, add, cut, or distort content merely to hit a count.
+- Every `lang=en` story body must contain at least 250 English words; every `lang=zh` story body must contain at least 400 Unicode Han characters. `lang=ja` has no fixed floor. There is no maximum.
+- Meet the floor only with relevant sourced substance. Never repeat, speculate, invent, or preserve awkward wording merely to increase the count.
 
 ## Five Passes
 
@@ -63,16 +64,18 @@ Compare each story with its Fact Manifest entry.
 - Correct genuine factual drift. Do not insert every omitted Manifest fact merely for completeness.
 - For a questionable name or technical term, use the established target-language form and preserve identity.
 
-### Pass 2: Source backing
+### Pass 2: Source backing and substantive depth
 
-Check material body claims that are not already secured by the Manifest, prioritizing claims that are specific, consequential, surprising, or uncertain.
+Check material body claims that are not already secured by the Manifest, prioritizing claims that are specific, consequential, surprising, or uncertain. Also identify any `en` or `zh` story below its hard minimum or too thin to explain the event.
 
 - Use the cited URLs first.
-- Search only when the existing references cannot resolve a material claim.
+- For an undersized or substantively thin story, open its Lead and relevant corroborating URLs and add useful event details, mechanics, background, affected parties, consequences, uncertainty, or next steps that those pages support.
+- Search only when the existing references cannot resolve a material claim or cannot provide enough relevant material to reach the hard floor.
 - If a claim is supported, retain it.
 - If a new opened source supports a retained claim, add its APA reference and repair continuous numbering.
 - If support cannot be established, remove, narrow, or qualify the claim.
-- Do not conduct searches merely to satisfy a quota or to add background.
+- Do not conduct searches merely to satisfy a quota. Do not pad with generic background.
+- If credible opened sources cannot support the hard floor, stop and report the affected story rather than accepting an undersized or fabricated body.
 
 ### Pass 3: Quotations
 
@@ -93,6 +96,7 @@ Check the complete document against `references/output-spec.md` and `references/
 - coverage-gap notes in the correct category;
 - APA reference lines with bare URLs and continuous `[N]`;
 - canonical quote marks for `lang`;
+- at least 250 English words per `en` story or 400 Han characters per `zh` story;
 - no prohibited summary/analysis markers or global references section.
 
 Repair format problems with focused patches. Do not alter article substance merely for formatting.
@@ -111,7 +115,7 @@ Revise any wording that is unnatural, ambiguous, repetitive, mechanical, overly 
 
 You may rewrite a sentence or paragraph, split or merge paragraphs, and improve a headline when needed. Preserve the event, factual meaning, uncertainty, attribution, citations, category, and story order. Do not introduce new factual claims during this pass; return to Pass 2 first if a proposed rewrite needs new evidence.
 
-There is no defect whitelist, edit quota, paragraph-count lock, or body-length rollback. Use judgement. Prefer the smallest edit that produces genuinely native, precise prose, but make every necessary edit.
+There is no defect whitelist, edit quota, paragraph-count lock, or maximum body length. Use judgement. Prefer the smallest edit that produces genuinely native, precise prose, but make every necessary edit. Do not let a fluency edit reduce an `en` or `zh` body below its hard floor.
 
 ## Apply-Patch Discipline
 
@@ -126,8 +130,8 @@ There is no defect whitelist, edit quota, paragraph-count lock, or body-length r
 2. Manifest facts are semantically correct and naturally localized.
 3. Material claims and quotations are supported by retained references.
 4. The report reads as native professional writing in `lang`; no obvious translationese or repeated template remains.
-5. References, numbering, headings, separators, gap notes, and quote marks pass the direct format check.
-6. Any reported length information is treated as advisory only.
+5. Every `en` story contains at least 250 English words and every `zh` story contains at least 400 Unicode Han characters, without padding. `ja` is exempt.
+6. References, numbering, headings, separators, gap notes, quote marks, and minimum body lengths pass the direct format check.
 
 ## Final Report
 

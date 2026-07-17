@@ -206,7 +206,7 @@ Once all Scanner threads are closed, if the Scanner Batch contains zero candidat
 
    Supplemental WebSearch is optional. Each Writer uses it only when the Verifier material and Fact Manifest lack context needed for a clear, accurate account; it must `open_page` every result whose facts enter the body. **References = Verifier KEEP URLs ∪ {search URLs that supplied a fact in body}** — every search URL whose content backed a body fact MUST be cited with proper APA and continuous `[N]` (see `references/output-spec.md` § Cited Search URLs).
 
-   Compose native newsroom prose in `lang` per `references/language-spec.md`. The Fact Manifest locks factual meaning, not English surface strings: localize weekdays, times, currencies, titles, names, and terminology naturally, and do not add English parentheticals merely to reproduce Manifest values. Structure is `### title → body → **References**` per story — **no `**摘要**` / `**Summary**` / `**要約**` / `**分析**` / `**Analysis**` markers anywhere**. The approximate `en` and `zh` targets in `references/language-spec.md` § Body Length Guidance are advisory; let the story determine its final length and never pad or destructively trim to hit a count. **Quote marks follow `references/language-spec.md` § Canonical Quote Marks** (en ASCII `""` / zh curly `“”` / ja corner `「」` — the format-check hook reports any non-canonical char immediately after the edit). Produce Markdown obeying `references/output-spec.md`. Create or overwrite the assigned `out_md` with `apply_patch`, then make focused corrective patches if self-check or the hook identifies a defect.
+   Compose native newsroom prose in `lang` per `references/language-spec.md`. The Fact Manifest locks factual meaning, not English surface strings: localize weekdays, times, currencies, titles, names, and terminology naturally, and do not add English parentheticals merely to reproduce Manifest values. Structure is `### title → body → **References**` per story — **no `**摘要**` / `**Summary**` / `**要約**` / `**分析**` / `**Analysis**` markers anywhere**. Per § Body Length Standard, every `en` body must contain at least 250 English words and every `zh` body at least 400 Unicode Han characters; there is no maximum and `ja` has no fixed floor. When supplied excerpts are too thin, open the Lead and relevant corroborating URLs, then search only if those sources remain insufficient. Meet the floor with relevant sourced substance, never repetition or generic padding. **Quote marks follow `references/language-spec.md` § Canonical Quote Marks** (en ASCII `""` / zh curly `“”` / ja corner `「」` — the format-check hook reports any non-canonical char immediately after the edit). Produce Markdown obeying `references/output-spec.md`. Create or overwrite the assigned `out_md` with `apply_patch`, then make focused corrective patches if self-check or the hook identifies a defect.
 
    **Bilingual execution order — PARALLEL**. Spawn both Writer subagents in a single orchestrator message (multi-Agent-tool-uses in one turn). Each Writer is independent: separate `lang`, separate `out_md_{lang}`, no shared file, no shared state. The orchestrator awaits both invocations and proceeds when both have returned.
 
@@ -239,14 +239,14 @@ Once all Scanner threads are closed, if the Scanner Batch contains zero candidat
    | Pass | Purpose |
    |------|---------|
    | 1 | Fact Manifest semantic fidelity and natural localization |
-   | 2 | Material claim source backing; search only when existing evidence is insufficient |
+   | 2 | Material-claim backing and substantive depth; open cited sources and search only when needed |
    | 3 | Quotation meaning, attribution, and target-language rendering |
    | 4 | Required structure, references, numbering, quote marks, and typography |
    | 5 | Full native-language editorial pass for Chinese, English, or Japanese |
 
    The Editor searches only to resolve a material factual or quotation issue, not to satisfy a quota. Pass 5 uses no web research because facts and evidence are already settled.
 
-   Pass 5 has no defect whitelist, edit quota, paragraph-count lock, or body-length rollback. It may rewrite sentences, merge or split paragraphs, and improve headlines whenever needed for genuinely native prose. It must preserve the event, factual meaning, uncertainty, attribution, source coverage, category, story order, and required Markdown structure.
+   Pass 5 has no defect whitelist, edit quota, paragraph-count lock, or maximum body length. It may rewrite sentences, merge or split paragraphs, and improve headlines whenever needed for genuinely native prose. It must preserve the event, factual meaning, uncertainty, attribution, source coverage, category, story order, required Markdown structure, and the 250-word/400-Han-character hard minimum.
 
    **Reporting.** The Editor prints a structured stdout report covering factual corrections, references added, claims removed or qualified, quotation fixes, structural fixes, and representative native-language edits; the orchestrator logs it but does not gate on it. The format-check hook fires after every `apply_patch` and validates the resulting file — if a patch produces a malformed state, the hook reports the violation and the Editor must correct that file before continuing.
 
@@ -336,7 +336,7 @@ Scattered through the Workflow above; consolidated here for quick scanning. **No
 | `references/schemas.md` | Category Scanner Output Schema, mechanical Scanner Batch Schema, Verifier Output Schema | Scanner, Orchestrator, Verifier |
 | `references/rubric.md` | Verifier-only source, geography, news-value, coverage, deduplication, and final category rules | Verifier |
 | `references/output-spec.md` | Required Markdown Output, Markdown Syntax Contract, Invalid + Valid examples (`lang=en`, `lang=zh`), APA 7th Reference Format | Writer |
-| `references/language-spec.md` | Localisation Table, Derived Display Fields, Filename Pattern, Language Rules, headline guidance, Body Length Guidance, Writing Standard, and language-specific conventions | Writer, Editor |
+| `references/language-spec.md` | Localisation Table, Derived Display Fields, Filename Pattern, Language Rules, headline guidance, Body Length Standard, Writing Standard, and language-specific conventions | Writer, Editor |
 | `references/verification.md` | Output Rules, Writer Self-Check, End-to-End Verification, Flow Diagram, Recommended Agent Assignment, Invocation Examples | Writer (self-check), Orchestrator (delivery check) |
 | `references/email-spec.md` | Email subject / body templates, env var contract, attachment selection, exit-code handling, security | Orchestrator (Step 10 only when `email` is set) |
 

@@ -183,24 +183,26 @@ Rationale: `ja` uses corner brackets because Japanese newsroom convention treats
 - Story titles are single-line newsroom headlines without terminal punctuation. Let the event determine the natural length; clarity and native phrasing matter more than a fixed character or word count.
 - Do not compress the body into the title. Detail lives in the body paragraph(s) that follow the `### title` line directly (no `**摘要**` / `**Summary**` / `**要約**` marker is used).
 
-## Body Length Guidance
+## Body Length Standard
 
-Use the following as planning targets, not validity bands:
+English and Chinese use a hard minimum with no maximum:
 
-| `lang` | Typical target | Unit |
-|---|---:|---|
-| `en` | about 300 | English words |
-| `zh` | about 500 | Unicode Han characters |
-| `ja` | story-dependent | — |
+| `lang` | Typical target | Hard minimum | Unit |
+|---|---:|---:|---|
+| `en` | about 300 | 250 | English words |
+| `zh` | about 500 | 400 | Unicode Han characters |
+| `ja` | story-dependent | — | — |
 
 When measuring, count only the story body between its `### <title>` and `**References**` marker. Exclude the title, category headings, References lines, URLs, separators, gap notes, and all other document structure.
 
 - **English word count**: count ASCII alphanumeric lexical tokens. Internal apostrophes or hyphens and a decimal or currency-number suffix do not split a token (`central-bank`, `investor's`, `3.5`, and `US$3.5` each count as one word).
 - **Chinese character count**: count only characters with Unicode Script property `Han`. Punctuation, Arabic numerals, Latin letters, whitespace, and Markdown syntax do not count.
-- A simple event may be shorter; a complex event may be longer. Completeness, relevance, and natural pacing decide the final length.
-- Never add background, repetition, generic significance claims, or source-language glosses to reach a target.
+- Every `en` and `zh` body must meet its hard minimum. A complex event may be longer; there is no maximum or narrow accepted band.
+- If supplied material is too thin, open the Lead and relevant corroborating pages, then search only when those sources remain insufficient.
+- Meet the minimum with relevant sourced event detail, mechanics, context, affected parties, consequences, uncertainty, or next steps.
+- Never add repetition, generic significance claims, unnecessary quotations, invented context, or source-language glosses to reach the minimum.
 - Never cut necessary explanation or distort a fact to reduce a count.
-- The format hook may report length statistics, but length alone does not fail export or email.
+- The format hook reports per-story failures below the minimum and blocks export or email until they are corrected.
 - Paragraph count remains flexible in all languages.
 
 ## Writing Standard

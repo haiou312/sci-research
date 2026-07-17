@@ -11,7 +11,7 @@ Each story must use this exact block structure (`{references_marker}` comes from
 ```md
 ### <Story title in target language>
 
-<Body in natural target-language newsroom prose. Preserve the Fact Manifest's factual meaning while localizing names, titles, dates, times, currencies, and other expressions normally; do not retain English strings or add English parentheticals merely to satisfy literal matching. Let the story determine its paragraphing and final length. The planning targets in `references/language-spec.md` § Body Length Guidance are advisory, not validity bands. Explain what happened and the context a reader needs, without padding, repeated significance claims, or formulaic openings and endings. Supplemental WebSearch is optional: use it only when the supplied material lacks necessary context, open every source whose facts you use, and cite every such URL. Every factual claim must trace to the Verifier bundle, Fact Manifest, or an opened supplemental source. Wrap direct quotations with the language's canonical `quote_marks` and preserve attribution.>
+<Body in natural target-language newsroom prose. Preserve the Fact Manifest's factual meaning while localizing names, titles, dates, times, currencies, and other expressions normally; do not retain English strings or add English parentheticals merely to satisfy literal matching. Follow `references/language-spec.md` § Body Length Standard: every `en` body has at least 250 English words and every `zh` body has at least 400 Unicode Han characters; `ja` has no fixed floor and no language has a maximum. Explain the event with relevant sourced detail and context rather than padding or formulaic prose. When the supplied material cannot support a complete body above the floor, open the Lead and relevant corroborating URLs, then use supplemental WebSearch only if those pages remain insufficient. Cite every opened source whose facts enter the body. Every factual claim must trace to the Verifier bundle, Fact Manifest, or an opened source. Wrap direct quotations with the language's canonical `quote_marks` and preserve attribution.>
 
 {references_marker}
 
@@ -28,7 +28,7 @@ Do not emit a trailing global references or sources section.
 
 **`[N]` numbering rule**: every reference line starts with `[N] ` where `N` runs **continuously from 1 across the entire document**, not per-story. The first reference of story 1 is `[1]`; if story 1 has 3 references, story 2's first reference is `[4]`. Multiple references per story are allowed and common when the Verifier delivers corroborating or claim-complementary sources.
 
-**Search URLs that supplied a fact in body MUST appear** in the references block. Supplemental search is optional and should be used only when the Verifier material and Fact Manifest do not provide context needed for a clear, accurate story. Open every result whose facts enter the body. The references block contains: Verifier KEEP URLs (Lead + every Corroborated by URL) ∪ {search URLs whose content backed a body fact}.
+**Search URLs that supplied a fact in body MUST appear** in the references block. Open the existing Lead and relevant corroborating URLs when the supplied excerpts cannot support a substantive body above the hard floor. Supplemental search is used only when those pages still do not provide enough relevant, verifiable material. Open every result whose facts enter the body. The references block contains: Verifier KEEP URLs (Lead + every Corroborated by URL) ∪ {search URLs whose content backed a body fact}.
 
 If a category has fewer kept stories than `min_per_category` after Verifier Coverage Review, keep the section heading and append exactly one italic `gap_note` line before the next `---`.
 
@@ -183,10 +183,10 @@ Before calling `apply_patch`, count your own output:
 6. No `^> **来源**` / `^> **Source**` blockquote patterns.
 7. No `^*\s*来源[:：]` / `^*\s*Sources?[:：]` italic in-text citation patterns.
 8. Every URL in the references block is either a Verifier KEEP URL (Lead or Corroborated by) OR a search URL that supplied a fact in body. URLs that were opened but whose content wasn't used MUST NOT appear; URLs whose content was used MUST appear.
-9. Every story is complete, relevant, and naturally paced. The approximate `en` and `zh` targets in `references/language-spec.md` § Body Length Guidance are planning aids only; do not pad, distort, or destructively trim a story to hit them.
+9. Every `en` story body contains at least 250 English words and every `zh` story body contains at least 400 Unicode Han characters, counted per `references/language-spec.md` § Body Length Standard. `ja` has no fixed minimum. There is no maximum. Never pad, distort, or repeat content to meet the floor.
 
 If any check fails, regenerate. A PostToolUse hook (`scripts/hooks/daily-news-format-check.js`) checks items 1, 2, 3, 4, 5, 6, and 7 mechanically after each edit and injects correction context into the task. Because PostToolUse runs after the edit, correct the resulting file before continuing. The orchestrator's direct `--file` check exits 2 on a violation and hard-stops export or email.
 
-Item 9 is editorial rather than a validity gate. The direct hook may report aggregate body-length statistics for `en` and `zh`, but length alone does not fail export or email.
+Item 9 is hook-enforced per story. The hook reports the story title, actual count, and minimum; direct mode exits 2 when any `en` or `zh` body is below the floor.
 
 **Item 8 is not hook-enforced** — verifying "every URL traces to Verifier KEEP OR backed a body fact" requires the Verifier-KEEP set, which the hook does not have. Item 8 is enforced by the Writer's citation contract and verified by Editor Pass 2.

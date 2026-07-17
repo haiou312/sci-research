@@ -49,14 +49,15 @@ The Fact Manifest locks factual identity and meaning, not English surface string
 - People, institutions, products, and official titles must refer to the same entity. Use the established target-language name or transliteration when one exists.
 - Direct quotes must faithfully preserve meaning and attribution, translated into `lang` unless `lang=en`.
 - Do not add source-language text in parentheses merely to reproduce a Manifest value. English glosses are used only when they genuinely help identify a proper noun without a standard target-language form.
-- Omitting a secondary Manifest fact is an editorial choice. Replacing it with a different fact is not.
+- You may omit a secondary Manifest fact when it does not help the reader, but every story still needs enough supported detail to explain the event fully. Replacing a Manifest fact with a different fact is not allowed.
 
 Every factual claim must come from the Verifier material or from a source you opened. If support is unclear, omit or qualify the claim rather than guessing.
 
 ### 3. Sources and references
 
 - Every Verifier Lead and `Corroborated by` URL appears in that story's `**References**` block.
-- Supplemental research is optional. Search only when the supplied material lacks context necessary for an accurate, intelligible story.
+- Start with the Verifier material and Fact Manifest. When they do not support a complete body above the language's hard minimum, open the Lead and relevant corroborating URLs to recover event details and context.
+- Run supplemental search only when those cited pages still do not provide enough relevant, verifiable material. There is no fixed search count.
 - Open every supplemental URL whose facts you use.
 - Add every used supplemental URL to the same story's References. Do not cite opened-but-unused pages.
 - Format references and continuous `[N]` numbering exactly as specified in `references/output-spec.md`.
@@ -68,15 +69,20 @@ Every factual claim must come from the Verifier material or from a source you op
 - Make the event, consequence, and relevant context clear without forcing every story into the same template.
 - Let the story determine its paragraph count, opening, ending, and level of detail.
 - Avoid padding, generic significance claims, repetitive conclusions, and unnecessary source-language glosses.
-- For English, about 300 words is a useful planning target. For Chinese, about 500 Han characters is a useful planning target. These are editorial guides, not pass/fail bands; a simple story may be shorter and a complex story may be longer.
+- Give each story substantive depth. Depending on the event, useful material may include what happened, how it works, the most relevant prior context, affected parties, quantified consequences, uncertainty, and the next decision point. Use only the elements that genuinely help explain this story.
+- `lang=en`: aim around 300 English words and never submit fewer than 250.
+- `lang=zh`: aim around 500 Unicode Han characters and never submit fewer than 400.
+- `lang=ja`: no fixed length floor.
+- These are minimums for `en` and `zh`, not maximums or narrow target bands. A complex story may be longer.
+- Meet the floor with relevant sourced substance, never repetition, generic analysis, unnecessary quotations, or invented context. If the available evidence cannot support the floor, stop and identify the story instead of emitting an undersized or padded body.
 - Quote only when exact wording matters. Otherwise paraphrase and attribute.
 
 ## Workflow
 
 1. Parse the Verifier KEEP set, final categories, URLs, and coverage gaps.
 2. Read the Fact Manifest and map each story to its locked factual meaning.
-3. Decide story by story whether supplemental research is necessary. There is no minimum search count.
-4. Write a natural target-language headline and body.
+3. Assess whether the supplied material supports a substantive body above the language floor. Open the story's cited sources when more detail is needed; search only if those sources remain insufficient.
+4. Write a natural target-language headline and body, using sourced event details and context rather than compressing the Factual excerpt into a short brief.
 5. Build the complete per-story References block.
 6. Assemble the report using the H1, H2, story-block, gap-note, separator, quote-mark, and filename rules in the two reference files.
 7. Use `apply_patch` to create `out_md`. Run the format check. If the file needs correction, use additional focused `apply_patch` operations until it passes.
@@ -110,7 +116,8 @@ Before returning:
 3. Every body fact is supported by the Verifier material or an opened and cited supplemental source.
 4. The report reads as native professional writing in `lang`, not as a translation or repeated template.
 5. H1/H2/H3 structure, coverage-gap notes, quote marks, References blocks, bare URLs, and continuous `[N]` numbering satisfy the reference specifications.
-6. The direct format check passes. Length information from the check is advisory only and must not trigger padding or destructive trimming.
+6. Every `en` body has at least 250 English words and every `zh` body has at least 400 Unicode Han characters. There is no maximum. No story uses repetition or unsupported prose to reach the floor.
+7. The direct format check passes.
 
 Return a concise completion report naming `out_md`, the story count, reference count, and any supplemental research used.
 '''
