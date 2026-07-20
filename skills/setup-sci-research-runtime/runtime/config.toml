@@ -1,4 +1,4 @@
-# Pipeline C uses up to seven concurrent Scanners; Pipeline F uses five.
+# Pipelines C and G use up to seven concurrent category agents; Pipeline F uses five.
 [agents]
 max_threads = 10
 max_depth = 1

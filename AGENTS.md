@@ -1,6 +1,6 @@
 # sci-research — Codex 项目指引
 
-这是一个 Codex 插件，包含四条专业情报流水线。以当前 skill、TOML agent 和引用规范为准；不要恢复旧平台的 agent 注册、嵌入式 prompt 或专用社交媒体 MCP 配置。
+这是一个 Codex 插件，包含五条专业情报流水线。以当前 skill、TOML agent 和引用规范为准；不要恢复旧平台的 agent 注册、嵌入式 prompt 或专用社交媒体 MCP 配置。
 
 ## 当前架构
 
@@ -10,6 +10,7 @@
 | D | $sci-research:daily-briefing | 多国品牌新闻简报 | SPD Bank 品牌 docx、可选邮件 |
 | E | $sci-research:reputation-track | 公司声誉风险监测 | 仅命中负面时生成 HTML 邮件正文 |
 | F | $sci-research:china-outbound-opportunity-briefing | 中资企业英国及欧洲商机拓展情报 | Markdown、机构化 docx、可选邮件 |
+| G | $sci-research:monthly-news-intelligence | 单国或地区指定月份热点新闻 | 与 Pipeline C 同结构的 Markdown、可选 docx 与邮件 |
 
 所有子 agent 都是带 `sci-research-` 命名空间的原生 Codex TOML 定义，源文件位于 `.codex/agents/*.toml`。Marketplace 更新后先用 `$sci-research:setup-sci-research-runtime` 同步到运行 workspace 的 `.codex/agents/`，并校验项目级 `.codex/config.toml` 中 `agents.max_threads >= 10`，再新开 Codex task。
 
@@ -39,6 +40,11 @@
 | sci-research-opportunity-fact-extractor | gpt-5.4-mini | medium | 交易、登记、图片和来源事实清单 |
 | sci-research-opportunity-writer | gpt-5.6-sol | high | 中文机构化商机简报写作 |
 | sci-research-opportunity-editor | gpt-5.6-sol | high | 事实、阶段、实体身份、商机措辞、引用与版式检查 |
+| sci-research-monthly-curator | gpt-5.6-sol | high | 按栏目将现有日报故事聚类为月度事件并提出正选/备选 |
+| sci-research-monthly-verifier | gpt-5.6-terra | high | 跨栏目去重、最终路由、证据集与月度故事选择 |
+| sci-research-monthly-fact-extractor | gpt-5.4-mini | medium | 从最终证据日报锁定时间线、阶段、事实、引语与引用 |
+| sci-research-monthly-writer | gpt-5.6-sol | high | 基于日报证据生成与 Pipeline C 同结构的多语言月报 |
+| sci-research-monthly-editor | gpt-5.6-sol | high | 本地证据事实、月度时间线、引用、格式与母语质量检查 |
 
 ## 流水线契约
 
@@ -91,6 +97,21 @@
 - Writer 必须遵守 Fact Manifest 和固定 Markdown 结构；图片优先使用官方图表或企业官方图片，版权不明时仅链接或写无合规配图。
 - Editor 完成事实、交易阶段、Companies House 身份、商机措辞、引用、图片与中文表达检查；导出前运行直接格式门。
 
+### G — Monthly News Intelligence
+
+流程：Pipeline C 最终 Markdown → 确定性月度索引 → Curator × active category → Verifier → Fact Extractor → Writer × language → Editor × language → pandoc → 可选邮件。
+
+- 只读取 `~/.sci-research/reports/daily-news/{YYYY-MM-DD}/` 顶层的 Pipeline C 最终 Markdown；每个日期最多选择同一国家的一种语言版本。不得读取 audit 文本、邮件正文或 docx。
+- 全流水线禁止 WebSearch 和打开来源 URL；现有日报正文与逐条 References 是完整证据边界。
+- 收集脚本只读运行，严格校验日报 H1、国家派生栏目及故事引用，并输出文件 SHA-256、日期覆盖、缺失日期和结构化故事索引。
+- `source_lang=auto` 时按 primary output language → English → Chinese → Japanese 回退，每个日期只取第一份匹配日报，避免双语日报重复计数。
+- Curator 按 active category 并行一次，将同一事件的月内进展聚类，默认每栏提出 3 个正选和最多 2 个备选；重复频率本身不是新闻价值。
+- Verifier 负责跨栏目同事件去重、最终路由、备选晋级和一至五条代表性证据日报选择；一个 source story ID 不得支持两篇最终月报新闻。
+- Fact Extractor 从最终 evidence story IDs 锁定事实、日期、阶段、引语与 URL 并去重；Writer/Editor 不得使用未入选日报或外部知识。
+- 最终 H2/H3/正文/逐条 APA References/分隔线与 Pipeline C 相同，只将 H1 和文件名改为月份，并在首个 H2 前保留一条本地化资料覆盖说明。中英文正文底线与 Pipeline C 相同。
+- 当前月份允许通过 `as_of` 生成，但必须明确资料截至日；`require_complete_month=true` 时任何应覆盖日期缺少可用日报均停止。
+- source index、Curator Bundle、Verifier 报告与 Fact Manifest 保存到月报目录 `audit/`，均不得使用 `.md`。
+
 ## 默认目录
 
 | 用途 | 默认路径 |
@@ -100,12 +121,13 @@
 | D 输出 | ~/.sci-research/reports/daily-briefings/{date}/ |
 | E 声誉报告 | ~/.sci-research/reports/reputation/{date}/ |
 | F 商机简报 | ~/.sci-research/reports/china-opportunity-briefings/{date_to}/ |
+| G 月度热点新闻 | ~/.sci-research/reports/monthly-news/{month}/ |
 
 - 输出目录可被相应的 --out-dir 或 --source-dir 覆盖。
 
 ## 邮件、依赖与安全
 
-- 所有邮件一律通过受控脚本：C/E/F 使用 scripts/send-report-email.py，D 使用 skills/daily-briefing/scripts/send-briefing-email.py。
+- 所有邮件一律通过受控脚本：C/E/F/G 使用 scripts/send-report-email.py，D 使用 skills/daily-briefing/scripts/send-briefing-email.py。
 - 不要内嵌 smtplib、sendmail 或 mail -s。email-send-guard hook 会阻断这类调用。
 - 真实邮件必须由用户明确请求；验证使用 --email-dry-run。
 - 安装或更新 D/F 的 docx 依赖：python3 -m pip install --user --upgrade -r requirements.txt。不要自动修改用户 Python 环境。
@@ -115,6 +137,7 @@
 | Hook | 触发 | 作用 |
 |---|---|---|
 | daily-news-format-check | PostToolUse: apply_patch + 交付前直接检查 | 编辑后反馈格式错误；直接 `--file` 检查阻断不合格 Markdown 的导出和邮件 |
+| monthly-news-format-check | PostToolUse: apply_patch + 交付前直接检查 | 复用 C 的故事/引用/长度规则，并检查月度 H1、资料覆盖说明和国家派生栏目顺序 |
 | opportunity-briefing-format-check | PostToolUse: apply_patch + 交付前直接检查 | 检查 F 的章节、表格、逐条摘要/影响/商机/关注、Companies House 字段、图片与免责声明 |
 | email-send-guard | PreToolUse: Bash | 阻断绕过受控邮件脚本的内联 SMTP |
 
@@ -136,6 +159,10 @@
 | F 选择、Companies House、图片与输出规范 | skills/china-outbound-opportunity-briefing/references/ |
 | F agent 行为 | .codex/agents/sci-research-opportunity-*.toml、.codex/agents/sci-research-companies-house-analyst.toml |
 | F Companies House 与 docx 脚本 | skills/china-outbound-opportunity-briefing/scripts/ |
+| G 编排、参数、输出与邮件 | skills/monthly-news-intelligence/SKILL.md |
+| G 月度选择、schema、输出与验证规范 | skills/monthly-news-intelligence/references/ |
+| G 日报只读索引脚本 | skills/monthly-news-intelligence/scripts/collect-monthly-reports.py |
+| G agent 行为 | .codex/agents/sci-research-monthly-*.toml |
 | Runtime 安装与检查 | skills/setup-sci-research-runtime/、skills/setup-sci-research-runtime/runtime/config.toml、scripts/codex/check-plugin-bundle.py |
 | 插件清单与市场条目 | .codex-plugin/plugin.json、.agents/plugins/marketplace.json |
 
@@ -147,5 +174,6 @@
 4. D 验证：先安装 requirements.txt，使用 C 产出的样例 Markdown，邮件只做 dry-run。
 5. E 验证：测试 Yahoo 企业/高管确认、非中国大陆媒体与公开社交媒体搜索、低中高判断、干净结果静默退出与邮件 dry-run。
 6. F 验证：测试五 lane 并行、Companies House 有/无 API key、watchlist 与 snapshot diff、confirmed/probable/unverified、格式门、图片回退、docx 渲染和邮件 dry-run。
+7. G 验证：用完整月和当前不完整月测试单日单语言选择、缺失日期、6/7 栏目 Curator 并行、跨栏目去重、Fact Manifest、双语一致性、月报格式门、docx 与邮件 dry-run。
 
-当前 C/D/E 只完成了静态与安装打包验证，真实端到端首跑仍待执行；F 已完成静态检查、Companies House 脚本测试、格式门和样例 docx 视觉验证，原生 agent 联网首跑仍待执行。
+当前 C/D/E 只完成了静态与安装打包验证，真实端到端首跑仍待执行；F 已完成静态检查、Companies House 脚本测试、格式门和样例 docx 视觉验证，原生 agent 联网首跑仍待执行；G 已完成静态与安装打包验证、日报收集脚本真实样本检查及格式门单元测试，原生 agent 离线首跑仍待执行。

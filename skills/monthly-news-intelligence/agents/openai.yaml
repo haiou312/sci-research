@@ -1,0 +1,7 @@
+interface:
+  display_name: "Monthly News Intelligence"
+  short_description: "Monthly country briefing sourced from daily reports"
+  default_prompt: "Use $sci-research:monthly-news-intelligence to create the United Kingdom monthly news report for 2026-07 in Chinese."
+
+policy:
+  allow_implicit_invocation: true

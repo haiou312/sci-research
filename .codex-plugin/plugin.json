@@ -1,7 +1,7 @@
 {
   "name": "sci-research",
-  "version": "1.21.1+codex.20260717110319",
-  "description": "Four specialised multi-agent intelligence workflows plus project-scoped runtime setup, including UK and Europe commercial opportunity monitoring for Chinese enterprises.",
+  "version": "1.22.0+codex.20260720163135",
+  "description": "Five specialised multi-agent intelligence workflows plus project-scoped runtime setup, including offline monthly country-news synthesis and UK/Europe commercial opportunity monitoring.",
   "author": {
     "name": "Peter Wang"
   },
@@ -10,6 +10,8 @@
   "license": "MIT",
   "keywords": [
     "daily-news",
+    "monthly-news",
+    "monthly-briefing",
     "news-intelligence",
     "daily-briefing",
     "reputation-track",
@@ -26,8 +28,8 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "Sci-Research News Intelligence",
-    "shortDescription": "News, commercial opportunities, branded briefings, and reputation monitoring",
-    "longDescription": "Four specialised workflows: daily-news-intelligence for dated single-country reporting, daily-briefing for a multi-country branded Word document, reputation-track for company and executive risk alerts, and china-outbound-opportunity-briefing for UK economic signals, Chinese expansion into Europe, cross-border M&A, investment footprints, and Companies House entity changes. A setup skill installs the namespaced TOML custom agents into the active project.",
+    "shortDescription": "Daily and monthly news, opportunities, briefings, and reputation monitoring",
+    "longDescription": "Five specialised workflows: daily-news-intelligence for dated single-country reporting, monthly-news-intelligence for offline monthly synthesis from existing daily reports, daily-briefing for a multi-country branded Word document, reputation-track for company and executive risk alerts, and china-outbound-opportunity-briefing for UK economic signals, Chinese expansion into Europe, cross-border M&A, investment footprints, and Companies House entity changes. A setup skill installs the namespaced TOML custom agents into the active project.",
     "developerName": "Peter Wang",
     "category": "Productivity",
     "capabilities": [
@@ -37,6 +39,7 @@
     ],
     "defaultPrompt": [
       "Generate a daily news intelligence report for Japan",
+      "Create a monthly United Kingdom news report from existing daily reports",
       "Create a branded briefing from daily news reports",
       "Monitor a company for reputational risk",
       "Create a UK and Europe opportunity briefing for Chinese enterprises",

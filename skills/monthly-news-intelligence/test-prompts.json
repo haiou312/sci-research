@@ -1,0 +1,17 @@
+[
+  {
+    "id": 1,
+    "prompt": "$sci-research:monthly-news-intelligence --country \"United Kingdom\" --month 2026-06 --lang zh",
+    "expected": "Read-only aggregation of one canonical Pipeline C Markdown per available date; six category-level Curators run in parallel; one Verifier and one Fact Extractor; Chinese monthly Markdown and DOCX with the Pipeline C story/reference structure, a visible source-coverage note, event-level deduplication, and no WebSearch."
+  },
+  {
+    "id": 2,
+    "prompt": "$sci-research:monthly-news-intelligence --country \"China\" --month 2026-05 --lang zh+en --stories-per-category 3",
+    "expected": "Seven active categories including china_nexus; selection and fact extraction run once; Chinese and English Writers/Editors run per language over the same final event set; each output carries identical evidence URLs, monthly H1, continuous APA numbering, hard body-length floors, and no outside facts."
+  },
+  {
+    "id": 3,
+    "prompt": "$sci-research:monthly-news-intelligence --country \"Japan\" --month 2026-07 --require-complete-month",
+    "expected": "Collector checks every expected date through as_of and stops before Curator dispatch if any date lacks a usable Japan daily report; it does not silently reinterpret partial coverage as a complete month."
+  }
+]

@@ -4,7 +4,7 @@ Send sci-research pipeline reports via Gmail SMTP.
 
 Supports three body modes (mutually exclusive, exactly one required):
   --body          plain text inline
-  --body-file     plain text from file (used by Pipelines C / D / F)
+  --body-file     plain text from file (used by Pipelines C / F / G)
   --body-html-file  HTML from file → builds multipart/alternative with auto
                   text/plain fallback (used by reputation-track / Pipeline E)
 
@@ -17,7 +17,7 @@ Reads credentials from environment variables:
   GOOGLE_EMAIL_START_TLS       — 'true' to use STARTTLS on port 587 (default: true)
 
 Usage:
-  # Text body, with optional attachments (Pipelines C / D / F)
+  # Text body, with optional attachments (Pipelines C / F / G)
   send-report-email.py \\
     --to "alice@foo.com,bob@bar.com" \\
     --subject "中国每日热点新闻 — 2026年4月14日" \\
@@ -159,7 +159,7 @@ def build_message(cfg, recipients, subject, body_text, attachments, body_html=No
     When `body_html` is provided, the body becomes a multipart/alternative
     containing both text/plain (auto-generated fallback) and text/html. When
     body_html is None, a single text/plain part is attached (legacy path for
-    Pipelines C / D / F).
+    Pipelines C / F / G).
 
     Attachment filenames use both RFC 2047 `filename=` and RFC 2231
     `filename*=` so non-ASCII names survive corporate Exchange clients.

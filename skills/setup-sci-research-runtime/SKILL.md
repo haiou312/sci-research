@@ -5,13 +5,13 @@ description: "Install, update, verify, or remove the project-scoped Codex agents
 
 # Setup Sci-Research Runtime
 
-Install the plugin's native Codex agents and required subagent concurrency setting into the current workspace. This skill configures the runtime only; it never runs Pipelines C, D, E, or F.
+Install the plugin's native Codex agents and required subagent concurrency setting into the current workspace. This skill configures the runtime only; it never runs Pipelines C, D, E, F, or G.
 
 ## Rules
 
 - Default `PROJECT_ROOT` to the current working directory. Use another directory only when the user explicitly names it.
 - Install only under `${PROJECT_ROOT}/.codex/`; never modify `~/.codex/config.toml`, global agents, MCP servers, prompts, Git hooks, or Python packages.
-- Pipeline C needs seven concurrent Scanner threads for China. Require project config `agents.max_threads >= 10`; keep `agents.max_depth = 1` in a newly created config because Sci-Research does not use recursive delegation.
+- Pipelines C and G need up to seven concurrent category threads for China. Require project config `agents.max_threads >= 10`; keep `agents.max_depth = 1` in a newly created config because Sci-Research does not use recursive delegation.
 - If `${PROJECT_ROOT}/.codex/config.toml` is absent, create it from the bundled runtime template. If it already exists, validate `agents.max_threads >= 10` and preserve the file byte-for-byte. Stop with the exact required TOML block when an existing config is missing the setting or sets it below 10.
 - Resolve `SKILL_DIR` as the absolute directory containing this `SKILL.md`, and derive `PLUGIN_ROOT` from it. Never hard-code a marketplace cache version.
 - Run the bundle checker before install or update.

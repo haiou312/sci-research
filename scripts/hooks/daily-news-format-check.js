@@ -244,12 +244,17 @@ function extractStoryBodies(content) {
 
 function detectLang(content) {
   const m = content.match(
-    /^# .+?(每日热点新闻|Daily News Intelligence|デイリーニュース)/m
+    /^# .+?(每日热点新闻|月度热点新闻|Daily News Intelligence|Monthly News Intelligence|デイリーニュース|月間ニュース)/m
   );
   if (!m) return null;
-  if (m[1] === "每日热点新闻") return "zh";
-  if (m[1] === "Daily News Intelligence") return "en";
-  if (m[1] === "デイリーニュース") return "ja";
+  if (m[1] === "每日热点新闻" || m[1] === "月度热点新闻") return "zh";
+  if (
+    m[1] === "Daily News Intelligence" ||
+    m[1] === "Monthly News Intelligence"
+  ) {
+    return "en";
+  }
+  if (m[1] === "デイリーニュース" || m[1] === "月間ニュース") return "ja";
   return null;
 }
 

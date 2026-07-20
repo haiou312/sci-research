@@ -15,6 +15,7 @@ REQUIRED_SKILLS = {
     "china-outbound-opportunity-briefing",
     "daily-news-intelligence",
     "daily-briefing",
+    "monthly-news-intelligence",
     "reputation-track",
     "setup-sci-research-runtime",
 }
@@ -27,6 +28,11 @@ REQUIRED_AGENTS = {
     "sci-research-daily-news-scanner",
     "sci-research-daily-news-writer",
     "sci-research-news-verifier",
+    "sci-research-monthly-curator",
+    "sci-research-monthly-editor",
+    "sci-research-monthly-fact-extractor",
+    "sci-research-monthly-verifier",
+    "sci-research-monthly-writer",
     "sci-research-opportunity-editor",
     "sci-research-opportunity-fact-extractor",
     "sci-research-opportunity-scanner",
@@ -101,8 +107,8 @@ def validate(plugin_root: Path) -> tuple[int, int]:
                 command = hook.get("command")
                 if isinstance(command, str):
                     commands.append(command)
-    if len(commands) != 3:
-        fail(f"expected 3 hook commands, found {len(commands)}")
+    if len(commands) != 4:
+        fail(f"expected 4 hook commands, found {len(commands)}")
     for command in commands:
         if "$PLUGIN_ROOT" not in command:
             fail(f"hook command does not use $PLUGIN_ROOT: {command}")
