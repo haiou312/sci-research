@@ -24,7 +24,7 @@ Silently verify all of the following. If any check fails, fix before writing —
 1. First non-whitespace character is `#`.
 2. H1 matches `h1_pattern` exactly for the chosen `lang` (see `references/language-spec.md` § Localisation Table).
 3. The active-category H2 headings appear in order (6 for a non-China report, 7 for a China report; `china_nexus` only for a China report) and each matches its composed value from `references/language-spec.md` § Category Catalog & Selection exactly.
-4. Every story title line starts with `### ` and is a natural single-line newsroom headline for `lang` (see `references/language-spec.md` § Title Length Rules).
+4. Every story title line starts with `### ` and is a natural, logically coherent single-line newsroom headline for `lang` (see `references/language-spec.md` § Title Length Rules). For `zh` and `en`, multi-clause titles use `，` and `, ` respectively, never bare whitespace or another separator; any causal connection is supported by retained evidence.
 5. Every `**References**` line is followed by one or more APA 7th references: `[N] Author. (Year, Month Day). Title. Outlet. https://...` (see `references/output-spec.md` § APA 7th Reference Format).
 6. No Markdown link syntax `[text](url)` appears anywhere in the document (see `references/output-spec.md` § Markdown Syntax Contract).
 7. No alternative reference formats: no `来源：` blocks, no `（来源：...）` inline citations, no bullet-list URLs, no global reference section at the end.

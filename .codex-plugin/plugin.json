@@ -1,6 +1,6 @@
 {
   "name": "sci-research",
-  "version": "1.22.0+codex.20260720163135",
+  "version": "1.22.1+codex.20260721154327",
   "description": "Five specialised multi-agent intelligence workflows plus project-scoped runtime setup, including offline monthly country-news synthesis and UK/Europe commercial opportunity monitoring.",
   "author": {
     "name": "Peter Wang"

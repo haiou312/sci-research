@@ -51,6 +51,8 @@ Each story is a **single dense paragraph** in Chinese. This is NOT the Pipeline 
 - Verb-object or subject-verb structure
 - No terminal punctuation
 - Concise and punchy, like a wire headline
+- Write one coherent statement, not two raw facts placed side by side. When a title contains two related claims or clauses, make their relationship explicit and separate them with the full-width comma `，`; never use bare whitespace, a colon, semicolon, or dash as the clause separator. Preserve spaces inside foreign-language proper names.
+- Use causal wording such as `推动` or `导致` only when the source Pipeline C report supports causation. Otherwise use an accurate non-causal relationship or focus the title on the stronger fact. Do not mechanically replace a space with a comma.
 - Examples from the reference briefing:
   - `以色列黎巴嫩同意直接谈判，鲁比奥主持华府斡旋`
   - `美国三月CPI同比升3.3%，汽油单月暴涨21.2%`

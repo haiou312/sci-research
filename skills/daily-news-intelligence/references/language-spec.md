@@ -181,6 +181,9 @@ Rationale: `ja` uses corner brackets because Japanese newsroom convention treats
 
 - The H1 is fixed to `h1_pattern` for the chosen language. Do not add subtitles, qualifiers, or parenthetical context.
 - Story titles are single-line newsroom headlines without terminal punctuation. Let the event determine the natural length; clarity and native phrasing matter more than a fixed character or word count.
+- A headline must express a coherent relationship, not concatenate two raw facts. When it contains two distinct claims or clauses, rewrite them so their relationship is explicit, then separate the clauses with the language's comma: `，` for `lang=zh` and `, ` for `lang=en`. Do not use bare whitespace, a colon, semicolon, or dash as a substitute for that clause separator. Ordinary spaces inside English prose and foreign-language proper names remain unchanged. Japanese continues to follow native Japanese headline punctuation.
+- Use causal wording such as `推动`, `导致`, `driving`, or `lifting` only when the retained evidence supports that causal relationship. Otherwise use an accurate non-causal relationship or make the stronger fact the single headline focus. Never repair a title by mechanically replacing whitespace with a comma.
+- Examples: `芯片出口激增，推动韩国7月前20天出口额创同期新高` when causation is supported; otherwise `韩国7月前20天出口额创同期新高，芯片出口增幅显著`. In English: `Chip exports surge, lifting South Korea's July shipments to a record` when supported.
 - Do not compress the body into the title. Detail lives in the body paragraph(s) that follow the `### title` line directly (no `**摘要**` / `**Summary**` / `**要約**` marker is used).
 
 ## Body Length Standard

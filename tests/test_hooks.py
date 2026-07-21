@@ -211,6 +211,63 @@ class HookTests(unittest.TestCase):
             self.assertIn("LENGTH_INFO: lang=zh", result.stdout)
             self.assertIn("required>=400", result.stdout)
 
+    def test_direct_format_check_rejects_chinese_headline_whitespace_separator(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            report = Path(temp_dir) / "daily-news/report.md"
+            report.parent.mkdir(parents=True)
+            report.write_text(
+                f"""# 韩国每日热点新闻 — 2026年7月16日
+
+## 一、经济与市场
+
+### 芯片出口激增 韩国前二十天出口额创新高
+
+{"中" * 400}
+
+**References**
+
+[1] Reuters. (2026, July 16). South Korean exports rise. Reuters. https://example.com/story
+""",
+                encoding="utf-8",
+            )
+            result = subprocess.run(
+                ["node", str(FORMAT_CHECK), "--file", str(report)],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("contains whitespace between Chinese text fragments", result.stderr)
+            self.assertIn("do not mechanically replace", result.stderr)
+
+    def test_direct_format_check_accepts_chinese_comma_and_foreign_name_spaces(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            report = Path(temp_dir) / "daily-news/report.md"
+            report.parent.mkdir(parents=True)
+            report.write_text(
+                f"""# 日本每日热点新闻 — 2026年7月16日
+
+## 一、经济与市场
+
+### Seven & i接受收购提议，交易仍待监管审查
+
+{"中" * 400}
+
+**References**
+
+[1] Reuters. (2026, July 16). Seven & i reviews bid. Reuters. https://example.com/story
+""",
+                encoding="utf-8",
+            )
+            result = subprocess.run(
+                ["node", str(FORMAT_CHECK), "--file", str(report)],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("FORMAT_OK", result.stdout)
+
     def test_direct_monthly_format_check_accepts_matching_structure(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             report = Path(temp_dir) / "monthly-news/report.md"

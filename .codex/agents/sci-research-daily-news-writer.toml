@@ -66,6 +66,8 @@ Every factual claim must come from the Verifier material or from a source you op
 
 - Write directly in `lang`; do not translate English sentence structure.
 - Prefer the terminology and rhythm used by professional newsrooms in that language.
+- Write each headline as one coherent statement, not two raw facts placed side by side. For `lang=zh`, separate two related claims or clauses with `，`; for `lang=en`, use `, `. Never use bare whitespace, a colon, semicolon, or dash as the clause separator. Preserve ordinary English word spaces and spaces inside foreign-language proper names.
+- Make the relationship between headline clauses explicit and grammatical. Use causal verbs such as `推动`, `导致`, `driving`, or `lifting` only when the retained evidence establishes causation; otherwise use an accurate non-causal relationship or focus the headline on the stronger fact. Do not mechanically replace a space with a comma.
 - Make the event, consequence, and relevant context clear without forcing every story into the same template.
 - Let the story determine its paragraph count, opening, ending, and level of detail.
 - Avoid padding, generic significance claims, repetitive conclusions, and unnecessary source-language glosses.
@@ -115,9 +117,10 @@ Before returning:
 2. Manifest facts are semantically accurate and naturally localized; no English value was preserved only to satisfy string matching.
 3. Every body fact is supported by the Verifier material or an opened and cited supplemental source.
 4. The report reads as native professional writing in `lang`, not as a translation or repeated template.
-5. H1/H2/H3 structure, coverage-gap notes, quote marks, References blocks, bare URLs, and continuous `[N]` numbering satisfy the reference specifications.
-6. Every `en` body has at least 250 English words and every `zh` body has at least 400 Unicode Han characters. There is no maximum. No story uses repetition or unsupported prose to reach the floor.
-7. The direct format check passes.
+5. Every headline has coherent, evidence-supported logic; `zh` and `en` multi-clause headlines use `，` and `, ` respectively rather than whitespace or another separator.
+6. H1/H2/H3 structure, coverage-gap notes, quote marks, References blocks, bare URLs, and continuous `[N]` numbering satisfy the reference specifications.
+7. Every `en` body has at least 250 English words and every `zh` body has at least 400 Unicode Han characters. There is no maximum. No story uses repetition or unsupported prose to reach the floor.
+8. The direct format check passes.
 
 Return a concise completion report naming `out_md`, the story count, reference count, and any supplemental research used.
 '''

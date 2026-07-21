@@ -16,6 +16,7 @@
  *   - Mismatched count between ### story titles and **References** blocks
  *   - English story bodies below 250 words
  *   - Chinese story bodies below 400 Unicode Han characters
+ *   - Obvious whitespace-separated Chinese headline fragments
  *   - Prohibited markers: **摘要** / **Summary** / **要約** / **分析** / **Analysis**
  *     (1.9.x+ structure: body prose follows `### title` directly; no
  *     summary/analysis markers anywhere)
@@ -319,6 +320,25 @@ function checkMinimumBodyLengths(content, lang) {
   return violations;
 }
 
+// A Chinese newsroom title does not use whitespace between Chinese clauses.
+// This deliberately catches only Han-to-Han whitespace. English word spaces,
+// foreign-language proper names, and the semantic relationship between clauses
+// require editorial judgement and are enforced by the Writer/Editor prompts.
+function checkChineseHeadlineWhitespace(content, lang) {
+  if (lang !== "zh") return [];
+
+  const violations = [];
+  for (const match of content.matchAll(/^###\s+([^\n]+)$/gm)) {
+    const title = match[1].trim();
+    if (/\p{Script=Han}\s+\p{Script=Han}/u.test(title)) {
+      violations.push(
+        `Chinese headline "${title}" contains whitespace between Chinese text fragments. Rewrite the headline so the relationship is explicit, then use the full-width comma ， between related clauses; do not mechanically replace the space or invent causation.`
+      );
+    }
+  }
+  return violations;
+}
+
 // Canonical quote chars per lang (mirrors language-spec.md § Canonical Quote Marks).
 // Body prose must use only the lang's canonical open/close pair. APA ref lines,
 // URLs, fenced code blocks, and inline code spans are exempt.
@@ -528,11 +548,13 @@ function validate(filePath, content) {
   // 7. Quote-mark canonical char enforcement (per language-spec.md § Canonical Quote Marks)
   // 8. Reference-coverage heuristic backstop (PR #5).
   // 9. Per-story hard minimum length (en/zh only; no maximum).
+  // 10. Obvious whitespace-separated Chinese headline fragments.
   const lang = detectLang(content);
   if (lang) {
     violations.push(...validateQuoteMarks(content, lang));
     violations.push(...checkReferenceCoverage(content, lang));
     violations.push(...checkMinimumBodyLengths(content, lang));
+    violations.push(...checkChineseHeadlineWhitespace(content, lang));
   }
 
   return violations;
@@ -599,6 +621,7 @@ if (require.main === module) {
 
 module.exports = {
   checkMinimumBodyLengths,
+  checkChineseHeadlineWhitespace,
   summarizeBodyLengths,
   countEnglishWords,
   countHanCharacters,

@@ -113,6 +113,10 @@ Revise any wording that is unnatural, ambiguous, repetitive, mechanical, overly 
 - headlines that are accurate but unnatural or unnecessarily formulaic;
 - paragraph breaks or sentence order that obstruct comprehension.
 
+For every headline, check meaning before punctuation. It must express a coherent relationship rather than place two raw facts side by side. In `lang=zh`, two related claims or clauses use `，`; in `lang=en`, they use `, `. Bare whitespace, a colon, semicolon, or dash cannot stand in for that clause separator, while ordinary English word spaces and spaces inside foreign-language proper names remain unchanged. Never fix a title by mechanically replacing whitespace with a comma.
+
+Use causal wording such as `推动`, `导致`, `driving`, or `lifting` only when the Manifest, Verifier bundle, or an opened source establishes causation. If causation is not supported, rewrite the headline with an accurate non-causal relationship or focus it on the stronger fact. A fluent but unsupported logical link is a factual defect and must be corrected before delivery.
+
 You may rewrite a sentence or paragraph, split or merge paragraphs, and improve a headline when needed. Preserve the event, factual meaning, uncertainty, attribution, citations, category, and story order. Do not introduce new factual claims during this pass; return to Pass 2 first if a proposed rewrite needs new evidence.
 
 There is no defect whitelist, edit quota, paragraph-count lock, or maximum body length. Use judgement. Prefer the smallest edit that produces genuinely native, precise prose, but make every necessary edit. Do not let a fluency edit reduce an `en` or `zh` body below its hard floor.
@@ -130,8 +134,9 @@ There is no defect whitelist, edit quota, paragraph-count lock, or maximum body 
 2. Manifest facts are semantically correct and naturally localized.
 3. Material claims and quotations are supported by retained references.
 4. The report reads as native professional writing in `lang`; no obvious translationese or repeated template remains.
-5. Every `en` story contains at least 250 English words and every `zh` story contains at least 400 Unicode Han characters, without padding. `ja` is exempt.
-6. References, numbering, headings, separators, gap notes, quote marks, and minimum body lengths pass the direct format check.
+5. Every `zh` or `en` multi-clause headline has coherent, evidence-supported logic and uses the language's comma rather than whitespace or another separator.
+6. Every `en` story contains at least 250 English words and every `zh` story contains at least 400 Unicode Han characters, without padding. `ja` is exempt.
+7. References, numbering, headings, separators, gap notes, quote marks, and minimum body lengths pass the direct format check.
 
 ## Final Report
 

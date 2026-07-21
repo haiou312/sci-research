@@ -184,9 +184,10 @@ Before calling `apply_patch`, count your own output:
 7. No `^*\s*来源[:：]` / `^*\s*Sources?[:：]` italic in-text citation patterns.
 8. Every URL in the references block is either a Verifier KEEP URL (Lead or Corroborated by) OR a search URL that supplied a fact in body. URLs that were opened but whose content wasn't used MUST NOT appear; URLs whose content was used MUST appear.
 9. Every `en` story body contains at least 250 English words and every `zh` story body contains at least 400 Unicode Han characters, counted per `references/language-spec.md` § Body Length Standard. `ja` has no fixed minimum. There is no maximum. Never pad, distort, or repeat content to meet the floor.
+10. Every `zh` or `en` multi-clause headline expresses an evidence-supported relationship and uses the language's comma (`，` or `, `), never bare whitespace or another separator. Do not mechanically replace whitespace with punctuation.
 
 If any check fails, regenerate. A PostToolUse hook (`scripts/hooks/daily-news-format-check.js`) checks items 1, 2, 3, 4, 5, 6, and 7 mechanically after each edit and injects correction context into the task. Because PostToolUse runs after the edit, correct the resulting file before continuing. The orchestrator's direct `--file` check exits 2 on a violation and hard-stops export or email.
 
-Item 9 is hook-enforced per story. The hook reports the story title, actual count, and minimum; direct mode exits 2 when any `en` or `zh` body is below the floor.
+Item 9 is hook-enforced per story. The hook reports the story title, actual count, and minimum; direct mode exits 2 when any `en` or `zh` body is below the floor. For item 10, the hook catches obvious whitespace-separated Chinese headline fragments; the Writer and Editor remain responsible for semantic relationships and English headline logic.
 
 **Item 8 is not hook-enforced** — verifying "every URL traces to Verifier KEEP OR backed a body fact" requires the Verifier-KEEP set, which the hook does not have. Item 8 is enforced by the Writer's citation contract and verified by Editor Pass 2.
