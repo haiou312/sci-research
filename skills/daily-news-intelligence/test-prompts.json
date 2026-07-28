@@ -12,6 +12,11 @@
   {
     "id": 3,
     "prompt": "$sci-research:daily-news-intelligence --country \"China\" --email \"test@example.com\" --email-dry-run --lang zh",
-    "expected": "7 category-scoped Scanner agents dispatched in parallel and mechanically wrapped into one Scanner Batch with per-category search/open_page counts; 7-category zh Markdown + docx (China: econ/politics/tech/society/china_nexus/ipo_ma/other — 海外涉华财经 at position 5), exact-date readable articles from foreign media only, paid/stub leads replaced by authoritative free same-event reporting, email dry-run preview with correct subject and 7-line category body template, no SMTP connection"
+    "expected": "7 category-scoped Scanner agents dispatched in parallel and mechanically wrapped into one Scanner Batch with per-category search/open_page counts; 7-category zh Markdown + docx (China: econ/politics/tech/society/china_nexus/ipo_ma/other — 海外涉华财经 at position 5), exact publication/development-date readable articles from foreign media only, paid/stub leads replaced by authoritative free same-event reporting, email dry-run preview with correct subject and 7-line category body template, no SMTP connection"
+  },
+  {
+    "id": 4,
+    "prompt": "$sci-research:daily-news-intelligence --country \"United States\" --date 2026-07-28 --lang en",
+    "expected": "econ discovery spans macro releases, central-bank and rate expectations, fiscal/trade policy, major asset classes, energy/commodities, and global disruptions with a concrete US channel; publication date and reportable development both equal 2026-07-28, so prior-session recaps are rejected; one market episode is consolidated across index/sector moves, flows, FX/bonds, sidecars or circuit breakers; stronger macro and policy events outrank routine retail-rate tables without fixed impact thresholds or a mandatory source count; final prose distinguishes confirmed facts from attributed expectations and unsupported causation"
   }
 ]

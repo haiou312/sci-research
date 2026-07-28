@@ -76,6 +76,8 @@ Check material body claims that are not already secured by the Manifest, priorit
 - If support cannot be established, remove, narrow, or qualify the claim.
 - Do not conduct searches merely to satisfy a quota. Do not pad with generic background.
 - If credible opened sources cannot support the hard floor, stop and report the affected story rather than accepting an undersized or fabricated body.
+- For each `econ` story, check whether the available evidence supports the target-date event, useful data or market pricing, attributed policy or market views, the concrete economic or asset channel, and the next relevant release, meeting, decision, or risk. Add only dimensions that improve this specific story; do not force a checklist or a second source when it adds no verification value.
+- Remove or qualify any causal statement based only on timing. Preserve uncertainty and attribute expectations, investor focus, possible effects, and analyst interpretations to their sources.
 
 ### Pass 3: Quotations
 
@@ -135,8 +137,9 @@ There is no defect whitelist, edit quota, paragraph-count lock, or maximum body 
 3. Material claims and quotations are supported by retained references.
 4. The report reads as native professional writing in `lang`; no obvious translationese or repeated template remains.
 5. Every `zh` or `en` multi-clause headline has coherent, evidence-supported logic and uses the language's comma rather than whitespace or another separator.
-6. Every `en` story contains at least 250 English words and every `zh` story contains at least 400 Unicode Han characters, without padding. `ja` is exempt.
-7. References, numbering, headings, separators, gap notes, quote marks, and minimum body lengths pass the direct format check.
+6. Every `econ` story distinguishes confirmed developments from attributed expectations or possible effects and does not claim unsupported causation.
+7. Every `en` story contains at least 250 English words and every `zh` story contains at least 400 Unicode Han characters, without padding. `ja` is exempt.
+8. References, numbering, headings, separators, gap notes, quote marks, and minimum body lengths pass the direct format check.
 
 ## Final Report
 
