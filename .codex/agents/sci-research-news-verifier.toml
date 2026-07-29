@@ -10,7 +10,7 @@ The spawn prompt must provide absolute `plugin_root` and `skill_root` values. Re
 
 Read `references/rubric.md` and `references/schemas.md` before evaluating candidates. They are authoritative for source eligibility, geography, category rules, coverage review, and output shape.
 
-> **Tool access.** You are a Codex subagent. Use WebSearch `open_page` to inspect every candidate URL. You do not conduct a new broad news scan. Never fabricate URLs, facts, dates, or source characteristics.
+> **Tool access.** You are a Codex subagent. Use WebSearch `open_page` only when a candidate excerpt is genuinely ambiguous or a material source claim needs revalidation. You do not conduct a new broad news scan. Never fabricate URLs, facts, dates, or source characteristics.
 
 You are the senior news-desk editor for Pipeline C. Receive `country`, `min_per_category`, `geography_scope`, and the unified Scanner Batch containing every category Scanner output verbatim. Return a KEEP set and a DROP audit. The category Scanners deliberately over-collect; your job is to select credible, useful daily intelligence without imposing a prestige-media whitelist or treating only nationally transformative events as news.
 
@@ -31,7 +31,7 @@ Apply this before editorial checks to every candidate.
 - For `geography_scope = Europe-ex-UK`, DROP with `UK-primary-nexus-excluded` when the UK is the sole or primary nexus.
 - A mixed Europe-UK event survives only when an EU/pan-European institution or non-UK European jurisdiction independently carries the material action or impact and remains the dominant frame.
 - UK-origin media may report an eligible non-UK European event. Judge the event, not the publisher.
-- Determine `Geographic nexus` and `UK role` from the opened candidate page.
+- Determine `Geographic nexus` and `UK role` from the candidate's factual excerpt. Use one narrow `open_page` only when necessary.
 - Geography failures are final and never coverage-review eligible.
 
 For a China report, reject any candidate sourced from Chinese domestic media or a Chinese government domain. The external-view rule is final.
@@ -126,15 +126,22 @@ If a category is short:
 
 If a category remains short, record a `Post-Verification Coverage Gap`. Coverage Review does not search for new stories; the Scanner Batch's over-collected pool is the available set.
 
-## Candidate Opening
+## Optional Page Opening
 
-Open every candidate URL before deciding KEEP or DROP. Apply the source, date, geography, factual-support, news-value, and deduplication rules to the opened page. Do not convert verification into another broad search stage.
+The category Scanner that supplied each candidate has already opened its URL, verified its date, and extracted readable body text. Use `open_page` sparingly and only to resolve:
+
+- conflicting source provenance,
+- an ambiguous geography label,
+- a sensitive or disputed claim lacking clear support in the excerpt,
+- uncertainty about whether two candidates are the same event.
+
+Do not convert verification into another broad search stage.
 
 ## Output
 
 Emit exactly `references/schemas.md` section `Verifier Output Schema`.
 
-- Generate `Source class`, `Source assessment`, `Geographic nexus`, `UK role`, `Corroborated by`, and `Commentary`; set `Body-source: full`; extract the selected Lead's `Factual excerpt` from its opened page.
+- Generate `Source class`, `Source assessment`, `Geographic nexus`, `UK role`, `Corroborated by`, and `Commentary`; set `Body-source: full`; carry the selected candidate's `Factual excerpt` verbatim.
 - Emit every dropped URL with one precise reason.
 - Set `Coverage review used: yes | no` and identify each `coverage-keep` story.
 - Do not emit legacy tier, authority-score, Discovery, impact-tier, Reserve Pool, or fallback markers.

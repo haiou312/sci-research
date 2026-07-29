@@ -14,7 +14,7 @@ Generate a professional dated daily report for institutional readers covering a 
 **Pipeline flow** (high-level — Workflow below has the numbered procedure with bash commands):
 
 - Validate params → parse `lang` as `langs = lang.split('+')` (single or bilingual) → expand `~` → compute derived fields per `lang` (incl. `active_categories`)
-- Fan out ONE Scanner per active category in parallel (6 or 7 category-scoped Luna agents); each searches only its assigned category and emits every target-date URL separately
+- Fan out ONE Scanner per active category in parallel (6 or 7 category-scoped Luna agents); each searches only its assigned category and emits every qualifying URL separately
 - Mechanically wrap all complete category outputs verbatim into one Scanner Batch; IF the Batch has no stories → STOP with message
 - Verifier (Scanner Batch in prompt) → credibility + new-information + daily-news-value + originality + dedup + final category routing → Coverage Review for short categories → Verifier Output Schema
 - Fact-Extractor (Verifier output + params) → fact-manifest YAML (single, language-agnostic — shared across bilingual halves)
@@ -29,21 +29,22 @@ Generate a professional dated daily report for institutional readers covering a 
 
 Evidence priority order:
 
-1. Articles whose absolute date or target-day relative timestamp indicates publication on `date`; the Verifier revalidates every candidate with WebSearch `open_page` on its URL (primary truth).
+1. Articles whose publication date matches `date` exactly, verified by WebSearch `open_page` on the canonical URL (primary truth).
 2. `web_search` is only used to surface candidate URLs — never standalone evidence.
 3. Model inference is permitted only when directly supported by the opened article text.
 
 Apply a two-stage filter before anything reaches the Writer:
 
-- **Stage 1 (Scanner fan-out, one agent per category)**: GPT-5.6 Luna instances run concurrently, each focused on one active category and using only these hard gates: target-day publication evidence (including resolvable `today` or minute/hour-based timestamps), foreign-media-only sourcing for China, and Europe-ex-UK event scope. Each instance receives one category and its one-sentence discovery direction.
+- **Stage 1 (Scanner fan-out, one agent per category)**: GPT-5.6 Luna instances run concurrently, each focused on one active category and using only these hard gates: exact target date, authoritative media, enough readable factual body, free same-event replacement for paid/stub reporting, foreign-media-only sourcing for China, and Europe-ex-UK event scope. Each instance receives one category and its one-sentence discovery direction.
 - **Stage 2 (Verifier)**: source credibility and evidence fit + concrete new information + daily briefing value + originality/corroboration + dedup/category validation. It uses contextual editorial judgement rather than fixed impact numbers or outlet grades, then runs Coverage Review for any category below `min_per_category`.
 
 Hard rules:
 
-- Scanner date evidence may be an explicit target date or a relative timestamp that clearly resolves to the target day. The Verifier opens every candidate and performs final canonical-date verification.
+- Do not admit a candidate without passing the date-verification gate.
+- Scanner candidates must come from authoritative media and contain readable factual body text; paid/stub leads require a free authoritative same-event replacement.
 - A China Scanner uses foreign media only and does not query or use Chinese domestic media or Chinese government domains.
 - When normalized `country == Europe`, apply the hard `Europe-ex-UK` geography gate in `references/rubric.md`: a UK-only or UK-primary event is out of scope. Outlet nationality is not event geography, so UK publications remain valid sources for in-scope European events.
-- Do not pad a category with off-date or out-of-scope material.
+- Do not pad a category with untrustworthy, off-date, out-of-scope, or fact-free material.
 - Do not merge unrelated events into one synthetic story.
 - Same-event deduplication, Lead selection, final category routing, `china_nexus` boundaries, and IPO/M&A eligibility happen in the Verifier, not the Scanner.
 - The Writer must read the Verifier's KEEP set, never the Scanner Batch directly.
@@ -156,13 +157,14 @@ The orchestrator must not summarise, truncate, or reformat the upstream output �
 
 2. **Scan candidates** (Scanner stage, English output — CATEGORY FAN-OUT). Launch **one `sci-research-daily-news-scanner` subagent per active category**, all concurrently in one orchestrator message, per § Subagent Dispatch Rule. China launches 7 Scanner invocations; every other country launches 6. Each invocation uses the same exact role with `fork_turns="none"` and receives only `country`, `date`, one `category`, and `geography_scope` after the runtime-path header. Use category-labelled task names for observability, but never as the role selector.
 
-Each category Scanner uses GPT-5.6 Luna's judgement to search broadly within its assigned category. China uses foreign media only; Europe excludes UK-only or UK-primary events. Every target-date URL remains a separate candidate for Verifier review.
+Each category Scanner uses GPT-5.6 Luna's judgement to search broadly within its assigned category. Its TOML intentionally contains one-line category directions and only the confirmed hard rules; do not add search plans, outlet lists, source grades, materiality tests, transaction thresholds, routing rules, dedup instructions, or candidate quotas to the spawn prompt. Each admitted URL must be authoritative media reporting published on the exact target date with readable factual body text. Paid/stub reporting must be replaced by a readable free authoritative report of the same event. China uses foreign media only; Europe excludes UK-only or UK-primary events. Every qualifying URL remains a separate candidate for Verifier review.
 
 Wait for all category invocations. Validate each result against `references/schemas.md` § Category Scanner Output Schema:
 
 - `Searched category` must equal the category assigned to that invocation.
 - `Status` must be `complete`; a valid complete output may contain zero candidates.
-- Every candidate ID must be prefixed by its searched category and every story must contain publication-time evidence (absolute or accepted target-day relative text), source, and URL.
+- Tool counts must be non-negative integers, `Search actions >= 1`, `open_successes + open_failures = open_attempts`, and `Candidates found <= Open-page successes`. Counts refer to individual queries and individual URLs, even when a WebSearch tool call batches several operations.
+- Every candidate ID must be prefixed by its searched category and every story must contain `Open-page result: verified-readable`.
 
 If an invocation errors, returns `Status: failed`, or violates the schema, retry that category once with the same exact role, parameters, and `fork_turns="none"`. If the retry also fails, halt before the Verifier and report the affected category; do not convert an execution failure into a zero-candidate coverage gap.
 
@@ -173,13 +175,13 @@ After all category outputs are complete, mechanically assemble one Scanner Batch
 - Place each complete Category Scanner Output verbatim between its matching BEGIN/END markers.
 - Do not summarize, rewrite, deduplicate, merge, score, or reroute any candidate.
 
-Use `apply_patch` to create or overwrite `SCANNER_AUDIT` with the full Scanner Batch verbatim. This artifact records the complete candidate pool.
+Use `apply_patch` to create or overwrite `SCANNER_AUDIT` with the full Scanner Batch verbatim. This artifact records the complete candidate pool, per-category coverage notes, and `search` / `open_page` action counts.
 
 After `SCANNER_AUDIT` is durable, close every category Scanner thread before Step 7. For a failed or invalid category attempt, close that attempt before launching its retry.
 
 Once all Scanner threads are closed, if the Scanner Batch contains zero candidates across all categories, stop and report: "No news candidates found for {country} on {date}. The date may be a future date, a holiday, or WebSearch may be temporarily unavailable." Do not proceed to the Verifier.
 
-3–6. **[Category Scanner internal]** Free-form discovery plus the date and geography checks happen independently inside each category Scanner. The orchestrator waits for the complete fan-out, validates every output, then creates the mechanical Scanner Batch.
+3–6. **[Category Scanner internal]** Free-form discovery plus the short hard-rule checks happen independently inside each category Scanner. The orchestrator waits for the complete fan-out, validates every output, then creates the mechanical Scanner Batch.
 
 7. **Quality filter** (Verifier stage). Spawn `sci-research-news-verifier` (`.codex/agents/sci-research-news-verifier.toml`) per § Subagent Dispatch Rule with the full **Scanner Batch** (`references/schemas.md` § Scanner Batch Schema) included verbatim in its prompt plus `country`, `min_per_category`, and `geography_scope`. The Verifier independently assesses source credibility, revalidates date and geography, evaluates concrete new information and contextual daily-briefing value, selects Leads from same-event candidate URLs, performs final dedup and category routing, and applies the `china_nexus` and `ipo_ma` rules in `references/rubric.md`. If a category is short, Coverage Review may admit credible narrower regional, specialist, institutional, or company-level developments, but never relaxes date, geography, source provenance, factual support, or true-duplicate rules. The Verifier emits the schema from `references/schemas.md`, including a complete DROP audit and any remaining coverage gaps.
 
