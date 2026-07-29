@@ -54,14 +54,14 @@
 
 - Scanner 按 active category 一栏一个并行运行；该 fan-out 每份报告只执行一次。Verifier、Fact Extractor 各运行一次；双语模式下 Writer 和 Editor 按语言并行。
 - 每个 Scanner 使用简短、高自由度提示，只接收一个栏目及其一句大致搜索方向，由 GPT-5.6 Luna 自行决定查询、媒体、语言、深度和跟进路径。
-- Scanner 只执行这些硬门槛：日期必须精确等于目标日；来源必须是权威媒体；页面必须有可读事实正文；付费或仅摘要线索必须找到权威免费同事件报道，否则删除；不得编造。
-- Scanner 不做新闻价值评分、交易或影响门槛、候选配额、去重、Lead 选择、最终分类或 `china_nexus`/`ipo_ma` 路由；每个合格 URL 独立交给 Verifier。
+- Scanner 只执行这些硬门槛：日期必须精确等于目标日；中国只搜索外媒；Europe 提前排除英国主体事件；不得编造。来源、正文、付费可用性及其他采用资格全部交给 Verifier。
+- Scanner 不做新闻价值评分、交易或影响门槛、候选配额、去重、Lead 选择、最终分类或 `china_nexus`/`ipo_ma` 路由；每个当天候选 URL 独立交给 Verifier。
 - 编排器只按栏目顺序原样包裹各 Scanner 输出并计算汇总计数，不新增 Merger agent，不改写、去重或路由候选；这些判断仍由 Verifier 完成。
 - country=China 必须采用外部视角：只查询和使用外国媒体，不查询或使用中国本土媒体及中国政府域名。
 - country=Europe 使用 Europe-ex-UK 地域契约：英国为唯一或主要地域主体的事件必须排除，且该门槛不得被 Coverage Review 放宽；英国媒体仍可作为欧洲新闻来源，英国仅作为背景或外部交易对手时不自动排除。
 - 非中国报告有 6 个栏目；中国报告在第 5 位增加 china_nexus，并保留 ipo_ma。
-- Verifier 独立判断来源可信度、新闻价值和具体新事实，并负责 Lead 选择、同事件去重、最终栏目路由、`china_nexus`/`ipo_ma` 资格及 Coverage Review。
-- Scanner Batch（含每栏原始输出及 search/open_page 计数）与 Verifier KEEP/DROP 报告必须原样保存到日报目录的 `audit/*.txt`；不要使用 `.md`，避免 Pipeline D 将审计文件当作国家日报。
+- Verifier 打开每个候选 URL，独立判断来源、正文、付费可用性、事实、新闻价值和地域资格，并负责 Lead 选择、同事件去重、最终栏目路由、`china_nexus`/`ipo_ma` 资格及 Coverage Review。
+- Scanner Batch 与 Verifier KEEP/DROP 报告必须原样保存到日报目录的 `audit/*.txt`；不要使用 `.md`，避免 Pipeline D 将审计文件当作国家日报。
 - Writer 必须遵守 Fact Manifest；Editor 使用 apply_patch 运行五道检查。引用、引号和输出格式规范以 skills/daily-news-intelligence/references/ 为准。
 - 英文每篇正文不得少于 250 个词，中文每篇正文不得少于 400 个 Unicode 汉字，不设最高字数。材料不足时先打开 Lead 和相关佐证原文，再按需补充搜索；只能用可引用的实质内容达到底线，不得重复、空泛扩写或编造。
 - --email-attach none 表示仅发送正文，必须省略 --attach。

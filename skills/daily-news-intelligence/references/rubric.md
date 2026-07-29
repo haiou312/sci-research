@@ -22,7 +22,6 @@ Eligibility principles:
 - Regional and specialist sources may Lead when they directly report an in-scope event and have accountable editorial provenance.
 - A media report may rely on a filing or official statement for what an institution or company announced. Material consequences or contested claims should be corroborated when practical.
 - Transparent syndication is eligible when attribution is clear. Prefer the original URL when it is usable; otherwise retain the original under `Corroborated by` when known.
-- Scanner admits only media reporting with enough readable factual body. When the original is paywalled, an authoritative free same-event report or transparent attributed syndication must supply the candidate body.
 
 Hard-reject as a Lead:
 
@@ -57,7 +56,7 @@ For `country = China`:
 - Chinese domestic actions must be reported through eligible foreign media.
 - This restriction applies across all categories and cannot be relaxed for coverage.
 
-The Scanner already applies the same foreign-media-only rule. The Verifier revalidates it.
+The Verifier revalidates the Scanner's foreign-media-only rule.
 
 ## Editorial Selection Rubric
 
@@ -115,7 +114,7 @@ When a category remains short, record the gap instead of admitting weak evidence
 ## Date Verification Rules
 
 - Each category Scanner admits only exact-date candidates; the Verifier revalidates that decision.
-- Every candidate URL must pass an `open_page` round trip on the canonical article or document.
+- The Verifier opens every candidate URL before deciding KEEP or DROP.
 - The extracted publication date must equal `date` in either the outlet's local timezone or UTC.
 - Neighbouring days do not qualify.
 - Search snippets alone are not proof.

@@ -14,38 +14,22 @@ Return one English output for the single assigned category. The searched categor
 - Date: <YYYY-MM-DD>
 - Searched category: <category id>
 - Candidates found: <M>
-- Search actions: <non-negative integer>
-- Open-page attempts: <non-negative integer>
-- Open-page successes: <non-negative integer>
-- Open-page failures: <non-negative integer>
 
 ## Stories
 
 ### [<searched category>] <English headline>
 - Candidate ID: <category-prefixed ID unique within the Scanner Batch, such as econ-1>
-- Publish date (verified): <ISO timestamp or local date>
-- Source: <media organisation>
-- URL: <full canonical or readable syndicated https URL>
-- Byline: <author, organisation byline, or "No byline">
-- Open-page result: verified-readable
-- Factual excerpt: <verbatim text from the readable article body>
-- Key facts: <concise English account of what the article reports>
+- Publish date: <ISO timestamp or local date>
+- Source: <publisher or issuing organisation>
+- URL: <full https URL>
 
-... (repeat for every qualifying URL; do not merge possible duplicates) ...
-
-## Coverage Note
-
-- <category id>: <brief description of what was found, why authoritative exact-date reporting with readable factual body was sparse, or why Status is failed>
+... (repeat for every target-date URL; do not merge possible duplicates) ...
 ```
 
 Rules:
 
 - `Status: complete` requires meaningful search execution, even when `Candidates found: 0`.
 - `Status: failed` means the Scanner could not complete discovery because of a tool or runtime failure; it is not evidence that the category had no qualifying news.
-- `Status: complete` requires `Search actions >= 1`. Count individual queries, not batched tool calls.
-- Count `Open-page attempts` by individual URL, not batched tool calls.
-- `Open-page successes + Open-page failures` must equal `Open-page attempts`.
-- `Candidates found` must not exceed `Open-page successes`.
 
 ## Scanner Batch Schema
 
@@ -60,7 +44,6 @@ The orchestrator creates one Scanner Batch after all category Scanner invocation
 - Category outputs complete: <N>
 - Candidates found: <M>
 - Candidate counts by searched category: one `id=<n>` token per category in active-category order
-- Tool totals: search=<n> | open_attempts=<n> | open_successes=<n> | open_failures=<n>
 
 ## Category Outputs
 
@@ -99,7 +82,7 @@ The Verifier evaluates every Scanner candidate, selects the final Lead for dupli
 - Geographic nexus: <target country, non-UK European jurisdiction, or EU/pan-European institution>
 - UK role: <not-applicable | none | context | external-counterparty>
 - Corroborated by: <same-event candidate URLs folded into this Lead; or "None">
-- Factual excerpt: <carried verbatim from the selected Scanner candidate>
+- Factual excerpt: <verbatim text extracted from the opened Lead page>
 - Commentary: <Verifier account of what happened and why it matters>
 - Verdict: KEEP
 - Source verdict: <credible | credible-with-caveat>

@@ -20,7 +20,7 @@ Given a country, company, date, month, or reporting window, this plugin orchestr
 
 The five pipelines use separate agent chains and stage contracts. Pipeline D intentionally consumes one date of Pipeline C reports across countries. Pipeline G consumes one month of Pipeline C reports for one country and never searches the web. Pipeline F performs its own date-range discovery and uses a scoped Companies House API/watchlist monitor; it does not claim exhaustive discovery of every Chinese-backed UK entity.
 
-Pipeline C also writes raw Scanner and Verifier audit artifacts under `daily-news/{date}/audit/` as `.txt` files. They show the Scanner candidate pool and coverage notes, then the Verifier's source assessment, KEEP/DROP reasons, Coverage Review decisions, and remaining gaps; Pipeline D ignores them because it reads report Markdown rather than audit text files.
+Pipeline C also writes raw Scanner and Verifier audit artifacts under `daily-news/{date}/audit/` as `.txt` files. They show the Scanner candidate pool, then the Verifier's source assessment, KEEP/DROP reasons, Coverage Review decisions, and remaining gaps; Pipeline D ignores them because it reads report Markdown rather than audit text files.
 
 ---
 
@@ -29,7 +29,6 @@ Pipeline C also writes raw Scanner and Verifier audit artifacts under `daily-new
 - **20 specialised agents** across five pipelines, each agent narrowly scoped
 - **Parallel high-freedom Luna Scanners** — one focused agent and one short direction per category, with no outlet list, source tier, candidate quota, impact threshold, deduplication, or routing logic
 - **Per-URL date verification** in `$sci-research:daily-news-intelligence` — neighbouring days are discarded
-- **Readable free reporting** — paid or stub-only leads are replaced with an authoritative free same-event article or excluded
 - **Editorial second-pass filter** (`sci-research-news-verifier`) for daily news — evidence fit / new information / contextual news value / originality / dedup
 - **Fact Manifest + 5-pass Editor** — numbers / names / dates / quotes locked to a verbatim YAML manifest, then fact-checked and style-repaired post-Writer
 - **External-view China gate** — `$sci-research:daily-news-intelligence --country "China"` uses foreign media only and excludes Chinese-domestic outlets and Chinese government domains
@@ -449,8 +448,8 @@ Bilingual mode (--lang zh+en …): the category Scanner fan-out runs once per re
 
 | Agent | Codex configuration | Role |
 |---|---|---|
-| `sci-research-daily-news-scanner` | gpt-5.6-luna / medium | One parallel instance per active category. Each instance follows one short category direction; hard-gates exact date, authoritative media, readable body, paid-to-free replacement, China foreign-media-only sourcing, and Europe-ex-UK scope; and reports search/open-page counts. The orchestrator mechanically wraps all outputs before handing every qualifying URL to the Verifier |
-| `sci-research-news-verifier` | gpt-5.6-terra / high | Editorial second-pass filter: independent source assessment, concrete new information, contextual daily-news value, originality/corroboration, Lead selection, deduplication, final category routing, and Coverage Review for short categories |
+| `sci-research-daily-news-scanner` | gpt-5.6-luna / medium | One parallel instance per active category. Each instance follows one short category direction and collects every target-date URL, retaining China foreign-media-only sourcing and Europe-ex-UK scope. The orchestrator mechanically wraps the minimal candidate metadata for the Verifier |
+| `sci-research-news-verifier` | gpt-5.6-terra / high | Opens every candidate URL, then performs independent source assessment, factual-body review, concrete-new-information and contextual-news-value judgement, originality/corroboration, Lead selection, deduplication, final category routing, and Coverage Review for short categories |
 | `sci-research-daily-fact-extractor` | gpt-5.4-mini / medium | Extracts every number / name / date / quote from the Verifier KEEP set into a locked-values YAML Fact Manifest (no web access) |
 | `sci-research-daily-news-writer` | gpt-5.6-sol / high | Consumes the Verifier KEEP set and Fact Manifest and composes native target-language newsroom prose. English bodies have a 250-word minimum and Chinese bodies a 400-Han-character minimum, with no maximum. It opens existing story sources and performs supplemental research only when needed for relevant depth. One instance per language in bilingual mode |
 | `sci-research-daily-editor` | gpt-5.6-sol / high | Five-pass post-Writer editor: semantic fact fidelity, source-backed substantive depth, quotation accuracy, structure/typography, and a full native-language editorial pass. It repairs undersized stories from opened evidence while preserving facts, sources, story set, category routing, and required Markdown structure. `apply_patch`-only. One instance per language in bilingual mode |
@@ -525,14 +524,11 @@ The Pipeline C Scanner is intentionally short. GPT-5.6 Luna chooses its own quer
 The Scanner applies only these hard rules:
 
 - the article publication date must equal the requested date;
-- the source must be authoritative, editorially accountable media;
-- the page must expose enough readable article body to verify facts;
-- a paid or stub-only lead must be replaced with an authoritative free same-event article;
 - China reports use foreign media only;
 - Europe reports exclude UK-only and UK-primary events, while UK media may report eligible non-UK European events;
 - unverifiable facts, dates, sources, and URLs must never be invented.
 
-The Scanner does not score news value, enforce transaction or impact thresholds, decide final category eligibility, merge duplicate coverage, choose a Lead, or route `china_nexus` and `ipo_ma`. It returns each qualifying URL separately. The Verifier then judges credibility and news value, selects Leads, deduplicates events, performs final category routing, and runs Coverage Review.
+The Scanner does not assess source credibility, body access, paid access, factual sufficiency, news value, transaction or impact thresholds, final category eligibility, duplicate coverage, Lead selection, or `china_nexus` and `ipo_ma` routing. It returns each target-date URL separately. The Verifier opens every candidate URL, makes those decisions, selects Leads, deduplicates events, performs final category routing, and runs Coverage Review.
 
 Detailed rules:
 - Pipeline C Scanner hard rules and category directions: [`.codex/agents/sci-research-daily-news-scanner.toml`](./.codex/agents/sci-research-daily-news-scanner.toml)
