@@ -40,7 +40,6 @@ For ordinary single-country reports:
 
 - The target country must be the event's primary decision-maker, jurisdiction, location, regulated market, materially affected principal, or direct economic/political counterparty.
 - Foreign actors may appear, but the target-country relevance must be concrete rather than incidental.
-- For `econ`, a global driver is eligible when the candidate identifies a concrete channel through the target country's markets, monetary policy, inflation, energy supply, trade, industry, financial stability, or economic outlook. Generic worldwide relevance is insufficient.
 
 For `geography_scope = Europe-ex-UK`:
 
@@ -84,8 +83,6 @@ Use contextual judgement rather than fixed numerical thresholds:
 
 An event does not need to be nationally transformative. It is enough that an informed executive reader would reasonably want to know it happened today and that its consequence or relevance can be stated clearly.
 
-For `econ`, use relative editorial priority rather than mechanical thresholds. Meaningful macro releases, central-bank and fiscal decisions, major policy shifts, substantial market episodes, energy or commodity supply changes, and globally important risk transmission normally outrank routine retail-rate tables, generic market roundups, and lightweight commercial surveys. A lower-priority item may still qualify when it contains a concrete, useful target-date development and no stronger candidate is displaced.
-
 Categorical rejects:
 
 - routine marketing or promotion with no substantive consequence;
@@ -94,19 +91,14 @@ Categorical rejects:
 - lifestyle, celebrity, entertainment, or gossip without broader significance;
 - ordinary sports results without material political, economic, diplomatic, or major-championship significance;
 - content whose only rationale is that it appeared in a famous outlet.
-- a same-day article whose only news is a recap of an earlier trading session or earlier event.
 
 ### 4. Originality and corroboration
 
 Select the Lead with the clearest claim-level evidence and most useful retrievable body. Do not use a global prestige score.
 
-Corroboration is preferred, not a universal source-count gate. For consequential, disputed, or data-heavy economic events, prefer a media Lead supported by another credible report or clearly attributed official evidence when available in the Scanner Batch.
-
 ### 5. Deduplication
 
 Merge only the same underlying event: substantially the same actors, action, and date. Keep later stages or follow-ups when they add a distinct decision, filing, vote, enforcement action, result, or other material fact. Broad thematic similarity is not duplication.
-
-For `econ`, group one trading episode, data release, policy signal, or supply shock as one event. Fold synchronous index and sector moves, bond or currency reactions, capital flows, and exchange safeguards such as sidecars or circuit breakers into that event's Lead and corroboration set. Keep a separate story only for an independently meaningful later decision, intervention, release, or new phase.
 
 ## Coverage Review
 
@@ -115,17 +107,16 @@ If the primary Verifier pass leaves a category below `min_per_category`:
 1. Reconsider candidates rejected only as `No-meaningful-news-value` during the primary Verifier pass.
 2. KEEP as `coverage-keep` when the candidate still has an eligible source, exact date, correct geography, a concrete new fact, and identifiable relevance to the category.
 3. Regional, specialist, institutional, and company-level developments may qualify; national-scale impact is not required.
-4. Never restore source-provenance failures, off-date or event-date failures, geography failures, China external-view violations, exact duplicates, routine PR, opinion-only pieces, unsupported rumours, prior-session recaps, or fabricated/unverifiable material.
+4. Never restore source-provenance failures, off-date or geography failures, China external-view violations, exact duplicates, routine PR, opinion-only pieces, unsupported rumours, or fabricated/unverifiable material.
 5. Continue until the category reaches `min_per_category` or no eligible candidates remain. Existing high/medium stories are never removed merely to hit a number.
 
 When a category remains short, record the gap instead of admitting weak evidence.
 
 ## Date Verification Rules
 
-- Each category Scanner admits only candidates whose publication date and reportable development both match the target date; the Verifier revalidates that decision.
+- Each category Scanner admits only exact-date candidates; the Verifier revalidates that decision.
 - Every candidate URL must pass an `open_page` round trip on the canonical article or document.
 - The extracted publication date must equal `date` in either the outlet's local timezone or UTC.
-- The event, release, decision, market move, or material update must also occur on `date`. A same-day article that only recaps an earlier session or event fails. A periodic statistic released on `date` and an ongoing event with a material `date` update qualify.
 - Neighbouring days do not qualify.
 - Search snippets alone are not proof.
 - Drop relative-only dates with no recoverable absolute date, index/topic/search pages, empty pages, and pages whose canonical date cannot be verified.
@@ -141,13 +132,6 @@ When a category remains short, record the gap instead of admitting weak evidence
 ## Conditional and Topical Categories
 
 The following are Verifier routing and final-admission rules. The Scanner does not apply them while discovering candidates.
-
-### `econ` - Economy and Markets
-
-- Interpret `econ` broadly: macroeconomic data and outlooks; central-bank decisions, remarks, and rate expectations; fiscal, tax, debt, trade, industrial, and financial-regulatory policy; equities, government bonds, foreign exchange, energy, and commodities; and geopolitical, shipping, sanctions, or supply developments with a concrete economic or market channel.
-- Do not require an event to move multiple asset classes or require a proven direct causal relationship between the event and a simultaneous market move.
-- A geopolitical event belongs in `econ` when the dominant reportable frame is an evidenced market, energy, trade, inflation, rate, or supply channel. Otherwise route it to `politics`.
-- Causal claims must be supported by candidate evidence. When the relationship is uncertain, preserve the facts and use attribution such as market expectations, investor focus, or a named analyst view rather than converting chronology into causation.
 
 ### `china_nexus` - China-Nexus Finance and Investment
 

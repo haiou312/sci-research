@@ -59,9 +59,9 @@ Apply these principles:
 
 ### 2. Concrete new information
 
-Every KEEP must contain a development that occurred or materially advanced on the target date, not merely a same-day publication, background, prediction, or recap of an earlier trading session.
+Every KEEP must contain a date-specific development, not merely background or prediction.
 
-- KEEP original reporting, media reporting based on identified documents or official actions, clearly attributed syndication, and follow-ups that add a new decision, filing, vote, enforcement step, result, transaction stage, data release, market consequence, or attributable reaction on the target date. A periodic figure released on the target date qualifies even when it measures an earlier period.
+- KEEP original reporting, media reporting based on identified documents or official actions, clearly attributed syndication, and follow-ups that add a new decision, filing, vote, enforcement step, result, transaction stage, data release, market consequence, or attributable reaction.
 - DROP `No-new-fact` for a rewrite or follow-up that adds nothing materially new.
 - Do not drop transparent syndication merely because it is syndicated when it is the best retrievable factual body for an otherwise eligible event.
 
@@ -90,7 +90,6 @@ Categorical drops:
 Choose the Lead that supplies the clearest claim-level evidence and most useful retrievable body. Consider direct access to facts, independence, completeness, and provenance.
 
 - Category Scanner candidates are not deduplicated. When several candidate URLs cover the same event, choose one Lead and fold the other credible same-event URLs into `Corroborated by`.
-- Corroboration is valuable but not a fixed source-count gate. For a consequential, disputed, or data-heavy economic story, prefer an accountable media Lead supported by another credible report or clearly attributed official evidence when the Scanner Batch provides it.
 - Transparent attributed syndication is not penalised when the original is paywalled or inaccessible.
 - Do not rank sources through a global prestige score.
 
@@ -98,21 +97,10 @@ Choose the Lead that supplies the clearest claim-level evidence and most useful 
 
 - Merge only the same underlying event: substantially the same actors, action, and date.
 - Keep distinct later steps when they add a new decision or fact, even on the same policy line.
-- For `econ`, treat one trading episode, data release, policy signal, or supply shock as one event cluster. Merge synchronous index moves, sector moves, foreign-exchange or bond reactions, capital flows, and exchange safeguards such as sidecars or circuit breakers into the same Lead. Keep a separate story only for an independently meaningful later decision, intervention, release, or new phase.
 - Confirm each story is routed to exactly one active category by dominant frame.
 - Validate the `china_nexus` and `ipo_ma` rules in `references/rubric.md`; do not apply fixed transaction-value thresholds.
 
 ## Conditional Categories
-
-### `econ`
-
-Interpret economy and markets broadly: macroeconomic releases and outlooks; central-bank decisions, official remarks, and rate expectations; fiscal, tax, debt, trade, industrial, and financial-regulatory policy; equities, government bonds, foreign exchange, energy, and commodities; and geopolitical, shipping, sanctions, or supply developments with a concrete economic or market channel.
-
-- A global event may qualify for a country report when the candidate identifies a concrete channel through that country's markets, monetary policy, inflation, energy supply, trade, industry, financial stability, or economic outlook. Generic worldwide relevance is insufficient.
-- Do not require a move across several asset classes or proof that two simultaneous developments have a direct causal relationship.
-- Route a geopolitical event to `econ` when its dominant reportable frame is an evidenced market, energy, trade, inflation, rate, or supply channel; otherwise route it to `politics`.
-- When choosing among eligible `econ` events, give relative priority to meaningful macro releases, central-bank and fiscal decisions, major policy shifts, substantial market episodes, energy or commodity supply changes, and globally important risk transmission. Routine retail-rate tables, generic market roundups, and lightweight commercial surveys should not displace stronger events, but no fixed numerical threshold decides significance.
-- State causation only when the candidate evidence supports it. Otherwise describe the developments together with accurate attribution such as market expectations, investor focus, or an identified analyst view.
 
 ### `china_nexus`
 
@@ -165,7 +153,7 @@ Emit exactly `references/schemas.md` section `Verifier Output Schema`.
 3. No fixed numeric threshold decides news value.
 4. A concrete new fact matters more than whether the outlet used a personal byline.
 5. Transparent syndication can be a valid factual Lead.
-6. Deduplicate exact events, not broad subjects or evolving policy lines; for `econ`, consolidate synchronous consequences and safeguards within one market episode.
-7. Coverage Review broadens editorial relevance only; it never relaxes source, event date, geography, factual support, or provenance.
+6. Deduplicate exact events, not broad subjects or evolving policy lines.
+7. Coverage Review broadens editorial relevance only; it never relaxes source, date, geography, factual support, or provenance.
 8. You do not translate or write the final report.
 '''

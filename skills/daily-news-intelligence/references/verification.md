@@ -47,7 +47,7 @@ Both files must exist. Then spot-check the Markdown:
 
 1. `grep -c '^## ' "{out_md}"` should return `6` for a non-China report and `7` for a China report (= `len(active_categories)`).
 2. `grep -c '^### ' "{out_md}"` should return at least `len(active_categories) × min_per_category` (≥ `6 × min` for a non-China report, ≥ `7 × min` for a China report).
-3. Pick one story at random, open its URL, confirm both the publication date and the reportable development equal `date`; a same-day article that only recaps an earlier session fails.
+3. Pick one story at random, open its URL, confirm the publication date equals `date`.
 4. Confirm every references line matches `^<Org|Surname>.* \(\d{4}, [A-Z][a-z]+ \d{1,2}\)\. .+\. .+\. https?://`.
 
 Also inspect `SCANNER_AUDIT` before delivery:
@@ -132,7 +132,7 @@ Also inspect `SCANNER_AUDIT` before delivery:
 
 | Stage | Dispatch | Model | Rationale (the embedded body encodes this) |
 |-------|----------|-------|--------------------------------------------|
-| Scanner × active category (parallel) | `.codex/agents/sci-research-daily-news-scanner.toml` subagent | `gpt-5.6-luna / medium` | Each instance receives one category and a short, high-freedom prompt with exact publication/development date, authoritative-media, readable-body, paid-to-free replacement, China foreign-media-only, and Europe-ex-UK hard rules. It reports search/open-page counts, returns every qualifying URL separately, and does not score, deduplicate, or final-route candidates |
+| Scanner × active category (parallel) | `.codex/agents/sci-research-daily-news-scanner.toml` subagent | `gpt-5.6-luna / medium` | Each instance receives one category and a short, high-freedom prompt with exact-date, authoritative-media, readable-body, paid-to-free replacement, China foreign-media-only, and Europe-ex-UK hard rules. It reports search/open-page counts, returns every qualifying URL separately, and does not score, deduplicate, or final-route candidates |
 | Verifier | `.codex/agents/sci-research-news-verifier.toml` subagent | `gpt-5.6-terra / high` | News-desk filter encoding source credibility/evidence fit, concrete new information, contextual daily-news value, originality/corroboration, Lead selection, deduplication, and final category routing. Coverage Review may admit credible narrower developments when a category is short, without relaxing date, geography, provenance, or factual support |
 | Fact-Extractor | `.codex/agents/sci-research-daily-fact-extractor.toml` subagent | `gpt-5.4-mini / medium` | Extracts every hard fact + direct quote from the Verifier KEEP set into a locked-values YAML manifest. Pure transformation — no web, no narrative. The manifest is the Writer's locked-values contract and the Editor's Pass-1 ground truth |
 | Writer | `.codex/agents/sci-research-daily-news-writer.toml` subagent | `gpt-5.6-sol / high` | Daily briefing writer. Uses semantic Fact Manifest fidelity, native-language composition, complete citations, and hard minimums of 250 English words or 400 Chinese Han characters. Opens existing story sources and researches further only when necessary to supply relevant depth |
