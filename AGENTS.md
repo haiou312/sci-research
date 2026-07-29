@@ -54,7 +54,7 @@
 
 - Scanner 按 active category 一栏一个并行运行；该 fan-out 每份报告只执行一次。Verifier、Fact Extractor 各运行一次；双语模式下 Writer 和 Editor 按语言并行。
 - 每个 Scanner 使用简短、高自由度提示，只接收一个栏目及其一句大致搜索方向，由 GPT-5.6 Luna 自行决定查询、媒体、语言、深度和跟进路径。
-- Scanner 只执行这些硬门槛：日期必须精确等于目标日；中国只搜索外媒；Europe 提前排除英国主体事件；不得编造。来源、正文、付费可用性及其他采用资格全部交给 Verifier。
+- Scanner 只执行这些硬门槛：明确日期或可解析的 `today`、分钟/小时前等相对时间必须落在目标日；中国只搜索外媒；Europe 提前排除英国主体事件；不得编造。Scanner 保留相对时间原文，最终绝对日期由 Verifier 打开页面核验；来源、正文、付费可用性及其他采用资格也全部交给 Verifier。
 - Scanner 不做新闻价值评分、交易或影响门槛、候选配额、去重、Lead 选择、最终分类或 `china_nexus`/`ipo_ma` 路由；每个当天候选 URL 独立交给 Verifier。
 - 编排器只按栏目顺序原样包裹各 Scanner 输出并计算汇总计数，不新增 Merger agent，不改写、去重或路由候选；这些判断仍由 Verifier 完成。
 - country=China 必须采用外部视角：只查询和使用外国媒体，不查询或使用中国本土媒体及中国政府域名。

@@ -104,7 +104,7 @@ Merge only the same underlying event: substantially the same actors, action, and
 If the primary Verifier pass leaves a category below `min_per_category`:
 
 1. Reconsider candidates rejected only as `No-meaningful-news-value` during the primary Verifier pass.
-2. KEEP as `coverage-keep` when the candidate still has an eligible source, exact date, correct geography, a concrete new fact, and identifiable relevance to the category.
+2. KEEP as `coverage-keep` when the candidate still has an eligible source, a Verifier-confirmed target date, correct geography, a concrete new fact, and identifiable relevance to the category.
 3. Regional, specialist, institutional, and company-level developments may qualify; national-scale impact is not required.
 4. Never restore source-provenance failures, off-date or geography failures, China external-view violations, exact duplicates, routine PR, opinion-only pieces, unsupported rumours, or fabricated/unverifiable material.
 5. Continue until the category reaches `min_per_category` or no eligible candidates remain. Existing high/medium stories are never removed merely to hit a number.
@@ -113,12 +113,13 @@ When a category remains short, record the gap instead of admitting weak evidence
 
 ## Date Verification Rules
 
-- Each category Scanner admits only exact-date candidates; the Verifier revalidates that decision.
+- Each category Scanner admits candidates supported by either an explicit target date or a relative timestamp such as `today`, `just now`, or a minute/hour count that resolves to the target day from the runtime date and timezone.
+- The Scanner preserves relative publication text verbatim and does not reject a candidate merely because search results lack an absolute date.
 - The Verifier opens every candidate URL before deciding KEEP or DROP.
 - The extracted publication date must equal `date` in either the outlet's local timezone or UTC.
 - Neighbouring days do not qualify.
 - Search snippets alone are not proof.
-- Drop relative-only dates with no recoverable absolute date, index/topic/search pages, empty pages, and pages whose canonical date cannot be verified.
+- At the Verifier stage, recover the canonical publication date from the opened page. Drop candidates whose relative timestamp cannot be reconciled with `date`, index/topic/search pages, empty pages, and pages whose canonical date cannot be verified.
 
 ## Category Coverage Rules
 

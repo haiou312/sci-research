@@ -12,6 +12,6 @@
   {
     "id": 3,
     "prompt": "$sci-research:daily-news-intelligence --country \"China\" --email \"test@example.com\" --email-dry-run --lang zh",
-    "expected": "7 category-scoped Scanner agents dispatched in parallel and mechanically wrapped into one Scanner Batch; 7-category zh Markdown + docx (China: econ/politics/tech/society/china_nexus/ipo_ma/other — 海外涉华财经 at position 5), every exact-date foreign-media URL passed to the Verifier for source, body, paid-access, fact, value, deduplication, and routing decisions, email dry-run preview with correct subject and 7-line category body template, no SMTP connection"
+    "expected": "7 category-scoped Scanner agents dispatched in parallel and mechanically wrapped into one Scanner Batch; 7-category zh Markdown + docx (China: econ/politics/tech/society/china_nexus/ipo_ma/other — 海外涉华财经 at position 5), every foreign-media URL with explicit or resolvable relative target-day publication evidence passed to the Verifier for final date, source, body, paid-access, fact, value, deduplication, and routing decisions, email dry-run preview with correct subject and 7-line category body template, no SMTP connection"
   }
 ]

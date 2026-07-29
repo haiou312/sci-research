@@ -29,18 +29,18 @@ Generate a professional dated daily report for institutional readers covering a 
 
 Evidence priority order:
 
-1. Articles whose publication date matches `date` exactly; the Verifier revalidates every candidate with WebSearch `open_page` on its URL (primary truth).
+1. Articles whose absolute date or target-day relative timestamp indicates publication on `date`; the Verifier revalidates every candidate with WebSearch `open_page` on its URL (primary truth).
 2. `web_search` is only used to surface candidate URLs — never standalone evidence.
 3. Model inference is permitted only when directly supported by the opened article text.
 
 Apply a two-stage filter before anything reaches the Writer:
 
-- **Stage 1 (Scanner fan-out, one agent per category)**: GPT-5.6 Luna instances run concurrently, each focused on one active category and using only these hard gates: exact target date, foreign-media-only sourcing for China, and Europe-ex-UK event scope. Each instance receives one category and its one-sentence discovery direction.
+- **Stage 1 (Scanner fan-out, one agent per category)**: GPT-5.6 Luna instances run concurrently, each focused on one active category and using only these hard gates: target-day publication evidence (including resolvable `today` or minute/hour-based timestamps), foreign-media-only sourcing for China, and Europe-ex-UK event scope. Each instance receives one category and its one-sentence discovery direction.
 - **Stage 2 (Verifier)**: source credibility and evidence fit + concrete new information + daily briefing value + originality/corroboration + dedup/category validation. It uses contextual editorial judgement rather than fixed impact numbers or outlet grades, then runs Coverage Review for any category below `min_per_category`.
 
 Hard rules:
 
-- Do not admit a candidate without passing the date-verification gate.
+- Scanner date evidence may be an explicit target date or a relative timestamp that clearly resolves to the target day. The Verifier opens every candidate and performs final canonical-date verification.
 - A China Scanner uses foreign media only and does not query or use Chinese domestic media or Chinese government domains.
 - When normalized `country == Europe`, apply the hard `Europe-ex-UK` geography gate in `references/rubric.md`: a UK-only or UK-primary event is out of scope. Outlet nationality is not event geography, so UK publications remain valid sources for in-scope European events.
 - Do not pad a category with off-date or out-of-scope material.
@@ -162,7 +162,7 @@ Wait for all category invocations. Validate each result against `references/sche
 
 - `Searched category` must equal the category assigned to that invocation.
 - `Status` must be `complete`; a valid complete output may contain zero candidates.
-- Every candidate ID must be prefixed by its searched category and every story must contain a publication date, source, and URL.
+- Every candidate ID must be prefixed by its searched category and every story must contain publication-time evidence (absolute or accepted target-day relative text), source, and URL.
 
 If an invocation errors, returns `Status: failed`, or violates the schema, retry that category once with the same exact role, parameters, and `fork_turns="none"`. If the retry also fails, halt before the Verifier and report the affected category; do not convert an execution failure into a zero-candidate coverage gap.
 

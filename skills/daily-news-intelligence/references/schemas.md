@@ -19,7 +19,7 @@ Return one English output for the single assigned category. The searched categor
 
 ### [<searched category>] <English headline>
 - Candidate ID: <category-prefixed ID unique within the Scanner Batch, such as econ-1>
-- Publish date: <ISO timestamp or local date>
+- Publish date: <ISO timestamp, local date, or verbatim target-day relative timestamp such as "today" or "3 hours ago">
 - Source: <publisher or issuing organisation>
 - URL: <full https URL>
 
