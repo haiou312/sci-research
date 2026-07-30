@@ -98,6 +98,37 @@ def validate(plugin_root: Path) -> tuple[int, int]:
             f"unexpected={unexpected_agents or 'none'}"
         )
 
+    daily_agent_contract = {
+        "sci-research-daily-news-scanner": (
+            "mcp__google_news__search_news",
+            "Do not call `get_news_article`",
+        ),
+        "sci-research-daily-news-writer": (
+            "mcp__google_news__search_news",
+            "mcp__google_news__get_news_article",
+        ),
+        "sci-research-daily-editor": (
+            "mcp__google_news__search_news",
+            "mcp__google_news__get_news_article",
+        ),
+        "sci-research-news-verifier": (
+            "same-event deduplication",
+            "DROP_DUPLICATE",
+            "drop a unique result",
+        ),
+    }
+    for agent_name, required_tokens in daily_agent_contract.items():
+        agent_path = agents_dir / f"{agent_name}.toml"
+        instructions = tomllib.loads(agent_path.read_text(encoding="utf-8"))[
+            "developer_instructions"
+        ]
+        missing_tokens = [token for token in required_tokens if token not in instructions]
+        if missing_tokens:
+            fail(
+                f"{agent_path} is missing the Pipeline C agent contract: "
+                f"{', '.join(missing_tokens)}"
+            )
+
     hooks_path = plugin_root / "hooks/hooks.json"
     hooks = json.loads(hooks_path.read_text(encoding="utf-8"))
     commands: list[str] = []

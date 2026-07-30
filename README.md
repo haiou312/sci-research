@@ -20,15 +20,15 @@ Given a country, company, date, month, or reporting window, this plugin orchestr
 
 The five pipelines use separate agent chains and stage contracts. Pipeline D intentionally consumes one date of Pipeline C reports across countries. Pipeline G consumes one month of Pipeline C reports for one country and never searches the web. Pipeline F performs its own date-range discovery and uses a scoped Companies House API/watchlist monitor; it does not claim exhaustive discovery of every Chinese-backed UK entity.
 
-Pipeline C also writes raw Scanner and pass-through Verifier artifacts under `daily-news/{date}/audit/` as `.txt` files. They preserve every category's unverified search results and the unchanged downstream forwarding record; Pipeline D ignores them because it reads report Markdown rather than audit text files.
+Pipeline C also writes the raw Scanner Batch and deduplication-only Verifier report under `daily-news/{date}/audit/` as `.txt` files. They preserve every category's unverified search results and every KEEP/`DROP_DUPLICATE` decision; Pipeline D ignores them because it reads report Markdown rather than audit text files.
 
 ---
 
 ## Why This Plugin
 
 - **20 specialised agents** across five pipelines, each agent narrowly scoped
-- **Parallel one-sentence Terra Scanners** — one focused search agent per category; useful results are forwarded whether or not their pages open
-- **Pass-through Verifier** — no second web pass, source grading, date revalidation, news-value scoring, deduplication, rerouting, or DROP decisions
+- **Parallel one-sentence Terra Scanners** — one focused `google_news.search_news` agent per category; useful results are forwarded whether or not publisher pages can be fetched
+- **Deduplication-only Verifier** — removes later reports of the same event without a second web pass, source grading, date revalidation, news-value scoring, Lead replacement, or category rerouting
 - **Search-result Fact Manifest + 5-pass Editor** — literal values from search summaries are marked as search-result evidence, then later writing and editing can research and repair the report
 - **External-view China gate** — `$sci-research:daily-news-intelligence --country "China"` uses foreign media only and excludes Chinese-domestic outlets and Chinese government domains
 - **Free-prose Writer** — daily news Writer composes explanatory prose in the target language, not a mechanical translation
@@ -63,6 +63,14 @@ node --version
 ```
 
 These three commands must succeed. Python **3.11 or newer** is required because the runtime installer parses TOML with the standard-library `tomllib` module. Node.js is required by the quality hooks.
+
+Pipeline C additionally requires a user-level MCP server named `google_news` that exposes `search_news` and `get_news_article`. Verify it before installing the runtime:
+
+```bash
+codex mcp get google_news
+```
+
+The command must report `enabled: true`. MCP tools are loaded when a Codex task starts, so restart the task after adding or changing this server. Pipeline C has no Codex native WebSearch fallback.
 
 Check the optional Pipeline C docx exporter separately:
 
@@ -122,7 +130,7 @@ The setup performs a bundle check and dry-run before installing. It creates:
 
 With the recommended default workspace, `<runtime-workspace>` is `~/.sci-research`.
 
-The project config sets `web_search = "live"`, `agents.max_threads = 10`, and `agents.max_depth = 1`. Live search is required because Pipeline C targets current same-day results. China reports need seven concurrent category Scanner threads; the extra slots allow clean stage handoff without recursive delegation. If `.codex/config.toml` already exists, setup preserves user-owned content byte-for-byte and requires both live search and `agents.max_threads >= 10`; a missing or invalid value produces the exact TOML block to add.
+The project config sets `web_search = "live"`, `agents.max_threads = 10`, and `agents.max_depth = 1`. Native live search remains available to Pipelines E/F; Pipeline C uses only the separately configured `google_news` MCP. China reports need seven concurrent category Scanner threads; the extra slots allow clean stage handoff without recursive delegation. If `.codex/config.toml` already exists, setup preserves user-owned content byte-for-byte and requires both live search and `agents.max_threads >= 10`; a missing or invalid value produces the exact TOML block to add.
 
 It does not modify global `~/.codex/config.toml`, install Python packages, or run a news pipeline. If it reports an unmanaged-file conflict, a locally modified managed agent, or an invalid existing runtime setting, resolve the named file instead of overwriting it manually.
 
@@ -151,7 +159,7 @@ In the new task, run a runtime-only check:
 Use $sci-research:setup-sci-research-runtime to check the project-scoped runtime in this workspace. Do not run a news pipeline.
 ```
 
-The check must report 20 agents, `max_threads` of at least 10, and a matching plugin version before first use.
+The runtime check must report 20 agents, `max_threads` of at least 10, and a matching plugin version before first use. Pipeline C then performs a separate task-level preflight for `mcp__google_news__search_news` and `mcp__google_news__get_news_article`; if either is absent, verify `codex mcp get google_news` and start another new task.
 
 #### Step 8 — Run a no-email smoke test
 
@@ -447,11 +455,11 @@ Bilingual mode (--lang zh+en …): the category Scanner fan-out runs once per re
 
 | Agent | Codex configuration | Role |
 |---|---|---|
-| `sci-research-daily-news-scanner` | gpt-5.6-terra / high | One parallel instance per active category. After the runtime header it receives one search sentence and returns useful same-day results without opening, verifying, filtering, scoring, deduplicating, or routing them; China uses foreign media only and Europe excludes UK-focused events |
-| `sci-research-news-verifier` | gpt-5.6-terra / high | Pass-through schema adapter: forwards every Scanner result in the same order and searched category, with no web tools or DROP decisions |
+| `sci-research-daily-news-scanner` | gpt-5.6-terra / high | One parallel instance per active category. After the runtime header it receives one search sentence, uses only `google_news.search_news`, and returns useful same-day results without fetching, verifying, filtering, scoring, deduplicating, or routing them; China uses foreign media only and Europe excludes UK-focused events |
+| `sci-research-news-verifier` | gpt-5.6-terra / high | Deduplication-only adapter: keeps the first occurrence of each event in its searched category and marks later same-event reports `DROP_DUPLICATE`; no web tools, verification, scoring, Lead replacement, rerouting, or other DROP reasons |
 | `sci-research-daily-fact-extractor` | gpt-5.6-luna / medium | Extracts literal numbers, names, dates, and explicitly attributed quotes from search-result summaries into a manifest marked `evidence_basis: search-results` |
-| `sci-research-daily-news-writer` | gpt-5.6-sol / high | Consumes the Verifier KEEP set and Fact Manifest and composes native target-language newsroom prose. English bodies have a 250-word minimum and Chinese bodies a 400-Han-character minimum, with no maximum. It opens existing story sources and performs supplemental research only when needed for relevant depth. One instance per language in bilingual mode |
-| `sci-research-daily-editor` | gpt-5.6-sol / high | Five-pass post-Writer editor: semantic fact fidelity, source-backed substantive depth, quotation accuracy, structure/typography, and a full native-language editorial pass. It repairs undersized stories from opened evidence while preserving facts, sources, story set, category routing, and required Markdown structure. `apply_patch`-only. One instance per language in bilingual mode |
+| `sci-research-daily-news-writer` | gpt-5.6-sol / high | Consumes the Verifier KEEP set and Fact Manifest and composes native target-language newsroom prose. It re-finds each story with `google_news.search_news`, retrieves article text with `google_news.get_news_article`, and cites the publisher canonical URL. English bodies have a 250-word minimum and Chinese bodies a 400-Han-character minimum, with no maximum. One instance per language in bilingual mode |
+| `sci-research-daily-editor` | gpt-5.6-sol / high | Five-pass post-Writer editor: semantic fact fidelity, MCP full-text source backing, quotation accuracy, structure/typography, and a full native-language editorial pass. It uses the same two Google News MCP tools and never native WebSearch. `apply_patch`-only. One instance per language in bilingual mode |
 
 ### Pipeline D — `$sci-research:daily-briefing`
 
@@ -518,9 +526,9 @@ Pipeline C Markdown → deterministic source index → monthly-curator ×categor
 
 ## Pipeline C Minimal Discovery
 
-Each category Scanner receives one natural-language search sentence after its mandatory runtime-path header. GPT-5.6 Terra chooses the queries and returns useful results shown for the requested date. It does not open result pages or reject blocked, paywalled, snippet-only, dynamically rendered, or unavailable URLs.
+Each category Scanner receives one natural-language search sentence after its mandatory runtime-path header. GPT-5.6 Terra chooses the `google_news.search_news` queries and returns useful results shown for the requested date. It does not call `get_news_article` or reject blocked, paywalled, snippet-only, dynamically rendered, or unavailable publisher pages.
 
-Only two scope rules remain: China reports use foreign media only, and Europe reports exclude UK-focused events while allowing UK outlets to report non-UK European news. The pass-through Verifier does not search, verify, score, filter, deduplicate, reroute, or drop results; it only converts every result into the stable downstream schema.
+Only two search-scope rules remain: China reports use foreign media only, and Europe reports exclude UK-focused events while allowing UK outlets to report non-UK European news. The Verifier then performs one operation only: same-event deduplication from the Scanner Batch. It keeps the first occurrence and original searched category, drops later duplicates, and leaves distinct follow-ups, reactions, decisions, transactions, and transaction stages separate. Writer and Editor re-search inside their own MCP sessions before calling `get_news_article`, because article IDs are session-local.
 
 Detailed rules:
 - Minimal Scanner prompt and output: [`.codex/agents/sci-research-daily-news-scanner.toml`](./.codex/agents/sci-research-daily-news-scanner.toml) and [`skills/daily-news-intelligence/references/schemas.md`](./skills/daily-news-intelligence/references/schemas.md)
@@ -641,7 +649,7 @@ sci-research/
 |---|---|
 | Pipeline C minimal Scanner prompt | `.codex/agents/sci-research-daily-news-scanner.toml` |
 | Pipeline C category directions and orchestration | `skills/daily-news-intelligence/SKILL.md` |
-| Pipeline C pass-through Verifier | `.codex/agents/sci-research-news-verifier.toml` + `skills/daily-news-intelligence/references/schemas.md` |
+| Pipeline C deduplication-only Verifier | `.codex/agents/sci-research-news-verifier.toml` + `skills/daily-news-intelligence/references/schemas.md` |
 | Pipeline C China foreign-media / Europe-ex-UK scope | `skills/daily-news-intelligence/references/rubric.md` |
 | Pipeline C output format / Markdown contract | `skills/daily-news-intelligence/references/output-spec.md` |
 | Pipeline C language localisation / bilingual mode | `skills/daily-news-intelligence/references/language-spec.md` (§ Bilingual Mode) |
@@ -667,7 +675,7 @@ sci-research/
 - Python ≥ 3.11 (required by runtime setup; also used by email delivery and Pipelines D/F)
 - Pipelines D/F dependency (install or update from the plugin root): `python3 -m pip install --user --upgrade -r requirements.txt`
 - `pandoc` is optional; without it Pipeline C still produces Markdown but skips docx export
-- Internet access (for WebSearch `search` / `open_page`)
+- Internet access; Pipeline C uses the user-level `google_news` MCP for search and article text, while Pipelines E/F use Codex WebSearch
 - Gmail SMTP credentials (only when `--email` is used; see `.env.example`)
 - Companies House API key (optional in Pipeline F `auto` mode; required in `required` mode)
 - No separate social-media MCP configuration is required. Pipeline E uses public, openable social content discovered through WebSearch.

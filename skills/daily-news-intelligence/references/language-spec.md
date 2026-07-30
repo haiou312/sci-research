@@ -45,7 +45,7 @@ active(country) = [econ, politics, tech, society]
 - **Non-China report** → 6 categories: `econ, politics, tech, society, ipo_ma, other`.
 - **China report** → 7 categories: `econ, politics, tech, society, china_nexus, ipo_ma, other`.
 
-`china_nexus` appears **only** in a `--country China` report. `ipo_ma` appears in **every** report (always, regardless of country). `other` is always the final catch-all. The orchestrator passes only the assigned category's one-line direction to each Scanner, and the pass-through Verifier preserves the searched category without rerouting. This file owns identity, naming, order, and numbering.
+`china_nexus` appears **only** in a `--country China` report. `ipo_ma` appears in **every** report (always, regardless of country). `other` is always the final catch-all. The orchestrator passes only the assigned category's one-line direction to each Scanner, and the deduplication-only Verifier preserves the first occurrence's searched category without rerouting. This file owns identity, naming, order, and numbering.
 
 ### H2 numbering convention
 
@@ -201,7 +201,7 @@ When measuring, count only the story body between its `### <title>` and `**Refer
 - **English word count**: count ASCII alphanumeric lexical tokens. Internal apostrophes or hyphens and a decimal or currency-number suffix do not split a token (`central-bank`, `investor's`, `3.5`, and `US$3.5` each count as one word).
 - **Chinese character count**: count only characters with Unicode Script property `Han`. Punctuation, Arabic numerals, Latin letters, whitespace, and Markdown syntax do not count.
 - Every `en` and `zh` body must meet its hard minimum. A complex event may be longer; there is no maximum or narrow accepted band.
-- If supplied material is too thin, open the Lead and relevant corroborating pages, then search only when those sources remain insufficient.
+- If supplied material is too thin, re-find and fetch the Lead through `google_news.search_news` plus `google_news.get_news_article`, then run supplemental Google News MCP searches only when that returned full text remains insufficient.
 - Meet the minimum with relevant sourced event detail, mechanics, context, affected parties, consequences, uncertainty, or next steps.
 - Never add repetition, generic significance claims, unnecessary quotations, invented context, or source-language glosses to reach the minimum.
 - Never cut necessary explanation or distort a fact to reduce a count.
@@ -217,7 +217,7 @@ The goal is concise, complete, opinion-free newsroom writing that feels original
 - Body prose follows `### title` directly with one blank line between. **No `**摘要**` / `**Summary**` / `**要約**` / `**分析**` / `**Analysis**` marker is used** — these markers are prohibited and the format-check hook reports any output containing them after the edit.
 - **No fixed paragraph count** — let the story decide its own length and structure. Use paragraph breaks as a tool for clarity: at narrative shifts (e.g. disclosure → market reaction), when introducing background context, when separating multi-party reactions. A simple announcement may need just one paragraph; a complex story with rich historical background may need three or four.
 - Prefer a direct news lead, but let the event determine the most natural opening and ending. Avoid empty setup and formulaic significance conclusions such as "折射出", "凸显了", "标志着", or "this signals..." when they add no information.
-- Be specific about numbers, names, titles, dates, and the substance of any quote you keep — these must come from the forwarded search-result summary, its Fact Manifest entry, or a source the Writer opened during later research. The prose around them is the Writer's own.
+- Be specific about numbers, names, titles, dates, and the substance of any quote you keep — these must come from the forwarded search-result summary, its Fact Manifest entry, or full text returned by `google_news.get_news_article` during later research. The prose around them is the Writer's own.
 - Quote sparingly. Include a direct quote only when the speaker's exact words carry meaning the paraphrase would lose; otherwise summarise and attribute.
 
 ### Global tone

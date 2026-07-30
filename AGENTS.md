@@ -12,7 +12,7 @@
 | F | $sci-research:china-outbound-opportunity-briefing | 中资企业英国及欧洲商机拓展情报 | Markdown、机构化 docx、可选邮件 |
 | G | $sci-research:monthly-news-intelligence | 单国或地区指定月份热点新闻 | 与 Pipeline C 同结构的 Markdown、可选 docx 与邮件 |
 
-所有子 agent 都是带 `sci-research-` 命名空间的原生 Codex TOML 定义，源文件位于 `.codex/agents/*.toml`。Marketplace 更新后先用 `$sci-research:setup-sci-research-runtime` 同步到运行 workspace 的 `.codex/agents/`，并校验项目级 `.codex/config.toml` 中 `web_search = "live"` 与 `agents.max_threads >= 10`，再新开 Codex task。
+所有子 agent 都是带 `sci-research-` 命名空间的原生 Codex TOML 定义，源文件位于 `.codex/agents/*.toml`。Marketplace 更新后先用 `$sci-research:setup-sci-research-runtime` 同步到运行 workspace 的 `.codex/agents/`，并校验项目级 `.codex/config.toml` 中 `web_search = "live"` 与 `agents.max_threads >= 10`，再新开 Codex task。Pipeline C 还要求用户级启用名为 `google_news` 的 MCP，并让新 task 暴露 `mcp__google_news__search_news` 与 `mcp__google_news__get_news_article`；Pipeline C 不再使用 Codex 原生 WebSearch。
 
 - 每个 stage 通过 custom-agent selector 启动其精确命名 role，并使用 `fork_turns="none"`；模型与 model_reasoning_effort 从 TOML 读取。`task_name` 仅是线程标签。
 - 每个 stage 的输出和文件交接完成后必须调用 `close_agent`；并行组全部收齐后逐一关闭，失败或 schema 无效的尝试也要先关闭再重试。关闭失败时停止继续 spawn。
@@ -25,8 +25,8 @@
 
 | Agent | 模型 | effort | 取舍 |
 |---|---|---:|---|
-| sci-research-daily-news-scanner | gpt-5.6-terra | high | 按栏目并行的一句话当日新闻搜索；不打开、不核验、不筛选结果 |
-| sci-research-news-verifier | gpt-5.6-terra | high | 全量透传 Scanner 结果并适配下游 schema；不联网、不 DROP |
+| sci-research-daily-news-scanner | gpt-5.6-terra | high | 按栏目并行的一句话 Google News MCP 当日搜索；不取正文、不核验、不筛选结果 |
+| sci-research-news-verifier | gpt-5.6-terra | high | 只做同事件查重：保留首次出现、删除后续重复；不联网、不核验、不评分、不路由 |
 | sci-research-daily-fact-extractor | gpt-5.6-luna | medium | 从搜索结果摘要抽取结构化值并标记 search-results 证据基础 |
 | sci-research-daily-news-writer | gpt-5.6-sol | high | 多语言母语化新闻写作与按需背景补充 |
 | sci-research-daily-editor | gpt-5.6-sol | high | 事实、来源、引语、格式与完整母语编辑 |
@@ -53,17 +53,17 @@
 流程：Scanner × category → 机械汇总 → Verifier → Fact Extractor → Writer × language → Editor × language → pandoc → 可选邮件。
 
 - Scanner 按 active category 一栏一个并行运行；该 fan-out 每份报告只执行一次。Verifier、Fact Extractor 各运行一次；双语模式下 Writer 和 Editor 按语言并行。
-- 每个 Scanner 在必需的 runtime path header 后只接收一句搜索任务，由 GPT-5.6 Terra 自行决定查询；不得追加来源、打开、核验、评分、配额、去重或路由规则。
-- Scanner 搜索指定日期并返回 WebSearch 显示的有用结果；页面被阻挡、付费、仅摘要、动态渲染或暂时打不开仍然保留，不运行 `open_page`，不二次核验日期。
+- 每个 Scanner 在必需的 runtime path header 后只接收一句搜索任务，由 GPT-5.6 Terra 自行决定 `google_news.search_news` 查询；不得追加来源、正文获取、核验、评分、配额、去重或路由规则。
+- Scanner 只用 `mcp__google_news__search_news` 搜索指定日期并返回有用结果；页面被阻挡、付费、仅摘要、动态渲染或暂时打不开仍然保留，不运行 `get_news_article`，不二次核验日期。
 - Scanner 不做来源等级、新闻价值、影响力、材料完整性、替代来源、去重、Lead 选择、最终分类或 `china_nexus`/`ipo_ma` 路由。
-- 编排器只按栏目顺序原样包裹各 Scanner 输出并计算汇总计数；Verifier 只全量透传并适配下游 schema，不联网、不筛选、不去重、不路由、不输出 DROP。
+- 编排器只按栏目顺序原样包裹各 Scanner 输出并计算汇总计数；Verifier 只基于 Batch 做同事件查重，不联网、不核验、不评分、不选择更优 Lead、不路由，唯一允许的 DROP 是后续重复项 `DROP_DUPLICATE`。
 - country=China 必须采用外部视角：只查询和使用外国媒体，不查询或使用中国本土媒体及中国政府域名。
 - country=Europe 使用 Europe-ex-UK 搜索范围：排除以英国为唯一或主要对象的结果；英国媒体仍可报道非英国欧洲新闻。
 - 非中国报告有 6 个栏目；中国报告在第 5 位增加 china_nexus，并保留 ipo_ma。
-- Verifier 的 `Kept count` 必须等于 Scanner 输入数，分类保持 searched category；只记录搜索稀缺造成的栏目缺口。
-- Scanner Batch 与 Verifier 透传报告必须原样保存到日报目录的 `audit/*.txt`；不要使用 `.md`，避免 Pipeline D 将审计文件当作国家日报。
-- Writer 必须遵守 Fact Manifest；Editor 使用 apply_patch 运行五道检查。引用、引号和输出格式规范以 skills/daily-news-intelligence/references/ 为准。
-- 英文每篇正文不得少于 250 个词，中文每篇正文不得少于 400 个 Unicode 汉字，不设最高字数。材料不足时先打开 Lead 和相关佐证原文，再按需补充搜索；只能用可引用的实质内容达到底线，不得重复、空泛扩写或编造。
+- Verifier 按 Batch 顺序保留同一事件首次出现的结果及其 searched category，后续跨媒体或跨栏目的同事件报道去重；相关但属于后续进展、回应、另一决定或另一交易阶段的必须保留。`Input count = Kept count + Duplicate count`。
+- Scanner Batch 与 Verifier 查重报告必须原样保存到日报目录的 `audit/*.txt`；不要使用 `.md`，避免 Pipeline D 将审计文件当作国家日报。
+- Writer 必须遵守 Fact Manifest；Editor 使用 apply_patch 运行五道检查。Writer 与 Editor 的新闻搜索和正文获取只用 `google_news.search_news` / `google_news.get_news_article`，不得回退到 Codex 原生 WebSearch；引用、引号和输出格式规范以 skills/daily-news-intelligence/references/ 为准。
+- `get_news_article` 的 `article_id` 只在产生它的 MCP 会话内有效；Writer/Editor 必须按标题和媒体重新搜索并立即取文，不得复用 Scanner ID。英文每篇正文不得少于 250 个词，中文每篇正文不得少于 400 个 Unicode 汉字，不设最高字数。材料不足时先通过 MCP 重新搜索并取 Lead 正文，再按需补充同事件搜索；只能用返回的可引用实质正文达到底线，不得重复、空泛扩写或编造。
 - --email-attach none 表示仅发送正文，必须省略 --attach。
 
 ### D — Daily Briefing
@@ -148,9 +148,9 @@
 | 需求 | 真源文件 |
 |---|---|
 | C 编排、参数、输出与邮件 | skills/daily-news-intelligence/SKILL.md |
-| C Scanner 极简搜索提示 | .codex/agents/sci-research-daily-news-scanner.toml |
+| C Scanner 极简 Google News MCP 搜索提示 | .codex/agents/sci-research-daily-news-scanner.toml |
 | C 一句话栏目方向与编排 | skills/daily-news-intelligence/SKILL.md |
-| C Verifier 透传 schema 与最小中欧范围规则 | skills/daily-news-intelligence/references/schemas.md、skills/daily-news-intelligence/references/rubric.md |
+| C Verifier 纯查重 schema 与最小中欧范围规则 | skills/daily-news-intelligence/references/schemas.md、skills/daily-news-intelligence/references/rubric.md |
 | C agent 行为 | .codex/agents/sci-research-daily-*.toml、.codex/agents/sci-research-news-verifier.toml |
 | D 编排与参数 | skills/daily-briefing/SKILL.md |
 | D docx 模板与生成器 | skills/daily-briefing/template/、skills/daily-briefing/scripts/generate-branded-docx.py |
@@ -170,8 +170,8 @@
 ## 验证顺序
 
 1. 静态检查：TOML、JSON、Python、Node、Bash 语法与 git diff --check。
-2. Runtime 验证：在隔离 workspace 安装、检查、升级、配置冲突与卸载；确认 `web_search = "live"` 与 `agents.max_threads >= 10`，并在新 task 逐一验证命名 agent selector、模型、effort 与 close-agent 生命周期。
-3. C 最小首跑：无邮件，确认原生 agent 串联、apply_patch、hook、直接格式门与 pandoc 输出。
+2. Runtime 验证：在隔离 workspace 安装、检查、升级、配置冲突与卸载；确认 `web_search = "live"`、`agents.max_threads >= 10` 与用户级 `google_news` MCP 已启用，并在新 task 逐一验证两个 MCP 工具、命名 agent selector、模型、effort 与 close-agent 生命周期。
+3. C 最小首跑：无邮件，确认 Scanner 只调用 `search_news`、Writer/Editor 只用 `search_news` + `get_news_article`、无原生 WebSearch 回退，以及原生 agent 串联、apply_patch、hook、直接格式门与 pandoc 输出。
 4. D 验证：先安装 requirements.txt，使用 C 产出的样例 Markdown，邮件只做 dry-run。
 5. E 验证：测试 Yahoo 企业/高管确认、非中国大陆媒体与公开社交媒体搜索、低中高判断、干净结果静默退出与邮件 dry-run。
 6. F 验证：测试五 lane 并行、Companies House 有/无 API key、watchlist 与 snapshot diff、confirmed/probable/unverified、格式门、图片回退、docx 渲染和邮件 dry-run。

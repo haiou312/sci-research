@@ -1,6 +1,6 @@
 # Minimal Search Scope
 
-Pipeline C discovery is recall-first. Scanner results are search results, not opened or verified evidence, and the Verifier is a pass-through schema adapter.
+Pipeline C discovery is recall-first. Scanner results are Google News search results, not fetched or verified evidence, and the Verifier is a deduplication-only schema adapter.
 
 ## Rules retained
 
@@ -14,7 +14,8 @@ Pipeline C discovery is recall-first. Scanner results are search results, not op
 - No exact-date revalidation beyond the search target and displayed search-result date.
 - No readable-body, paywall, source-class, byline, primary-source, or provenance gate.
 - No credibility, news-value, impact, originality, corroboration, materiality, or transaction threshold.
-- No deduplication, Lead selection, final category rerouting, or Coverage Review.
-- No DROP audit. Every Scanner result is forwarded in its searched category, including blocked, paywalled, snippet-only, or currently unavailable pages.
+- No Lead-quality selection, final category rerouting, or Coverage Review.
+- The only Verifier removal is a later report of the same underlying event. The first occurrence remains the representative even when a later duplicate has a stronger headline, source, or summary.
+- Different follow-up developments, reactions, decisions, transactions, or transaction stages remain separate stories. No DROP reason other than `DROP_DUPLICATE` is allowed.
 
-The Writer and Editor may perform later research when composing and checking the final report. Their inability to open one forwarded URL must not retroactively remove that URL from the Scanner audit or pass-through bundle.
+The Writer and Editor may perform later research when composing and checking the final report. Retrieval failure must not retroactively alter the Scanner audit or the Verifier's deduplication decisions.

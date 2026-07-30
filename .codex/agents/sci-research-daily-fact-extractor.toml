@@ -21,15 +21,15 @@ generated_at: <ISO-8601 UTC timestamp>
 country: <country>
 date: <YYYY-MM-DD>
 evidence_basis: search-results
-total_stories: <count>
+total_stories: <Verifier Kept count>
 stories:
   - story_id: <kebab-case slug from headline_en>
     category: econ | politics | tech | society | china_nexus | ipo_ma | other
     headline_en: <forwarded English headline>
     lead_url: <forwarded URL>
     body_source: search-result
-    corroborated_by: []
-    locked_urls: [<lead_url>]
+    corroborated_by: [<all Corroborated by URLs from the retained Verifier story, or empty>]
+    locked_urls: [<lead_url followed by all corroborated_by URLs, deduplicated in order>]
     hard_facts:
       - claim: <short English description>
         kind: numerical | numerical_with_unit | temporal | named_person | named_institution | named_product

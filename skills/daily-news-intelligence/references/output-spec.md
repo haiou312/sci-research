@@ -11,7 +11,7 @@ Each story must use this exact block structure (`{references_marker}` comes from
 ```md
 ### <Story title in target language>
 
-<Body in natural target-language newsroom prose. Preserve the Fact Manifest's factual meaning while localizing names, titles, dates, times, currencies, and other expressions normally; do not retain English strings or add English parentheticals merely to satisfy literal matching. Follow `references/language-spec.md` § Body Length Standard: every `en` body has at least 250 English words and every `zh` body has at least 400 Unicode Han characters; `ja` has no fixed floor and no language has a maximum. Explain the event with relevant sourced detail and context rather than padding or formulaic prose. When the supplied material cannot support a complete body above the floor, open the Lead and relevant corroborating URLs, then use supplemental WebSearch only if those pages remain insufficient. Cite every opened source whose facts enter the body. Every factual claim must trace to the Verifier bundle, Fact Manifest, or an opened source. Wrap direct quotations with the language's canonical `quote_marks` and preserve attribution.>
+<Body in natural target-language newsroom prose. Preserve the Fact Manifest's factual meaning while localizing names, titles, dates, times, currencies, and other expressions normally; do not retain English strings or add English parentheticals merely to satisfy literal matching. Follow `references/language-spec.md` § Body Length Standard: every `en` body has at least 250 English words and every `zh` body has at least 400 Unicode Han characters; `ja` has no fixed floor and no language has a maximum. Explain the event with relevant sourced detail and context rather than padding or formulaic prose. When the supplied material cannot support a complete body above the floor, re-find the Lead through `google_news.search_news` and fetch it with `google_news.get_news_article`, then run supplemental MCP searches only if the returned full text remains insufficient. Cite every fetched article whose facts enter the body using its returned `canonical_url`. Every factual claim must trace to the Verifier bundle, Fact Manifest, or full text returned with `access_status: full_text`. Wrap direct quotations with the language's canonical `quote_marks` and preserve attribution.>
 
 {references_marker}
 
@@ -28,9 +28,9 @@ Do not emit a trailing global references or sources section.
 
 **`[N]` numbering rule**: every reference line starts with `[N] ` where `N` runs **continuously from 1 across the entire document**, not per-story. The first reference of story 1 is `[1]`; if story 1 has 3 references, story 2's first reference is `[4]`. Multiple references per story are allowed and common when the Verifier delivers corroborating or claim-complementary sources.
 
-**Search URLs that supplied a fact in body MUST appear** in the references block. Open the existing Lead and relevant corroborating URLs when the supplied excerpts cannot support a substantive body above the hard floor. Supplemental search is used only when those pages still do not provide enough relevant, verifiable material. Open every result whose facts enter the body. The references block contains: Verifier KEEP URLs (Lead + every Corroborated by URL) ∪ {search URLs whose content backed a body fact}.
+**Canonical URLs of Google News MCP articles that supplied a fact in body MUST appear** in the references block. Re-find the existing Lead and relevant same-event coverage with `search_news` when the supplied excerpts cannot support a substantive body above the hard floor, then call `get_news_article` for every result whose article text enters the body. The references block contains: canonicalized Verifier KEEP URLs ∪ {canonical URLs of MCP-fetched articles whose full text backed a body fact}. A Google News redirect may remain only as last-resort discovery provenance when the MCP cannot return a canonical URL; it is not article-body evidence.
 
-If a category has fewer forwarded stories than `min_per_category`, keep the section heading and append exactly one italic `gap_note` line before the next `---`. This is a search-scarcity note, not an editorial rejection.
+If a category has fewer retained unique stories than `min_per_category`, keep the section heading and append exactly one italic `gap_note` line before the next `---`. This is a unique-result scarcity note after deduplication, not an editorial rejection.
 
 ## Markdown Syntax Contract
 
@@ -144,20 +144,20 @@ The Bank of Japan held its policy rate at 0.5% for the third consecutive meeting
 
 (Note: `[3]`/`[4]` in the `lang=zh` example assumes the previous `lang=en` story consumed `[1]`/`[2]`. `[N]` is a **document-wide** continuous counter, never reset per story or per language. Body prose carries the news directly with no `**摘要**` / `**分析**` marker.)
 
-## Cited Search URLs
+## Cited Google News MCP Articles
 
-When Writer uses supplemental WebSearch for necessary context, it opens every result whose facts enter the body. **Any URL that supplied a fact written in body prose is a first-class citation** and appears in the story's `**References**` block alongside Verifier KEEP URLs:
+When Writer uses supplemental `google_news.search_news` for necessary context, it immediately calls `google_news.get_news_article` for every result whose full text enters the body. **Any canonical URL whose returned full text supplied a fact written in body prose is a first-class citation** and appears in the story's `**References**` block alongside the canonicalized Verifier Lead:
 
-- One APA reference line per cited search URL, with the next continuous `[N]` counter.
+- One APA reference line per cited canonical URL, with the next continuous `[N]` counter.
 - Outlet name = the URL's actual publisher.
 - Title = the source page's `<title>` or H1, preserved in original English.
 - Date = the source publication date.
 
 This is **mandatory**. Citing background facts in body without listing the supporting URL in References creates a reference gap visible to readers checking sources. Writer is responsible at write time; Editor verifies at edit time.
 
-Verifier-delivered URLs (Lead + every Corroborated by URL) always appear in References regardless of whether Writer cites them in body — they preserve the report's evidence trail.
+Every Verifier-delivered story remains in the report. Its Google News discovery URL is replaced in References by the publisher `canonical_url` returned from the Writer's same-session search/fetch pair when available; retain the discovery URL only when canonicalization fails.
 
-The ONLY URLs that may be opened and NOT cited are ones that returned irrelevant content or whose facts duplicate something already cited. When in doubt, cite.
+The ONLY canonical URLs that may be fetched and NOT cited are ones whose returned content was irrelevant or whose facts duplicate something already cited. When in doubt, cite.
 
 ## APA 7th Reference Format
 
@@ -169,7 +169,7 @@ The ONLY URLs that may be opened and NOT cited are ones that returned irrelevant
 - URLs are bare — never wrap in `[text](url)`.
 - One or more references per story, colocated in the story's references block. Do NOT emit a global sources list.
 - `[N]` prefix is mandatory, counter runs continuously from `[1]` at the document's first reference through `[total]` at the last, regardless of story boundaries.
-- **References = Verifier KEEP URLs ∪ {search URLs that supplied a fact in body}**. Every Verifier URL (Lead + every Corroborated by URL) MUST appear. Every search URL whose content backed a body fact MUST appear with proper APA and continuous `[N]`. URLs opened but unused are NOT added.
+- **References = canonicalized Verifier KEEP URLs ∪ {canonical URLs of MCP-fetched articles that supplied a fact in body}**. Every Verifier story MUST retain one provenance URL: prefer the publisher `canonical_url`; use its Google News discovery URL only when canonicalization fails. Every canonical URL whose returned full text backed a body fact MUST appear with proper APA and continuous `[N]`. Fetched-but-unused URLs are NOT added.
 
 ## Self-Check Checksum (Writer must verify before emitting)
 
@@ -182,7 +182,7 @@ Before calling `apply_patch`, count your own output:
 5. No `^## 参考文献$` / `^## References$` / `^## Sources$` H2 heading anywhere.
 6. No `^> **来源**` / `^> **Source**` blockquote patterns.
 7. No `^*\s*来源[:：]` / `^*\s*Sources?[:：]` italic in-text citation patterns.
-8. Every URL in the references block is either a Verifier KEEP URL (Lead or Corroborated by) OR a search URL that supplied a fact in body. URLs that were opened but whose content wasn't used MUST NOT appear; URLs whose content was used MUST appear.
+8. Every URL in the references block is either a canonicalized Verifier story URL, a last-resort Google News discovery URL for a story that could not be canonicalized, or a canonical URL whose `get_news_article` full text supplied a body fact. Fetched-but-unused supplemental URLs MUST NOT appear; URLs whose returned full text was used MUST appear.
 9. Every `en` story body contains at least 250 English words and every `zh` story body contains at least 400 Unicode Han characters, counted per `references/language-spec.md` § Body Length Standard. `ja` has no fixed minimum. There is no maximum. Never pad, distort, or repeat content to meet the floor.
 10. Every `zh` or `en` multi-clause headline expresses an evidence-supported relationship and uses the language's comma (`，` or `, `), never bare whitespace or another separator. Do not mechanically replace whitespace with punctuation.
 
