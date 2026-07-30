@@ -16,7 +16,7 @@
 
 - 每个 stage 通过 custom-agent selector 启动其精确命名 role，并使用 `fork_turns="none"`；模型与 model_reasoning_effort 从 TOML 读取。`task_name` 仅是线程标签。
 - 每个 stage 的输出和文件交接完成后必须调用 `close_agent`；并行组全部收齐后逐一关闭，失败或 schema 无效的尝试也要先关闭再重试。关闭失败时停止继续 spawn。
-- 上游输出原样传给下游 prompt；不要改成通用子 agent 或将 agent body 内嵌到 prompt。
+- 上游输出原样传给下游 prompt；Pipeline C 只允许文档规定的 Scanner 规范化、Verifier mechanical fallback 和 Manifest fallback。不要改成通用子 agent 或将 agent body 内嵌到 prompt。
 - 所有文件创建或修改均使用 apply_patch。不要在 prompt 中要求 Write 或 Edit 工具。
 
 ## 模型分配
@@ -25,8 +25,8 @@
 
 | Agent | 模型 | effort | 取舍 |
 |---|---|---:|---|
-| sci-research-daily-news-scanner | gpt-5.6-terra | high | 按栏目并行的一句话 Google News MCP 当日搜索；不取正文、不核验、不筛选结果 |
-| sci-research-news-verifier | gpt-5.6-terra | high | 只做同事件查重：保留首次出现、删除后续重复；不联网、不核验、不评分、不路由 |
+| sci-research-daily-news-scanner | gpt-5.6-terra | high | 按栏目并行的一句话 Google News MCP 当日搜索；最多两次查询、优先不同事件并封顶 10 条，不为凑数堆叠近似报道 |
+| sci-research-news-verifier | gpt-5.6-terra | high | 同事件查重并按直接相关性、具体进展、实质影响和事实清晰度将每栏筛至 3–6 条；不联网、不核验、不路由 |
 | sci-research-daily-fact-extractor | gpt-5.6-luna | medium | 从搜索结果摘要抽取结构化值并标记 search-results 证据基础 |
 | sci-research-daily-news-writer | gpt-5.6-sol | high | 多语言母语化新闻写作与按需背景补充 |
 | sci-research-daily-editor | gpt-5.6-sol | high | 事实、来源、引语、格式与完整母语编辑 |
@@ -53,15 +53,16 @@
 流程：Scanner × category → 机械汇总 → Verifier → Fact Extractor → Writer × language → Editor × language → pandoc → 可选邮件。
 
 - Scanner 按 active category 一栏一个并行运行；该 fan-out 每份报告只执行一次。Verifier、Fact Extractor 各运行一次；双语模式下 Writer 和 Editor 按语言并行。
-- 每个 Scanner 在必需的 runtime path header 后只接收一句搜索任务，由 GPT-5.6 Terra 自行决定 `google_news.search_news` 查询；不得追加来源、正文获取、核验、评分、配额、去重或路由规则。
-- Scanner 只用 `mcp__google_news__search_news` 搜索指定日期并返回有用结果；页面被阻挡、付费、仅摘要、动态渲染或暂时打不开仍然保留，不运行 `get_news_article`，不二次核验日期。
-- Scanner 不做来源等级、新闻价值、影响力、材料完整性、替代来源、去重、Lead 选择、最终分类或 `china_nexus`/`ipo_ma` 路由。
-- 编排器只按栏目顺序原样包裹各 Scanner 输出并计算汇总计数；Verifier 只基于 Batch 做同事件查重，不联网、不核验、不评分、不选择更优 Lead、不路由，唯一允许的 DROP 是后续重复项 `DROP_DUPLICATE`。
+- 每个 Scanner 在必需的 runtime path header 后只接收一句搜索任务，由 GPT-5.6 Terra 自行执行一次 `google_news.search_news` 主搜索；仅当直接相关的不同结果不足 3 条时可补搜一次。不得追加来源或正文获取规则。
+- Scanner 只用 `mcp__google_news__search_news` 搜索指定日期，清理完全相同的 URL/标准化标题并最多转交 10 条；十条是上限而非配额，明显属于同一人物、行动和进展的近似报道应优先保留信息最完整的一条，宁可少交也不凑数。不确定是否同事件时交给 Verifier。
+- Scanner 不做来源等级、正文核验、严格事件级去重、Lead 选择、最终分类或 `china_nexus`/`ipo_ma` 路由；页面被阻挡、付费、仅摘要、动态渲染或暂时打不开仍然保留。
+- 编排器按栏目顺序包裹 Scanner 输出并计算汇总计数；超过 10 条时机械封顶，部分或结构不完整时保留所有可解析故事并修正机械字段，完全失败时插入 `unavailable` 零候选占位。单栏的质量、结构或失败状态只记入审计，绝不阻断 Verifier。
 - country=China 必须采用外部视角：只查询和使用外国媒体，不查询或使用中国本土媒体及中国政府域名。
 - country=Europe 使用 Europe-ex-UK 搜索范围：排除以英国为唯一或主要对象的结果；英国媒体仍可报道非英国欧洲新闻。
 - 非中国报告有 6 个栏目；中国报告在第 5 位增加 china_nexus，并保留 ipo_ma。
-- Verifier 按 Batch 顺序保留同一事件首次出现的结果及其 searched category，后续跨媒体或跨栏目的同事件报道去重；相关但属于后续进展、回应、另一决定或另一交易阶段的必须保留。`Input count = Kept count + Duplicate count`。
-- Scanner Batch 与 Verifier 查重报告必须原样保存到日报目录的 `audit/*.txt`；不要使用 `.md`，避免 Pipeline D 将审计文件当作国家日报。
+- Verifier 不联网、不核验事实日期、不使用媒体等级或数值评分。它先按 Batch 顺序将同事件后续报道标记为 `DROP_DUPLICATE`，再按直接相关性、具体当日进展、实质影响和事实清晰度在每栏保留 3–6 个事件；超过 6 个的独立事件标记 `DROP_NOT_SELECTED`。Verifier 输出错误或 schema 不完整时不重试、不停止，由编排器按每栏前 6 条生成 `mechanical-fallback` 后继续 Fact Extractor。
+- Pipeline C 的候选数量、schema、计数和最终格式检查均为诊断与修正信号，不是中止门槛；Fact Extractor 失败时生成空事实 fallback Manifest，Editor 或格式检查失败时保留 Writer Markdown 并继续可用输出。只有全栏目无任何候选、必需工具不存在或输出路径不可写等客观无内容/基础设施条件才停止受影响输出。
+- Scanner Batch 与 Verifier 查重筛选报告必须原样保存到日报目录的 `audit/*.txt`；不要使用 `.md`，避免 Pipeline D 将审计文件当作国家日报。
 - Writer 必须遵守 Fact Manifest；Editor 使用 apply_patch 运行五道检查。Writer 与 Editor 的新闻搜索和正文获取只用 `google_news.search_news` / `google_news.get_news_article`，不得回退到 Codex 原生 WebSearch；引用、引号和输出格式规范以 skills/daily-news-intelligence/references/ 为准。
 - `get_news_article` 的 `article_id` 只在产生它的 MCP 会话内有效；Writer/Editor 必须按标题和媒体重新搜索并立即取文，不得复用 Scanner ID。英文每篇正文不得少于 250 个词，中文每篇正文不得少于 400 个 Unicode 汉字，不设最高字数。材料不足时先通过 MCP 重新搜索并取 Lead 正文，再按需补充同事件搜索；只能用返回的可引用实质正文达到底线，不得重复、空泛扩写或编造。
 - --email-attach none 表示仅发送正文，必须省略 --attach。
@@ -136,7 +137,7 @@
 
 | Hook | 触发 | 作用 |
 |---|---|---|
-| daily-news-format-check | PostToolUse: apply_patch + 交付前直接检查 | 编辑后反馈格式错误；直接 `--file` 检查阻断不合格 Markdown 的导出和邮件 |
+| daily-news-format-check | PostToolUse: apply_patch + 交付前直接检查 | 编辑后和交付前报告格式问题；Pipeline C 记录 `FORMAT_WARNING` 后仍继续导出已有内容 |
 | monthly-news-format-check | PostToolUse: apply_patch + 交付前直接检查 | 复用 C 的故事/引用/长度规则，并检查月度 H1、资料覆盖说明和国家派生栏目顺序 |
 | opportunity-briefing-format-check | PostToolUse: apply_patch + 交付前直接检查 | 检查 F 的章节、表格、逐条摘要/影响/商机/关注、Companies House 字段、图片与免责声明 |
 | email-send-guard | PreToolUse: Bash | 阻断绕过受控邮件脚本的内联 SMTP |
@@ -150,7 +151,7 @@
 | C 编排、参数、输出与邮件 | skills/daily-news-intelligence/SKILL.md |
 | C Scanner 极简 Google News MCP 搜索提示 | .codex/agents/sci-research-daily-news-scanner.toml |
 | C 一句话栏目方向与编排 | skills/daily-news-intelligence/SKILL.md |
-| C Verifier 纯查重 schema 与最小中欧范围规则 | skills/daily-news-intelligence/references/schemas.md、skills/daily-news-intelligence/references/rubric.md |
+| C Scanner 封顶、Verifier 查重筛选 schema 与中欧范围规则 | skills/daily-news-intelligence/references/schemas.md、skills/daily-news-intelligence/references/rubric.md |
 | C agent 行为 | .codex/agents/sci-research-daily-*.toml、.codex/agents/sci-research-news-verifier.toml |
 | D 编排与参数 | skills/daily-briefing/SKILL.md |
 | D docx 模板与生成器 | skills/daily-briefing/template/、skills/daily-briefing/scripts/generate-branded-docx.py |

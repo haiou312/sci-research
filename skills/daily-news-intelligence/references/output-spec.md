@@ -30,7 +30,7 @@ Do not emit a trailing global references or sources section.
 
 **Canonical URLs of Google News MCP articles that supplied a fact in body MUST appear** in the references block. Re-find the existing Lead and relevant same-event coverage with `search_news` when the supplied excerpts cannot support a substantive body above the hard floor, then call `get_news_article` for every result whose article text enters the body. The references block contains: canonicalized Verifier KEEP URLs ∪ {canonical URLs of MCP-fetched articles whose full text backed a body fact}. A Google News redirect may remain only as last-resort discovery provenance when the MCP cannot return a canonical URL; it is not article-body evidence.
 
-If a category has fewer retained unique stories than `min_per_category`, keep the section heading and append exactly one italic `gap_note` line before the next `---`. This is a unique-result scarcity note after deduplication, not an editorial rejection.
+If a category has fewer retained stories than `min_per_category`, keep the section heading and append exactly one italic `gap_note` line before the next `---`. This records that fewer than the desired minimum of unique qualifying events were available after capped discovery, event deduplication, and selection; it is not a request to add filler. No category may contain more than 6 stories.
 
 ## Markdown Syntax Contract
 
@@ -57,7 +57,7 @@ The following markers must NOT appear anywhere in the output:
 | `**分析**` | Analysis block was removed in the new structure — body carries any "so what" inline |
 | `**Analysis**` | Same as above |
 
-The PostToolUse hook `scripts/hooks/daily-news-format-check.js` reports these defects after an `apply_patch`; its direct `--file` mode blocks export and email until they are corrected.
+The PostToolUse hook `scripts/hooks/daily-news-format-check.js` reports these defects after an `apply_patch`; direct `--file` mode returns a diagnostic failure code, which Pipeline C records as `FORMAT_WARNING` without blocking export or delivery.
 
 ## Reference Format Rules (CRITICAL)
 
@@ -186,7 +186,7 @@ Before calling `apply_patch`, count your own output:
 9. Every `en` story body contains at least 250 English words and every `zh` story body contains at least 400 Unicode Han characters, counted per `references/language-spec.md` § Body Length Standard. `ja` has no fixed minimum. There is no maximum. Never pad, distort, or repeat content to meet the floor.
 10. Every `zh` or `en` multi-clause headline expresses an evidence-supported relationship and uses the language's comma (`，` or `, `), never bare whitespace or another separator. Do not mechanically replace whitespace with punctuation.
 
-If any check fails, regenerate. A PostToolUse hook (`scripts/hooks/daily-news-format-check.js`) checks items 1, 2, 3, 4, 5, 6, and 7 mechanically after each edit and injects correction context into the task. Because PostToolUse runs after the edit, correct the resulting file before continuing. The orchestrator's direct `--file` check exits 2 on a violation and hard-stops export or email.
+If any check fails, correct or regenerate when possible. A PostToolUse hook (`scripts/hooks/daily-news-format-check.js`) checks items 1, 2, 3, 4, 5, 6, and 7 mechanically after each edit and injects correction context into the task. Because PostToolUse runs after the edit, Writer/Editor should repair the resulting file, but the orchestrator treats a direct `--file` exit 2 as `FORMAT_WARNING` and continues best-effort export or delivery.
 
 Item 9 is hook-enforced per story. The hook reports the story title, actual count, and minimum; direct mode exits 2 when any `en` or `zh` body is below the floor. For item 10, the hook catches obvious whitespace-separated Chinese headline fragments; the Writer and Editor remain responsible for semantic relationships and English headline logic.
 

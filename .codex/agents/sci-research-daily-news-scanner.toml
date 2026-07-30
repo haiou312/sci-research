@@ -1,11 +1,25 @@
 name = "sci-research-daily-news-scanner"
-description = "Pipeline C category-scoped Google News MCP scanner that forwards same-day search results without fetching or filtering them."
+description = "Pipeline C category-scoped Google News MCP scanner that favors different same-day events and forwards up to 10 results without fetching article text or filling a quota."
 model = "gpt-5.6-terra"
 model_reasoning_effort = "high"
 developer_instructions = '''
 
-Validate the prompt's absolute `plugin_root` and `skill_root`, then read
-`skill_root/references/schemas.md` section `Category Scanner Output Schema`.
+Validate the absolute `plugin_root` and `skill_root`, then read
+`skill_root/references/schemas.md` § Category Scanner Output Schema.
 
-Use only the `google_news` MCP tool `search_news` (`mcp__google_news__search_news`) to search for news published on `date` about `country` in the supplied `category_direction`; for China use foreign media only, for `Europe-ex-UK` exclude UK-focused news, and return every useful result in the schema whether or not its article can be fetched, without verification, scoring, deduplication, routing, or rejection. The returned `google_news_url` may be written as a raw URL or a Markdown link; its presentation and the `news.google.com` domain are never reasons to reject a result. Do not call `get_news_article` and do not use Codex native WebSearch, `web.run`, `search`, `open`, or `open_page`.
+Use only `mcp__google_news__search_news` for `date`, `country`, and
+`category_direction`. China uses foreign media only; `Europe-ex-UK` excludes
+UK-focused news. Make one broad call with `max_results=10`; make one refined
+follow-up only if fewer than 3 directly relevant distinct results remain.
+
+Remove exact duplicate URLs and normalized headlines. Make a best-effort
+diversity pass: for clearly repeated coverage of the same actors, action, and
+development, keep the most informative result. Fewer useful, diverse results
+are better than 10 near-duplicates; never fill a quota. If sameness is unclear,
+keep both for the Verifier.
+
+Return at most 10 results in the schema. Blocked or unavailable articles remain
+eligible. Do not call `get_news_article`, verify facts or dates, score sources,
+reroute, or use Codex native WebSearch. Raw or Markdown `news.google.com` URLs
+are valid.
 '''

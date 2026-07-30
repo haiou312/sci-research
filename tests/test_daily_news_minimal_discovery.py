@@ -18,10 +18,15 @@ class DailyNewsMinimalDiscoveryTests(unittest.TestCase):
         instructions = agent["developer_instructions"]
         self.assertIn("mcp__google_news__search_news", instructions)
         self.assertIn("Do not call `get_news_article`", instructions)
-        self.assertIn("do not use Codex native WebSearch", instructions)
-        self.assertIn("whether or not its article can be fetched", instructions)
-        self.assertIn("raw URL or a Markdown link", instructions)
-        self.assertIn("never reasons to reject", instructions)
+        self.assertIn("Codex native WebSearch", instructions)
+        self.assertIn("Blocked or unavailable articles remain", instructions)
+        self.assertIn("Raw or Markdown `news.google.com` URLs", instructions)
+        self.assertIn("max_results=10", instructions)
+        self.assertIn("one refined", instructions)
+        self.assertIn("Return at most 10 results", instructions)
+        self.assertIn("exact duplicate URLs", instructions)
+        self.assertIn("best-effort", instructions)
+        self.assertIn("near-duplicates", instructions)
 
     def test_scanner_url_presentation_is_not_a_gate(self):
         schema = (
@@ -30,30 +35,49 @@ class DailyNewsMinimalDiscoveryTests(unittest.TestCase):
         skill = (ROOT / "skills" / "daily-news-intelligence" / "SKILL.md").read_text(
             encoding="utf-8"
         )
-        self.assertIn("raw `news.google.com` URL or a Markdown link", schema)
-        self.assertIn("URL presentation is not a validation gate", schema)
-        self.assertIn("must never trigger a Scanner retry", skill)
-        self.assertIn("URL domain are never schema violations", skill)
+        self.assertIn("raw `news.google.com` URL or a Markdown link is valid", schema)
+        self.assertIn("Do not retry or stop for schema, URL, access, or quality problems", skill)
+        self.assertIn("Preserve it verbatim", schema)
 
-    def test_verifier_is_deduplication_only(self):
+    def test_verifier_deduplicates_and_selects_three_to_six(self):
         agent = self.load_agent("sci-research-news-verifier.toml")
         self.assertEqual(agent["model"], "gpt-5.6-terra")
         self.assertEqual(agent["model_reasoning_effort"], "high")
         instructions = agent["developer_instructions"]
-        self.assertIn("same-event deduplication", instructions)
-        self.assertIn("keep the first occurrence", instructions)
+        self.assertIn("first report of each event", instructions)
         self.assertIn("DROP_DUPLICATE", instructions)
-        self.assertIn("Do not search, fetch pages, verify facts or dates", instructions)
-        self.assertIn("drop a unique result", instructions)
+        self.assertIn("DROP_NOT_SELECTED", instructions)
+        self.assertIn("more than 6 unique events", instructions)
+        self.assertIn("below `min_per_category`", instructions)
+        self.assertIn("Do not search, fetch, verify, score sources", instructions)
 
-    def test_verifier_schema_has_deduplication_arithmetic(self):
+    def test_verifier_schema_has_bounded_selection_arithmetic(self):
         schema = (
             ROOT / "skills" / "daily-news-intelligence" / "references" / "schemas.md"
         ).read_text(encoding="utf-8")
-        self.assertIn("Mode: deduplication-only", schema)
-        self.assertIn("Input count = Kept count + Duplicate count", schema)
-        self.assertIn("The only valid DROP verdict is `DROP_DUPLICATE`", schema)
+        self.assertIn("Mode: deduplicate-and-select", schema)
+        self.assertIn(
+            "Input count = Kept count + Duplicate count + Not-selected count", schema
+        )
+        self.assertIn("DROP_NOT_SELECTED", schema)
+        self.assertIn("at most 6 events", schema)
         self.assertIn("duplicate chains are forbidden", schema)
+        self.assertIn("Mode: mechanical-fallback", schema)
+        self.assertIn("Continue downstream", schema)
+
+    def test_skill_caps_scanner_and_final_category_counts(self):
+        skill = (ROOT / "skills" / "daily-news-intelligence" / "SKILL.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("max_per_category=6", skill)
+        self.assertIn("cap at 10", skill)
+        self.assertIn("Require `1 <= min_per_category <= 6`", skill)
+        self.assertIn("an `unavailable` zero-candidate block", skill)
+        self.assertIn("Never retry or stop for Verifier schema defects", skill)
+        self.assertIn("`mechanical-fallback`", skill)
+        self.assertIn("empty-facts fallback", skill)
+        self.assertIn("FORMAT_WARNING", skill)
+        self.assertIn("A missing language never blocks another", skill)
 
     def test_fact_extractor_is_luna_medium_with_search_result_basis(self):
         agent = self.load_agent("sci-research-daily-fact-extractor.toml")
@@ -81,7 +105,7 @@ class DailyNewsMinimalDiscoveryTests(unittest.TestCase):
         self.assertIn("Default: `Use google_news.search_news for news published on {date}", skill)
         self.assertIn("China: `Use google_news.search_news on foreign media only", skill)
         self.assertIn("Europe: `Use google_news.search_news", skill)
-        self.assertIn("Do not append any other search", skill)
+        self.assertIn("pass exactly one sentence", skill)
 
     def test_skill_requires_current_task_google_news_tools(self):
         skill = (ROOT / "skills" / "daily-news-intelligence" / "SKILL.md").read_text(

@@ -20,15 +20,16 @@ Given a country, company, date, month, or reporting window, this plugin orchestr
 
 The five pipelines use separate agent chains and stage contracts. Pipeline D intentionally consumes one date of Pipeline C reports across countries. Pipeline G consumes one month of Pipeline C reports for one country and never searches the web. Pipeline F performs its own date-range discovery and uses a scoped Companies House API/watchlist monitor; it does not claim exhaustive discovery of every Chinese-backed UK entity.
 
-Pipeline C also writes the raw Scanner Batch and deduplication-only Verifier report under `daily-news/{date}/audit/` as `.txt` files. They preserve every category's unverified search results and every KEEP/`DROP_DUPLICATE` decision; Pipeline D ignores them because it reads report Markdown rather than audit text files.
+Pipeline C also writes the capped Scanner Batch and deduplication-and-selection Verifier report under `daily-news/{date}/audit/` as `.txt` files. They preserve up to 10 diverse unverified search results per category, partial/unavailable category notes, and every KEEP/`DROP_DUPLICATE`/`DROP_NOT_SELECTED` decision; Pipeline D ignores them because it reads report Markdown rather than audit text files.
 
 ---
 
 ## Why This Plugin
 
 - **20 specialised agents** across five pipelines, each agent narrowly scoped
-- **Parallel one-sentence Terra Scanners** — one focused `google_news.search_news` agent per category; useful results are forwarded whether or not publisher pages can be fetched
-- **Deduplication-only Verifier** — removes later reports of the same event without a second web pass, source grading, date revalidation, news-value scoring, Lead replacement, or category rerouting
+- **Parallel one-sentence Terra Scanners** — one focused `google_news.search_news` agent per category; one broad query plus at most one low-coverage follow-up, soft event diversification, and up to 10 candidates without filling the allowance with near-duplicates
+- **Bounded Verifier** — removes later reports of the same event, then retains 3-6 events per category without a second web pass, source tiers, numeric scores, Lead replacement, or category rerouting
+- **Content-first degradation** — a weak Scanner category, imperfect Verifier schema, missing Fact Manifest, Editor failure, or format warning is recorded and downgraded instead of terminating usable downstream output
 - **Search-result Fact Manifest + 5-pass Editor** — literal values from search summaries are marked as search-result evidence, then later writing and editing can research and repair the report
 - **External-view China gate** — `$sci-research:daily-news-intelligence --country "China"` uses foreign media only and excludes Chinese-domestic outlets and Chinese government domains
 - **Free-prose Writer** — daily news Writer composes explanatory prose in the target language, not a mechanical translation
@@ -455,8 +456,8 @@ Bilingual mode (--lang zh+en …): the category Scanner fan-out runs once per re
 
 | Agent | Codex configuration | Role |
 |---|---|---|
-| `sci-research-daily-news-scanner` | gpt-5.6-terra / high | One parallel instance per active category. After the runtime header it receives one search sentence, uses only `google_news.search_news`, and returns useful same-day results without fetching, verifying, filtering, scoring, deduplicating, or routing them; China uses foreign media only and Europe excludes UK-focused events |
-| `sci-research-news-verifier` | gpt-5.6-terra / high | Deduplication-only adapter: keeps the first occurrence of each event in its searched category and marks later same-event reports `DROP_DUPLICATE`; no web tools, verification, scoring, Lead replacement, rerouting, or other DROP reasons |
+| `sci-research-daily-news-scanner` | gpt-5.6-terra / high | One parallel instance per active category. After the runtime header it receives one search sentence, uses only `google_news.search_news`, runs one broad query plus at most one low-coverage follow-up, favors different events over repeated coverage, and forwards up to 10 results without fetching article text; fewer diverse results are preferred to 10 near-duplicates |
+| `sci-research-news-verifier` | gpt-5.6-terra / high | Deduplication-and-selection adapter: groups same-event reports under their first occurrence, emits `DROP_DUPLICATE`, and retains 3-6 events per category; unique overflow becomes `DROP_NOT_SELECTED`; no web tools, factual verification, source tiers, numeric scoring, Lead replacement, or rerouting |
 | `sci-research-daily-fact-extractor` | gpt-5.6-luna / medium | Extracts literal numbers, names, dates, and explicitly attributed quotes from search-result summaries into a manifest marked `evidence_basis: search-results` |
 | `sci-research-daily-news-writer` | gpt-5.6-sol / high | Consumes the Verifier KEEP set and Fact Manifest and composes native target-language newsroom prose. It re-finds each story with `google_news.search_news`, retrieves article text with `google_news.get_news_article`, and cites the publisher canonical URL. English bodies have a 250-word minimum and Chinese bodies a 400-Han-character minimum, with no maximum. One instance per language in bilingual mode |
 | `sci-research-daily-editor` | gpt-5.6-sol / high | Five-pass post-Writer editor: semantic fact fidelity, MCP full-text source backing, quotation accuracy, structure/typography, and a full native-language editorial pass. It uses the same two Google News MCP tools and never native WebSearch. `apply_patch`-only. One instance per language in bilingual mode |
@@ -526,9 +527,9 @@ Pipeline C Markdown → deterministic source index → monthly-curator ×categor
 
 ## Pipeline C Minimal Discovery
 
-Each category Scanner receives one natural-language search sentence after its mandatory runtime-path header. GPT-5.6 Terra chooses the `google_news.search_news` queries and returns useful results shown for the requested date. It does not call `get_news_article` or reject blocked, paywalled, snippet-only, dynamically rendered, or unavailable publisher pages.
+Each category Scanner receives one natural-language search sentence after its mandatory runtime-path header. GPT-5.6 Terra runs one broad `google_news.search_news` call and may run one refined follow-up only when fewer than 3 directly relevant distinct results were found. It removes exact URL/headline duplicates, makes a best-effort diversity pass, and forwards up to 10 results shown for the requested date. Ten is an upper bound rather than a quota: fewer distinct events are preferred to a list dominated by near-identical coverage. It does not call `get_news_article` or reject blocked, paywalled, snippet-only, dynamically rendered, or unavailable publisher pages.
 
-Only two search-scope rules remain: China reports use foreign media only, and Europe reports exclude UK-focused events while allowing UK outlets to report non-UK European news. The Verifier then performs one operation only: same-event deduplication from the Scanner Batch. It keeps the first occurrence and original searched category, drops later duplicates, and leaves distinct follow-ups, reactions, decisions, transactions, and transaction stages separate. Writer and Editor re-search inside their own MCP sessions before calling `get_news_article`, because article IDs are session-local.
+China reports use foreign media only, and Europe reports exclude UK-focused events while allowing UK outlets to report non-UK European news. The Verifier groups same-event coverage under the first occurrence and original searched category, leaves distinct follow-ups, reactions, decisions, transactions, and transaction stages separate, then retains 3-6 events per category using direct relevance, concrete target-date development, material consequence, and factual clarity. A failed category becomes an audited zero-candidate placeholder; invalid Verifier output becomes a deterministic first-six-per-category fallback; neither condition stops later stages. Writer and Editor re-search inside their own MCP sessions before calling `get_news_article`, because article IDs are session-local.
 
 Detailed rules:
 - Minimal Scanner prompt and output: [`.codex/agents/sci-research-daily-news-scanner.toml`](./.codex/agents/sci-research-daily-news-scanner.toml) and [`skills/daily-news-intelligence/references/schemas.md`](./skills/daily-news-intelligence/references/schemas.md)
@@ -540,7 +541,7 @@ Detailed rules:
 
 | Hook | Pipeline | Trigger | What It Does |
 |---|---|---|---|
-| `daily-news-format-check` | C | PostToolUse:apply_patch + direct pre-delivery check | Reports format violations after edits; the direct `--file` check hard-stops export/email on count, numbering, URL, quote-mark, or body-length failures |
+| `daily-news-format-check` | C | PostToolUse:apply_patch + direct pre-delivery check | Reports count, numbering, URL, quote-mark, body-length, and per-category-limit violations; Pipeline C records `FORMAT_WARNING` and continues exporting existing content |
 | `monthly-news-format-check` | G | PostToolUse:apply_patch + direct pre-delivery check | Reuses Pipeline C story/reference/body-length checks and enforces the monthly H1, source-coverage note, and country-derived category order |
 | `opportunity-briefing-format-check` | F | PostToolUse:apply_patch + direct pre-delivery check | Enforces section order, action tables, story fields, sources, image provenance/fallback, Companies House confidence, and disclaimer |
 | `email-send-guard` | C / D / E / F / G | PreToolUse:Bash | **Blocks** inline `smtplib` / `MIMEMultipart` / `sendmail` Bash commands that bypass the sanctioned `send-*-email.py` scripts |
@@ -649,7 +650,7 @@ sci-research/
 |---|---|
 | Pipeline C minimal Scanner prompt | `.codex/agents/sci-research-daily-news-scanner.toml` |
 | Pipeline C category directions and orchestration | `skills/daily-news-intelligence/SKILL.md` |
-| Pipeline C deduplication-only Verifier | `.codex/agents/sci-research-news-verifier.toml` + `skills/daily-news-intelligence/references/schemas.md` |
+| Pipeline C deduplication-and-selection Verifier | `.codex/agents/sci-research-news-verifier.toml` + `skills/daily-news-intelligence/references/schemas.md` |
 | Pipeline C China foreign-media / Europe-ex-UK scope | `skills/daily-news-intelligence/references/rubric.md` |
 | Pipeline C output format / Markdown contract | `skills/daily-news-intelligence/references/output-spec.md` |
 | Pipeline C language localisation / bilingual mode | `skills/daily-news-intelligence/references/language-spec.md` (§ Bilingual Mode) |

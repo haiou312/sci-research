@@ -2,16 +2,16 @@
   {
     "id": 1,
     "prompt": "$sci-research:daily-news-intelligence --country \"Japan\" --lang zh",
-    "expected": "6 Terra/high category Scanners dispatched in parallel with exactly one google_news.search_news sentence after each runtime header; every useful search result enters the Scanner Batch even when its publisher article cannot be fetched; deduplication-only Verifier keeps each event's first occurrence and searched category, emits DROP_DUPLICATE only for later same-event reports, and leaves distinct follow-ups separate; Luna/medium Fact Extractor marks evidence_basis search-results; Writer and Editor use google_news.search_news plus google_news.get_news_article only; 6-category zh Markdown + docx with >=2 unique stories per category or an explicit gap note, >=400 Unicode Han characters per story, canonical publisher APA refs, Chinese quote marks “”, and native Chinese newsroom prose"
+    "expected": "6 parallel Terra/high Scanners; one broad search plus one optional low-coverage refinement; diverse, unverified results capped at 10 per category. Verifier deduplicates and keeps 3-6; documented fallbacks preserve usable content. Output is six-category native Chinese Markdown, optionally docx, with >=400 Han characters and APA references per story."
   },
   {
     "id": 2,
     "prompt": "$sci-research:daily-news-intelligence --country \"United Kingdom\" --lang en --min-per-category 3",
-    "expected": "6 Terra/high category Scanners use one-sentence recall-first search and do not fetch, verify, filter, score, deduplicate, or reroute results; deduplication-only Verifier drops later same-event reports without web access, scoring, Lead replacement, or rerouting; 6-category en Markdown + docx with >=3 unique stories per category or italic gap_note, every story body >=250 English words with no maximum, and varied native English newsroom prose rather than a repeated template"
+    "expected": "6 parallel Terra/high Scanners return up to 10 diverse results each without fetching articles. Verifier uses no web, removes same-event duplicates, and keeps at most 6 per category. Failures degrade through fallbacks; format checks are advisory. Each English story has >=250 words."
   },
   {
     "id": 3,
     "prompt": "$sci-research:daily-news-intelligence --country \"China\" --email \"test@example.com\" --email-dry-run --lang zh",
-    "expected": "7 Terra/high category Scanners dispatched in parallel with one search sentence each and foreign-media-only China scope; blocked, paid, stub, dynamic, and unavailable URLs remain Scanner results; deduplication-only Verifier may emit only DROP_DUPLICATE and preserves first-occurrence categories; 7-category zh Markdown + docx (China: econ/politics/tech/society/china_nexus/ipo_ma/other — 海外涉华财经 at position 5), email dry-run preview with correct subject and 7-line category body template, no SMTP connection"
+    "expected": "7 parallel Terra/high Scanners search foreign media only and return up to 10 diverse results per category; inaccessible URLs remain eligible. Verifier keeps 3-6 or uses mechanical fallback. Usable seven-category Chinese output continues through warnings to docx and email dry-run without SMTP."
   }
 ]

@@ -45,7 +45,7 @@ active(country) = [econ, politics, tech, society]
 - **Non-China report** → 6 categories: `econ, politics, tech, society, ipo_ma, other`.
 - **China report** → 7 categories: `econ, politics, tech, society, china_nexus, ipo_ma, other`.
 
-`china_nexus` appears **only** in a `--country China` report. `ipo_ma` appears in **every** report (always, regardless of country). `other` is always the final catch-all. The orchestrator passes only the assigned category's one-line direction to each Scanner, and the deduplication-only Verifier preserves the first occurrence's searched category without rerouting. This file owns identity, naming, order, and numbering.
+`china_nexus` appears **only** in a `--country China` report. `ipo_ma` appears in **every** report (always, regardless of country). `other` is always the final catch-all. The orchestrator passes only the assigned category's one-line direction to each Scanner, and the deduplication-and-selection Verifier preserves each retained first occurrence's searched category without rerouting. This file owns identity, naming, order, and numbering.
 
 ### H2 numbering convention
 
@@ -143,7 +143,7 @@ out_docx_en         = {out_dir}Japan-daily-news-2026-05-21.docx
 
 - **Upstream (category Scanner fan-out / Verifier / Fact-Extractor)**: the complete Scanner fan-out runs **once per report** regardless of `is_bilingual`, followed by one Verifier and one Fact-Extractor. These stages are English language-agnostic; their output is the same for `zh` / `en` / `ja` / `zh+en`.
 - **Per-lang (Writer / Editor / pandoc)**: fans out **once per lang** in `langs` order. The orchestrator invokes the Writer subagent for each lang separately, then Editor for each lang separately, then pandoc for each lang separately. Each Writer/Editor invocation still sees a single `lang` — the agents themselves are unchanged.
-- **Email (Step 10)**: collects every per-lang file into a single email per § email-spec.md § Bilingual Subject + Body Templates.
+- **Email (Step 8)**: collects every per-language file into one email per `email-spec.md` § Bilingual Subject + Body Templates.
 - **Self-check (filename)**: the rule `lang is zh or ja and country segment is ASCII` is checked **per generated file**, not on the combined `--lang` string.
 
 ### Backward compatibility
@@ -165,7 +165,7 @@ Single-lang `--lang zh` / `en` / `ja` behaviour is preserved unchanged: `is_bili
 
 ## Canonical Quote Marks
 
-Body prose uses exactly one quote-mark style per `lang`. Mixed styles or wrong-language chars are blocked by `scripts/hooks/daily-news-format-check.js`.
+Body prose uses exactly one quote-mark style per `lang`. Mixed styles or wrong-language chars are reported by `scripts/hooks/daily-news-format-check.js` for best-effort correction.
 
 | lang | Open | Close | Codepoints |
 |---|---|---|---|
@@ -205,7 +205,7 @@ When measuring, count only the story body between its `### <title>` and `**Refer
 - Meet the minimum with relevant sourced event detail, mechanics, context, affected parties, consequences, uncertainty, or next steps.
 - Never add repetition, generic significance claims, unnecessary quotations, invented context, or source-language glosses to reach the minimum.
 - Never cut necessary explanation or distort a fact to reduce a count.
-- The format hook reports per-story failures below the minimum and blocks export or email until they are corrected.
+- The format hook reports per-story failures below the minimum. Writer/Editor should correct them when evidence permits, but unresolved length warnings do not block export or delivery of existing content.
 - Paragraph count remains flexible in all languages.
 
 ## Writing Standard

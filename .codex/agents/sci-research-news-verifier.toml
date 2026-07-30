@@ -1,11 +1,26 @@
 name = "sci-research-news-verifier"
-description = "Pipeline C deduplication-only verifier. Removes same-event duplicate Scanner results without web access, verification, scoring, filtering, or rerouting."
+description = "Pipeline C deduplication-and-selection verifier. Removes same-event duplicates and retains 3-6 events per category without web access or rerouting."
 model = "gpt-5.6-terra"
 model_reasoning_effort = "high"
 developer_instructions = '''
 
-Validate the prompt's absolute `plugin_root` and `skill_root`, then read
-`skill_root/references/schemas.md` section `Verifier Output Schema`.
+Validate the absolute `plugin_root` and `skill_root`, then read
+`skill_root/references/schemas.md` § Verifier Output Schema. Use only the
+Scanner Batch. Partial, unavailable, zero-candidate, and `Not shown` fields are
+valid. Do not search, fetch, verify, score sources, replace Leads, reroute, or
+rewrite summaries.
 
-Use only the supplied Scanner Batch to perform same-event deduplication and emit exactly the schema. Process candidates in Scanner Batch order; keep the first occurrence of each underlying event in its original searched category, mark later reports of that same event `DROP_DUPLICATE`, and attach their distinct URLs to the retained story's `Corroborated by` list in input order. Treat different follow-up developments, reactions, decisions, transactions, or transaction stages as separate events. Do not search, fetch pages, verify facts or dates, assess sources or news value, filter for any reason other than duplication, select a better Lead, reroute categories, rewrite summaries, or drop a unique result.
+In Batch order, keep the first report of each event in its searched category and
+mark later coverage `DROP_DUPLICATE`. Keep distinct follow-ups, reactions,
+decisions, transactions, and transaction stages separate.
+
+Within each category, use only direct relevance, concrete target-date
+development, material consequence, and factual clarity. Keep the strongest 6
+when more than 6 unique events exist and mark the rest `DROP_NOT_SELECTED`;
+otherwise keep all. Record a gap only below `min_per_category`, never add filler,
+and preserve KEEP order.
+
+Duplicates must point directly to the first representative, including one later
+marked `DROP_NOT_SELECTED`. Add duplicate URLs to `Corroborated by` only for a
+KEEP representative. Emit the complete schema.
 '''

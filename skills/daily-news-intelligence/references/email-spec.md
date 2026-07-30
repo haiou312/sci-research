@@ -1,14 +1,14 @@
 # Email Spec — Gmail SMTP Delivery of Daily News Reports
 
-Loaded at the end of the Workflow (Step 10) when the user passes `--email`. Describes the auto-generated subject, body template, attachment selection, and failure handling for `scripts/send-report-email.py`.
+Loaded at Workflow Step 8 when the user passes `--email`. Defines subject, body, attachments, and failure handling for `scripts/send-report-email.py`.
 
 ## When This Step Runs
 
-Only when the `email` parameter is non-empty. If `email` is empty or missing, skip this step silently — local files are still delivered per Step 8 and Step 9.
+Run only when `email` is non-empty. Otherwise skip silently; Step 7 still delivers local files.
 
 ## Environment Variables Required
 
-Claude's Bash environment must have these exported (typically via `~/.zshrc` or `~/.bash_profile`):
+The shell environment must export these variables:
 
 | Variable | Required | Default | Purpose |
 |---|---|---|---|
@@ -338,7 +338,7 @@ If `--email-dry-run` is set, append `--dry-run` to the Python call. The script w
 | 8 | Print "⚠️ email blocked: attachment has no file extension. Check pandoc output or filename slug. Re-derive and retry." |
 | 9 | Print "⚠️ email failed: Content-Disposition header is missing dual-filename encoding (script-internal regression). Inspect recent changes to `scripts/send-report-email.py § build_message` — both `filename=` (RFC 2047) and `filename*=` (RFC 2231) must be present. Local files are preserved." |
 
-**Hard rule**: email failure never deletes, moves, or overwrites the local `.md` or `.docx` files. The report has already been delivered by Step 8 and Step 9.
+**Hard rule**: email failure never deletes, moves, or overwrites local `.md` or `.docx` files already produced in Step 7.
 
 ## Security
 

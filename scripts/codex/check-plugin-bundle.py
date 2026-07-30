@@ -102,6 +102,8 @@ def validate(plugin_root: Path) -> tuple[int, int]:
         "sci-research-daily-news-scanner": (
             "mcp__google_news__search_news",
             "Do not call `get_news_article`",
+            "best-effort",
+            "near-duplicates",
         ),
         "sci-research-daily-news-writer": (
             "mcp__google_news__search_news",
@@ -112,9 +114,10 @@ def validate(plugin_root: Path) -> tuple[int, int]:
             "mcp__google_news__get_news_article",
         ),
         "sci-research-news-verifier": (
-            "same-event deduplication",
+            "first report of each event",
             "DROP_DUPLICATE",
-            "drop a unique result",
+            "DROP_NOT_SELECTED",
+            "more than 6 unique events",
         ),
     }
     for agent_name, required_tokens in daily_agent_contract.items():

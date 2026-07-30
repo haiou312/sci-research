@@ -151,6 +151,44 @@ class HookTests(unittest.TestCase):
             self.assertIn("LENGTH_INFO: lang=en", result.stdout)
             self.assertIn("required>=250", result.stdout)
 
+    def test_direct_format_check_rejects_more_than_six_stories_in_category(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            report = Path(temp_dir) / "daily-news/report.md"
+            report.parent.mkdir(parents=True)
+            body = " ".join(["fact"] * 250)
+            stories = []
+            for number in range(1, 8):
+                stories.append(
+                    f"""### Economy story {number}
+
+{body}
+
+**References**
+
+[{number}] Reuters. (2026, July 16). Economy story {number}. Reuters. https://example.com/story/{number}
+
+---"""
+                )
+            report.write_text(
+                "\n\n".join(
+                    [
+                        "# Japan Daily News Intelligence — July 16, 2026",
+                        "## 1. Economy & Markets",
+                        *stories,
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            result = subprocess.run(
+                ["node", str(FORMAT_CHECK), "--file", str(report)],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("has 7 stories; maximum 6", result.stderr)
+
     def test_direct_format_check_rejects_chinese_below_minimum(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             report = Path(temp_dir) / "daily-news/report.md"

@@ -14,6 +14,7 @@
  *   - References without [N] continuous numbering
  *   - References lines without a URL
  *   - Mismatched count between ### story titles and **References** blocks
+ *   - More than 6 stories under any one category H2
  *   - English story bodies below 250 words
  *   - Chinese story bodies below 400 Unicode Han characters
  *   - Obvious whitespace-separated Chinese headline fragments
@@ -158,9 +159,9 @@ function collectPatchedFilePaths(data) {
 // The category set is country-derived (6 H2 for a non-China report, 7 for a China
 // report which adds 海外涉华财经与外交 at position 5) — see
 // skills/daily-news-intelligence/references/language-spec.md § Category Catalog &
-// Selection. This hook is intentionally category-count agnostic: it validates
-// ###↔**References** parity, [N] continuity, prohibited markers, quote chars, and
-// en/zh per-story minimum length, never the number or names of H2 sections.
+// Selection. This hook is intentionally category-identity and category-count
+// agnostic: it does not require particular H2 names or a fixed number of H2
+// sections. It does enforce the Pipeline C/G ceiling of 6 stories per H2.
 //
 // Prohibited markers (1.9.x+ structure): body prose follows `### title` directly.
 // No summary/analysis marker is permitted anywhere in the output.
@@ -173,6 +174,37 @@ const BODY_LENGTH_TARGETS = {
 
 function countMatches(content, regex) {
   return (content.match(regex) || []).length;
+}
+
+function checkCategoryStoryMaximum(content, maximum = 6) {
+  const violations = [];
+  let category = null;
+  let storyCount = 0;
+
+  function finishCategory() {
+    if (category !== null && storyCount > maximum) {
+      violations.push(
+        `Category "${category}" has ${storyCount} stories; maximum ${maximum}. ` +
+          `The Verifier must select no more than ${maximum} unique events for each category.`
+      );
+    }
+  }
+
+  for (const rawLine of content.split("\n")) {
+    const h2 = rawLine.match(/^##\s+(.+)$/);
+    if (h2) {
+      finishCategory();
+      category = h2[1].trim();
+      storyCount = 0;
+      continue;
+    }
+    if (category !== null && /^###\s+/.test(rawLine)) {
+      storyCount += 1;
+    }
+  }
+  finishCategory();
+
+  return violations;
 }
 
 // Extract reference lines per block: lines after each **References** marker
@@ -456,6 +488,9 @@ function validate(filePath, content) {
     );
   }
 
+  // 1a. Pipeline C/G selection ceiling: no category may contain more than 6 stories.
+  violations.push(...checkCategoryStoryMaximum(content));
+
   // 1b. Prohibited markers — 1.9.x+ structure forbids summary/analysis markers.
   //     Body prose follows ### title directly; no marker line between.
   const prohibitedHits = content.match(PROHIBITED_MARKERS);
@@ -620,6 +655,7 @@ if (require.main === module) {
 }
 
 module.exports = {
+  checkCategoryStoryMaximum,
   checkMinimumBodyLengths,
   checkChineseHeadlineWhitespace,
   summarizeBodyLengths,
