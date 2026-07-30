@@ -2,16 +2,16 @@
   {
     "id": 1,
     "prompt": "$sci-research:daily-news-intelligence --country \"Japan\" --lang zh",
-    "expected": "6-category zh Markdown + docx (non-China: econ/politics/tech/society/ipo_ma/other; no china_nexus), >=2 stories per category or an explicit gap note, every story body >=400 Unicode Han characters with no maximum, correct APA refs, Chinese quote marks “”, naturally localized facts without unnecessary English glosses, and native Chinese newsroom prose"
+    "expected": "6 Terra/high category Scanners dispatched in parallel with exactly one search sentence after each runtime header; every useful search result forwarded even when its page cannot be opened; pass-through Verifier keeps input count unchanged and searched categories unchanged; Luna/medium Fact Extractor marks evidence_basis search-results; 6-category zh Markdown + docx with >=2 stories per category or an explicit gap note, >=400 Unicode Han characters per story, correct APA refs, Chinese quote marks “”, and native Chinese newsroom prose"
   },
   {
     "id": 2,
     "prompt": "$sci-research:daily-news-intelligence --country \"United Kingdom\" --lang en --min-per-category 3",
-    "expected": "6-category en Markdown + docx (non-China: econ/politics/tech/society/ipo_ma/other; no china_nexus), >=3 stories per category or italic gap_note, every story body >=250 English words with no maximum, no untrustworthy/off-date/out-of-scope padding, and varied native English newsroom prose rather than a repeated template"
+    "expected": "6 Terra/high category Scanners use one-sentence recall-first search and do not open, verify, filter, score, deduplicate, or reroute results; pass-through Verifier forwards every result; 6-category en Markdown + docx with >=3 stories per category or italic gap_note, every story body >=250 English words with no maximum, and varied native English newsroom prose rather than a repeated template"
   },
   {
     "id": 3,
     "prompt": "$sci-research:daily-news-intelligence --country \"China\" --email \"test@example.com\" --email-dry-run --lang zh",
-    "expected": "7 category-scoped Scanner agents dispatched in parallel and mechanically wrapped into one Scanner Batch with compact per-category Discovery Notes; 7-category zh Markdown + docx (China: econ/politics/tech/society/china_nexus/ipo_ma/other — 海外涉华财经 at position 5), exact-date readable articles from foreign media only, paid/stub leads replaced by authoritative free same-event reporting, email dry-run preview with correct subject and 7-line category body template, no SMTP connection"
+    "expected": "7 Terra/high category Scanners dispatched in parallel with one search sentence each and foreign-media-only China scope; blocked, paid, stub, dynamic, and unavailable URLs remain results; pass-through Verifier emits no DROP decisions; 7-category zh Markdown + docx (China: econ/politics/tech/society/china_nexus/ipo_ma/other — 海外涉华财经 at position 5), email dry-run preview with correct subject and 7-line category body template, no SMTP connection"
   }
 ]

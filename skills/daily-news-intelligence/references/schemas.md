@@ -1,14 +1,14 @@
-# Schemas - Category Scanner, Scanner Batch, and Verifier Formats
+# Schemas - Minimal Search, Scanner Batch, and Pass-Through Formats
 
 Each category-scoped Scanner uses the first schema. The orchestrator wraps all category outputs verbatim in the second schema. The Verifier consumes that Scanner Batch and emits the third schema.
 
 ## Category Scanner Output Schema
 
-Return one English output for the single assigned category. The searched category is provisional; the Verifier owns final routing and cross-category deduplication.
+Return one English output for the single assigned category. This is a search-results list, not a verification record. Do not open result pages and do not reject a result because the page may be blocked, paywalled, or unavailable.
 
 ```
 ## Category Scan Report
-- Status: <complete | failed>
+- Status: complete
 - Country: <country>
 - Geography scope: <country | Europe-ex-UK>
 - Date: <YYYY-MM-DD>
@@ -17,33 +17,23 @@ Return one English output for the single assigned category. The searched categor
 
 ## Stories
 
-### [<searched category>] <English headline>
+### [<searched category>] <headline shown by search>
 - Candidate ID: <category-prefixed ID unique within the Scanner Batch, such as econ-1>
-- Publish date (verified): <ISO timestamp or local date>
-- Source: <media organisation or issuing institution>
-- Source type: <media | official-primary>
-- URL: <full canonical or readable syndicated https URL>
-- Byline: <author, organisation byline, issuing institution, or "No byline">
-- Open-page result: verified-readable
-- Factual excerpt: <verbatim text from the readable article body>
-- Key facts: <concise English account of what the article reports>
+- Publish date (search result): <date displayed by search, relative date, or "Not shown">
+- Source: <source shown by search>
+- URL: <result URL>
+- Search-result summary: <concise account based only on the search result>
 
-... (repeat for every qualifying URL; do not merge possible duplicates) ...
-
-## Discovery Note
-
-- Languages and entry points: <compact account of locally relevant/English search and current publisher, category, or release pages checked>
-- Rejected exact-date leads: <up to five `URL | reason` entries, or "None">
-- Coverage: <brief explanation of what was found, why coverage was sparse, or why Status is failed>
+... (repeat for every useful result; do not merge possible duplicates) ...
 ```
 
 Rules:
 
-- `Status: complete` requires multiple independent discovery paths when `Candidates found: 0`, including local-language and direct current-page checks when applicable.
-- `Status: failed` means the Scanner could not complete discovery because of a tool or runtime failure; it is not evidence that the category had no qualifying news.
-- `Candidates found` must equal the number of story blocks, and every candidate must come from an opened readable page.
-- `official-primary` is limited to substantive exact-date government, central-bank, regulator, exchange, or listed-company statistics, decisions, filings, and financial results. It does not include promotional copy and is unavailable for China reports.
-- Keep the Discovery Note compact; it is evidence of coverage, not a complete tool transcript.
+- `Candidates found` must equal the number of story blocks.
+- Search for the supplied target date, but copy the date exactly as search displays it; do not open a page merely to prove the date.
+- A blocked, paywalled, snippet-only, dynamically rendered, or currently unavailable page remains a valid result.
+- For China, use foreign-media search results only. For `Europe-ex-UK`, exclude results focused primarily or solely on the United Kingdom.
+- Do not score sources, assess news value, deduplicate events, route categories, produce rejection notes, or claim that a result was opened or verified.
 
 ## Scanner Batch Schema
 
@@ -72,47 +62,30 @@ The batch is valid only when every requested category has one `Status: complete`
 
 ## Verifier Output Schema
 
-The Verifier evaluates every Scanner candidate, selects the final Lead for duplicate events, performs final category routing, and emits this English raw-data shape.
+The Verifier is a schema adapter, not an editorial gate. It forwards every Scanner candidate in the same order and searched category. It does not use WebSearch, open pages, verify dates, assess sources, score news value, deduplicate, reroute, or drop results.
 
 ```
 ## Verification Report
 - Input count (from Scanner): <N>
-- Kept count: <M>
+- Kept count: <N; must equal Input count>
 - Geography scope: <country | Europe-ex-UK>
-- Category counts after verification: one `id=<n>` token per category in active-category order. Non-China: `econ=<n1> | politics=<n2> | tech=<n3> | society=<n4> | ipo_ma=<n5> | other=<n6>`. China: `econ=<n1> | politics=<n2> | tech=<n3> | society=<n4> | china_nexus=<n5> | ipo_ma=<n6> | other=<n7>`.
-- Coverage review used: <yes | no>
-- Coverage-review keeps: <k>
+- Category counts after verification: copy the Scanner counts in active-category order.
+- Mode: pass-through
 
 ## Kept Stories
 
-### [Category] <English headline>
-- Publish date (verified): <ISO timestamp or local date>
-- Source: <media outlet name>
-- Source class: <established-media | reputable-regional | reputable-specialist | sanctioned-syndication | official-primary>
-- Source assessment: <Verifier judgement of claim-level provenance and evidence fit>
-- URL: <full canonical https URL>
-- Byline: <author, organisation byline, or "No byline">
-- Body-source: full
-- Geographic nexus: <target country, non-UK European jurisdiction, or EU/pan-European institution>
-- UK role: <not-applicable | none | context | external-counterparty>
-- Corroborated by: <same-event candidate URLs folded into this Lead; or "None">
-- Factual excerpt: <carried verbatim from the selected Scanner candidate>
-- Commentary: <Verifier account of what happened and why it matters>
+### [<searched category>] <headline copied from Scanner>
+- Publish date (search result): <copied from Scanner>
+- Source: <copied from Scanner>
+- URL: <copied from Scanner>
+- Body-source: search-result
+- Corroborated by: None
+- Factual excerpt: <Search-result summary copied verbatim from Scanner>
+- Commentary: <same search-result summary, or a shorter faithful restatement>
 - Verdict: KEEP
-- Source verdict: <credible | credible-with-caveat>
-- New-information verdict: <original-reporting | document-based-reporting | transparent-syndication | meaningful-follow-up | unclear-but-supported>
-- News value: <high | medium | coverage-keep>
-- Dedup role: <Lead | Standalone>
+- Forwarding note: unverified-search-result
 
 ... (repeat per kept story) ...
-
-## Dropped Stories
-
-- URL: <full https URL>
-- Searched category: <id>
-- Reason: <Duplicate-of-#X | Unsupported-source | UK-primary-nexus-excluded | China-source-excluded | No-new-fact | No-meaningful-news-value | Routine-PR | Op-ed | Unsupported-rumour | Celebrity-or-lifestyle | Sports-non-political | China-aid-smallcountry-excluded | Out-of-category-scope | Other: <specific>>
-
-... (repeat per dropped candidate URL) ...
 
 ## Post-Verification Coverage
 (one line per category in active-category order; include `china_nexus` only for a China report)
@@ -125,11 +98,10 @@ The Verifier evaluates every Scanner candidate, selects the final Lead for dupli
 - other: <n>/<min_per_category>
 
 ## Post-Verification Coverage Gap
-(include only for a category still below `min_per_category` after Coverage Review)
+(include only for a category below `min_per_category`; this records search scarcity, not an editorial rejection)
 
 - Category: <id>
 - Scanner candidate count: <n>
-- Verifier kept count: <m>
-- Coverage-review candidates reconsidered: <r>
-- Reason: <single sentence explaining why no additional eligible stories remained>
+- Verifier kept count: <same as Scanner candidate count>
+- Reason: Search returned fewer than <min_per_category> results for this category.
 ```

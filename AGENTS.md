@@ -25,9 +25,9 @@
 
 | Agent | 模型 | effort | 取舍 |
 |---|---|---:|---|
-| sci-research-daily-news-scanner | gpt-5.6-luna | medium | 按栏目并行的高吞吐检索、日期核验与候选收集 |
-| sci-research-news-verifier | gpt-5.6-terra | high | 来源、影响力与去重规则裁决 |
-| sci-research-daily-fact-extractor | gpt-5.4-mini | medium | 结构化事实与引语抽取 |
+| sci-research-daily-news-scanner | gpt-5.6-terra | high | 按栏目并行的一句话当日新闻搜索；不打开、不核验、不筛选结果 |
+| sci-research-news-verifier | gpt-5.6-terra | high | 全量透传 Scanner 结果并适配下游 schema；不联网、不 DROP |
+| sci-research-daily-fact-extractor | gpt-5.6-luna | medium | 从搜索结果摘要抽取结构化值并标记 search-results 证据基础 |
 | sci-research-daily-news-writer | gpt-5.6-sol | high | 多语言母语化新闻写作与按需背景补充 |
 | sci-research-daily-editor | gpt-5.6-sol | high | 事实、来源、引语、格式与完整母语编辑 |
 | sci-research-briefing-curator | gpt-5.6-sol | high | 跨国筛选与品牌化改写 |
@@ -53,15 +53,15 @@
 流程：Scanner × category → 机械汇总 → Verifier → Fact Extractor → Writer × language → Editor × language → pandoc → 可选邮件。
 
 - Scanner 按 active category 一栏一个并行运行；该 fan-out 每份报告只执行一次。Verifier、Fact Extractor 各运行一次；双语模式下 Writer 和 Editor 按语言并行。
-- 每个 Scanner 使用简短、高自由度提示，只接收一个栏目及其一句大致搜索方向，由 GPT-5.6 Luna 自行决定查询、媒体、语言、深度和跟进路径。
-- Scanner 只执行这些硬门槛：日期必须精确等于目标日；页面必须有可读事实正文；非中国报告可使用权威媒体或政府、央行、监管机构、交易所及上市公司的实质性一手发布，中国报告仍只用外国媒体；付费或仅摘要线索必须找到权威可读的同事件报道，否则删除；不得编造。
-- Scanner 不做新闻价值评分、交易或影响门槛、候选配额、去重、Lead 选择、最终分类或 `china_nexus`/`ipo_ma` 路由；每个合格 URL 独立交给 Verifier。
-- 编排器只按栏目顺序原样包裹各 Scanner 输出并计算汇总计数，不新增 Merger agent，不改写、去重或路由候选；这些判断仍由 Verifier 完成。
+- 每个 Scanner 在必需的 runtime path header 后只接收一句搜索任务，由 GPT-5.6 Terra 自行决定查询；不得追加来源、打开、核验、评分、配额、去重或路由规则。
+- Scanner 搜索指定日期并返回 WebSearch 显示的有用结果；页面被阻挡、付费、仅摘要、动态渲染或暂时打不开仍然保留，不运行 `open_page`，不二次核验日期。
+- Scanner 不做来源等级、新闻价值、影响力、材料完整性、替代来源、去重、Lead 选择、最终分类或 `china_nexus`/`ipo_ma` 路由。
+- 编排器只按栏目顺序原样包裹各 Scanner 输出并计算汇总计数；Verifier 只全量透传并适配下游 schema，不联网、不筛选、不去重、不路由、不输出 DROP。
 - country=China 必须采用外部视角：只查询和使用外国媒体，不查询或使用中国本土媒体及中国政府域名。
-- country=Europe 使用 Europe-ex-UK 地域契约：英国为唯一或主要地域主体的事件必须排除，且该门槛不得被 Coverage Review 放宽；英国媒体仍可作为欧洲新闻来源，英国仅作为背景或外部交易对手时不自动排除。
+- country=Europe 使用 Europe-ex-UK 搜索范围：排除以英国为唯一或主要对象的结果；英国媒体仍可报道非英国欧洲新闻。
 - 非中国报告有 6 个栏目；中国报告在第 5 位增加 china_nexus，并保留 ipo_ma。
-- Verifier 独立判断来源可信度、新闻价值和具体新事实，并负责 Lead 选择、同事件去重、最终栏目路由、`china_nexus`/`ipo_ma` 资格及 Coverage Review。
-- Scanner Batch（含每栏原始输出及精简 Discovery Note）与 Verifier KEEP/DROP 报告必须原样保存到日报目录的 `audit/*.txt`；不要使用 `.md`，避免 Pipeline D 将审计文件当作国家日报。模型自报的 search/open_page 次数不作为审计证据。
+- Verifier 的 `Kept count` 必须等于 Scanner 输入数，分类保持 searched category；只记录搜索稀缺造成的栏目缺口。
+- Scanner Batch 与 Verifier 透传报告必须原样保存到日报目录的 `audit/*.txt`；不要使用 `.md`，避免 Pipeline D 将审计文件当作国家日报。
 - Writer 必须遵守 Fact Manifest；Editor 使用 apply_patch 运行五道检查。引用、引号和输出格式规范以 skills/daily-news-intelligence/references/ 为准。
 - 英文每篇正文不得少于 250 个词，中文每篇正文不得少于 400 个 Unicode 汉字，不设最高字数。材料不足时先打开 Lead 和相关佐证原文，再按需补充搜索；只能用可引用的实质内容达到底线，不得重复、空泛扩写或编造。
 - --email-attach none 表示仅发送正文，必须省略 --attach。
@@ -148,9 +148,9 @@
 | 需求 | 真源文件 |
 |---|---|
 | C 编排、参数、输出与邮件 | skills/daily-news-intelligence/SKILL.md |
-| C Scanner 硬门槛 | .codex/agents/sci-research-daily-news-scanner.toml |
+| C Scanner 极简搜索提示 | .codex/agents/sci-research-daily-news-scanner.toml |
 | C 一句话栏目方向与编排 | skills/daily-news-intelligence/SKILL.md |
-| C Verifier 来源、新闻价值、去重、路由和 Coverage Review 规则 | skills/daily-news-intelligence/references/rubric.md |
+| C Verifier 透传 schema 与最小中欧范围规则 | skills/daily-news-intelligence/references/schemas.md、skills/daily-news-intelligence/references/rubric.md |
 | C agent 行为 | .codex/agents/sci-research-daily-*.toml、.codex/agents/sci-research-news-verifier.toml |
 | D 编排与参数 | skills/daily-briefing/SKILL.md |
 | D docx 模板与生成器 | skills/daily-briefing/template/、skills/daily-briefing/scripts/generate-branded-docx.py |

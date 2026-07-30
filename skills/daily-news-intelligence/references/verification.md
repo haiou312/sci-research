@@ -47,14 +47,14 @@ Both files must exist. Then spot-check the Markdown:
 
 1. `grep -c '^## ' "{out_md}"` should return `6` for a non-China report and `7` for a China report (= `len(active_categories)`).
 2. `grep -c '^### ' "{out_md}"` should return at least `len(active_categories) × min_per_category` (≥ `6 × min` for a non-China report, ≥ `7 × min` for a China report).
-3. Pick one story at random, open its URL, confirm the publication date equals `date`.
+3. Pick one story at random and confirm its URL, source, displayed search-result date, and summary trace to the saved Scanner audit. Do not require the URL to open.
 4. Confirm every references line matches `^<Org|Surname>.* \(\d{4}, [A-Z][a-z]+ \d{1,2}\)\. .+\. .+\. https?://`.
 
 Also inspect `SCANNER_AUDIT` before delivery:
 
 1. It contains exactly one `<!-- BEGIN CATEGORY OUTPUT: <id> -->` block per active category, in active-category order.
-2. Every category block contains `Status: complete`, the matching `Searched category`, a candidate count equal to its story blocks, and a compact `Discovery Note`; zero-candidate blocks show multiple independent discovery paths.
-3. Every admitted story contains a category-prefixed Candidate ID and `Open-page result: verified-readable`.
+2. Every category block contains `Status: complete`, the matching `Searched category`, and a candidate count equal to its story blocks.
+3. Every story contains a category-prefixed Candidate ID, `Publish date (search result)`, `Source`, `URL`, and `Search-result summary`; it must not claim that the result was opened or verified.
 4. The Scanner Batch header totals equal the sum of the verbatim category outputs.
 
 ## Flow Diagram
@@ -65,13 +65,12 @@ Also inspect `SCANNER_AUDIT` before delivery:
           ▼
 ┌────────────────────────────────────────┐
 │ Step 2: Scanner fan-out                │
-│  One GPT-5.6 Luna per active category  │
+│  One GPT-5.6 Terra per active category │
 │  All category agents run concurrently  │
 │  One category direction per prompt     │
-│  WebSearch open_page → per-URL date    │
-│  + authoritative/readable-body checks  │
-│  No dedup or final category routing     │
-│  Emit candidates + compact discovery   │
+│  One-sentence WebSearch task prompt     │
+│  Return results without opening pages   │
+│  No verification, filtering, or dedup   │
 └──────────────────┬─────────────────────┘
                    │
                    ▼
@@ -85,11 +84,10 @@ Also inspect `SCANNER_AUDIT` before delivery:
                    │
                    ▼
 ┌────────────────────────────────────────┐
-│ Step 7: Verifier stage                 │
-│  Credibility + New information +       │
-│  News value + Dedup + final routing     │
-│  Coverage Review for short categories  │
-│  Emit KEEP set + Dropped list          │
+│ Step 7: Pass-through Verifier          │
+│  No WebSearch or open_page             │
+│  Forward every result unchanged        │
+│  Emit stable downstream KEEP schema    │
 └──────────────────┬─────────────────────┘
                    │
                    ▼
@@ -131,13 +129,13 @@ Also inspect `SCANNER_AUDIT` before delivery:
 
 | Stage | Dispatch | Model | Rationale (the embedded body encodes this) |
 |-------|----------|-------|--------------------------------------------|
-| Scanner × active category (parallel) | `.codex/agents/sci-research-daily-news-scanner.toml` subagent | `gpt-5.6-luna / medium` | Each instance receives one category direction and a short prompt with exact-date, readable-body, narrow primary-source, paid-to-readable replacement, China foreign-media-only, and Europe-ex-UK hard rules. It returns every qualifying URL plus a compact Discovery Note and does not score, deduplicate, or final-route candidates |
-| Verifier | `.codex/agents/sci-research-news-verifier.toml` subagent | `gpt-5.6-terra / high` | News-desk filter encoding source credibility/evidence fit, concrete new information, contextual daily-news value, originality/corroboration, Lead selection, deduplication, and final category routing. Coverage Review may admit credible narrower developments when a category is short, without relaxing date, geography, provenance, or factual support |
-| Fact-Extractor | `.codex/agents/sci-research-daily-fact-extractor.toml` subagent | `gpt-5.4-mini / medium` | Extracts every hard fact + direct quote from the Verifier KEEP set into a locked-values YAML manifest. Pure transformation — no web, no narrative. The manifest is the Writer's locked-values contract and the Editor's Pass-1 ground truth |
+| Scanner × active category (parallel) | `.codex/agents/sci-research-daily-news-scanner.toml` subagent | `gpt-5.6-terra / high` | Each instance receives one search sentence after the runtime header and returns useful same-day search results without opening, verifying, filtering, scoring, deduplicating, or routing them; China uses foreign media only and Europe excludes UK-focused events |
+| Pass-through Verifier | `.codex/agents/sci-research-news-verifier.toml` subagent | `gpt-5.6-terra / high` | Schema adapter only: forwards every Scanner result in the same order and searched category and records search-scarcity gaps; no web tools and no DROP decisions |
+| Fact-Extractor | `.codex/agents/sci-research-daily-fact-extractor.toml` subagent | `gpt-5.6-luna / medium` | Extracts literal atoms from unverified search-result summaries into a YAML manifest marked `evidence_basis: search-results`; no web, inference, or narrative |
 | Writer | `.codex/agents/sci-research-daily-news-writer.toml` subagent | `gpt-5.6-sol / high` | Daily briefing writer. Uses semantic Fact Manifest fidelity, native-language composition, complete citations, and hard minimums of 250 English words or 400 Chinese Han characters. Opens existing story sources and researches further only when necessary to supply relevant depth |
 | Editor | `.codex/agents/sci-research-daily-editor.toml` subagent | `gpt-5.6-sol / high` | Five-pass editor for manifest facts, source-backed substantive depth, quotations, structure/typography, and full native-language quality. It repairs thin stories from opened evidence and may rewrite awkward prose while preserving the story set, facts, sources, categories, and required structure |
 
-**Substitution.** Do NOT substitute any other agent's body — each body encodes stage-specific invariants (e.g., the Scanner's category focus and strict single-date gate, and the Editor's `apply_patch`-only discipline) that are not present in the closest-named alternative agents. If a named role is unavailable, halt and report rather than substituting.
+**Substitution.** Do NOT substitute any other agent's body — each body encodes stage-specific invariants (e.g., the Scanner's one-sentence recall-first search and the Editor's `apply_patch`-only discipline) that are not present in the closest-named alternative agents. If a named role is unavailable, halt and report rather than substituting.
 
 ## Invocation Examples
 

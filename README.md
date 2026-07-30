@@ -20,18 +20,16 @@ Given a country, company, date, month, or reporting window, this plugin orchestr
 
 The five pipelines use separate agent chains and stage contracts. Pipeline D intentionally consumes one date of Pipeline C reports across countries. Pipeline G consumes one month of Pipeline C reports for one country and never searches the web. Pipeline F performs its own date-range discovery and uses a scoped Companies House API/watchlist monitor; it does not claim exhaustive discovery of every Chinese-backed UK entity.
 
-Pipeline C also writes raw Scanner and Verifier audit artifacts under `daily-news/{date}/audit/` as `.txt` files. They show the Scanner candidate pool and coverage notes, then the Verifier's source assessment, KEEP/DROP reasons, Coverage Review decisions, and remaining gaps; Pipeline D ignores them because it reads report Markdown rather than audit text files.
+Pipeline C also writes raw Scanner and pass-through Verifier artifacts under `daily-news/{date}/audit/` as `.txt` files. They preserve every category's unverified search results and the unchanged downstream forwarding record; Pipeline D ignores them because it reads report Markdown rather than audit text files.
 
 ---
 
 ## Why This Plugin
 
 - **20 specialised agents** across five pipelines, each agent narrowly scoped
-- **Parallel high-freedom Luna Scanners** — one focused agent and one short direction per category, with no outlet list, source tier, candidate quota, impact threshold, deduplication, or routing logic
-- **Per-URL date verification** in `$sci-research:daily-news-intelligence` — neighbouring days are discarded
-- **Readable free reporting** — paid or stub-only leads are replaced with an authoritative free same-event article or excluded
-- **Editorial second-pass filter** (`sci-research-news-verifier`) for daily news — evidence fit / new information / contextual news value / originality / dedup
-- **Fact Manifest + 5-pass Editor** — numbers / names / dates / quotes locked to a verbatim YAML manifest, then fact-checked and style-repaired post-Writer
+- **Parallel one-sentence Terra Scanners** — one focused search agent per category; useful results are forwarded whether or not their pages open
+- **Pass-through Verifier** — no second web pass, source grading, date revalidation, news-value scoring, deduplication, rerouting, or DROP decisions
+- **Search-result Fact Manifest + 5-pass Editor** — literal values from search summaries are marked as search-result evidence, then later writing and editing can research and repair the report
 - **External-view China gate** — `$sci-research:daily-news-intelligence --country "China"` uses foreign media only and excludes Chinese-domestic outlets and Chinese government domains
 - **Free-prose Writer** — daily news Writer composes explanatory prose in the target language, not a mechanical translation
 - **Bilingual mode (1.18.0+)** — `--lang zh+en` runs the category Scanner fan-out once per report, then fans Writer/Editor out per language in parallel and ships one email with a stacked bilingual body + up to 4 attachments
@@ -124,7 +122,7 @@ The setup performs a bundle check and dry-run before installing. It creates:
 
 With the recommended default workspace, `<runtime-workspace>` is `~/.sci-research`.
 
-The project config sets `web_search = "live"`, `agents.max_threads = 10`, and `agents.max_depth = 1`. Live search is required because the pipelines enforce exact publication dates. China reports need seven concurrent category Scanner threads; the extra slots allow clean stage handoff without recursive delegation. If `.codex/config.toml` already exists, setup preserves user-owned content byte-for-byte and requires both live search and `agents.max_threads >= 10`; a missing or invalid value produces the exact TOML block to add.
+The project config sets `web_search = "live"`, `agents.max_threads = 10`, and `agents.max_depth = 1`. Live search is required because Pipeline C targets current same-day results. China reports need seven concurrent category Scanner threads; the extra slots allow clean stage handoff without recursive delegation. If `.codex/config.toml` already exists, setup preserves user-owned content byte-for-byte and requires both live search and `agents.max_threads >= 10`; a missing or invalid value produces the exact TOML block to add.
 
 It does not modify global `~/.codex/config.toml`, install Python packages, or run a news pipeline. If it reports an unmanaged-file conflict, a locally modified managed agent, or an invalid existing runtime setting, resolve the named file instead of overwriting it manually.
 
@@ -442,16 +440,16 @@ $sci-research:monthly-news-intelligence --country "China" \
 
 ```
 sci-research-daily-news-scanner ×categories → mechanical batch → sci-research-news-verifier → sci-research-daily-fact-extractor → sci-research-daily-news-writer → sci-research-daily-editor → pandoc → email (optional)
-   (Luna / medium, parallel)                               (Terra / high)  (5.4 mini / medium)    (Sol / high, ×langs) (Sol / high, ×langs)
+   (Terra / high, parallel)                               (Terra / high)  (Luna / medium)        (Sol / high, ×langs) (Sol / high, ×langs)
 
 Bilingual mode (--lang zh+en …): the category Scanner fan-out runs once per report; Verifier/Fact-Extractor run once; Writer ×langs in parallel → Editor ×langs in parallel → pandoc ×langs
 ```
 
 | Agent | Codex configuration | Role |
 |---|---|---|
-| `sci-research-daily-news-scanner` | gpt-5.6-luna / medium | One parallel instance per active category. Each follows one short direction; hard-gates exact date, readable evidence, narrow official-primary eligibility, paid-to-readable replacement, China foreign-media-only sourcing, and Europe-ex-UK scope. It returns every qualifying URL plus a compact Discovery Note |
-| `sci-research-news-verifier` | gpt-5.6-terra / high | Editorial second-pass filter: independent source assessment, concrete new information, contextual daily-news value, originality/corroboration, Lead selection, deduplication, final category routing, and Coverage Review for short categories |
-| `sci-research-daily-fact-extractor` | gpt-5.4-mini / medium | Extracts every number / name / date / quote from the Verifier KEEP set into a locked-values YAML Fact Manifest (no web access) |
+| `sci-research-daily-news-scanner` | gpt-5.6-terra / high | One parallel instance per active category. After the runtime header it receives one search sentence and returns useful same-day results without opening, verifying, filtering, scoring, deduplicating, or routing them; China uses foreign media only and Europe excludes UK-focused events |
+| `sci-research-news-verifier` | gpt-5.6-terra / high | Pass-through schema adapter: forwards every Scanner result in the same order and searched category, with no web tools or DROP decisions |
+| `sci-research-daily-fact-extractor` | gpt-5.6-luna / medium | Extracts literal numbers, names, dates, and explicitly attributed quotes from search-result summaries into a manifest marked `evidence_basis: search-results` |
 | `sci-research-daily-news-writer` | gpt-5.6-sol / high | Consumes the Verifier KEEP set and Fact Manifest and composes native target-language newsroom prose. English bodies have a 250-word minimum and Chinese bodies a 400-Han-character minimum, with no maximum. It opens existing story sources and performs supplemental research only when needed for relevant depth. One instance per language in bilingual mode |
 | `sci-research-daily-editor` | gpt-5.6-sol / high | Five-pass post-Writer editor: semantic fact fidelity, source-backed substantive depth, quotation accuracy, structure/typography, and a full native-language editorial pass. It repairs undersized stories from opened evidence while preserving facts, sources, story set, category routing, and required Markdown structure. `apply_patch`-only. One instance per language in bilingual mode |
 
@@ -518,26 +516,15 @@ Pipeline C Markdown → deterministic source index → monthly-curator ×categor
 
 ---
 
-## Pipeline C Discovery And Verification
+## Pipeline C Minimal Discovery
 
-The Pipeline C Scanner is intentionally short. GPT-5.6 Luna chooses its own queries, sources, languages, depth, and follow-up paths. Each category receives only one sentence describing the general subject area.
+Each category Scanner receives one natural-language search sentence after its mandatory runtime-path header. GPT-5.6 Terra chooses the queries and returns useful results shown for the requested date. It does not open result pages or reject blocked, paywalled, snippet-only, dynamically rendered, or unavailable URLs.
 
-The Scanner applies only these hard rules:
-
-- the article publication date must equal the requested date;
-- the source must be accountable media or, outside China reports, a substantive exact-date release from a government, central bank, regulator, exchange, or listed company;
-- the page must expose enough readable article body to verify facts;
-- a paid or stub-only lead must be replaced with an authoritative readable same-event account;
-- a zero-candidate result must show multiple independent discovery paths in a compact Discovery Note;
-- China reports use foreign media only;
-- Europe reports exclude UK-only and UK-primary events, while UK media may report eligible non-UK European events;
-- unverifiable facts, dates, sources, and URLs must never be invented.
-
-The Scanner does not score news value, enforce transaction or impact thresholds, decide final category eligibility, merge duplicate coverage, choose a Lead, or route `china_nexus` and `ipo_ma`. It returns each qualifying URL separately. The Verifier then judges credibility and news value, selects Leads, deduplicates events, performs final category routing, and runs Coverage Review.
+Only two scope rules remain: China reports use foreign media only, and Europe reports exclude UK-focused events while allowing UK outlets to report non-UK European news. The pass-through Verifier does not search, verify, score, filter, deduplicate, reroute, or drop results; it only converts every result into the stable downstream schema.
 
 Detailed rules:
-- Pipeline C Scanner hard rules: [`.codex/agents/sci-research-daily-news-scanner.toml`](./.codex/agents/sci-research-daily-news-scanner.toml); category directions: [`skills/daily-news-intelligence/SKILL.md`](./skills/daily-news-intelligence/SKILL.md)
-- Pipeline C Verifier editorial rules: [`skills/daily-news-intelligence/references/rubric.md`](./skills/daily-news-intelligence/references/rubric.md)
+- Minimal Scanner prompt and output: [`.codex/agents/sci-research-daily-news-scanner.toml`](./.codex/agents/sci-research-daily-news-scanner.toml) and [`skills/daily-news-intelligence/references/schemas.md`](./skills/daily-news-intelligence/references/schemas.md)
+- Retained China/Europe scope: [`skills/daily-news-intelligence/references/rubric.md`](./skills/daily-news-intelligence/references/rubric.md)
 
 ---
 
@@ -652,10 +639,10 @@ sci-research/
 
 | Goal | Edit |
 |---|---|
-| Pipeline C Scanner hard rules | `.codex/agents/sci-research-daily-news-scanner.toml` |
+| Pipeline C minimal Scanner prompt | `.codex/agents/sci-research-daily-news-scanner.toml` |
 | Pipeline C category directions and orchestration | `skills/daily-news-intelligence/SKILL.md` |
-| Pipeline C Verifier source / news-value / dedup / routing rules | `skills/daily-news-intelligence/references/rubric.md` + `.codex/agents/sci-research-news-verifier.toml` |
-| Pipeline C external-view China rules | `.codex/agents/sci-research-daily-news-scanner.toml` § China report + `skills/daily-news-intelligence/references/rubric.md` § China External-View Gate |
+| Pipeline C pass-through Verifier | `.codex/agents/sci-research-news-verifier.toml` + `skills/daily-news-intelligence/references/schemas.md` |
+| Pipeline C China foreign-media / Europe-ex-UK scope | `skills/daily-news-intelligence/references/rubric.md` |
 | Pipeline C output format / Markdown contract | `skills/daily-news-intelligence/references/output-spec.md` |
 | Pipeline C language localisation / bilingual mode | `skills/daily-news-intelligence/references/language-spec.md` (§ Bilingual Mode) |
 | Pipeline C email delivery / bilingual email | `skills/daily-news-intelligence/references/email-spec.md` + `scripts/send-report-email.py` |

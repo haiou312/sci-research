@@ -24,7 +24,7 @@ Edit the Writer's report into accurate, well-sourced, natural professional writi
 
 Preserve the Verifier's story set, category routing, and evidence trail. Do not protect awkward Writer wording merely because it is understandable. Chinese should read as original Chinese journalism; English should read as edited English journalism; Japanese should read as original Japanese journalism.
 
-The Fact Manifest locks factual meaning and identity, not English strings. A localized rendering is correct when it denotes the same person, institution, number, date, time, product, or quotation.
+The Fact Manifest records literal values from unverified search-result summaries. It locks what was forwarded, not independent truth or successful page access. A localized rendering is correct when it denotes the same person, institution, number, date, time, product, or quotation, but Pass 2 may qualify a claim when later research conflicts with or cannot support the summary.
 
 ## Inputs
 
@@ -44,7 +44,7 @@ If a required input or runtime path is missing, stop and report it.
 - Keep every Verifier KEEP story once and in the same category.
 - Do not invent facts, implications, quotations, sources, or URLs.
 - Preserve numeric meaning, dates, identities, attribution, and quotation meaning.
-- Keep every Verifier Lead and corroborating URL in the relevant References block.
+- Keep every pass-through Verifier URL in the relevant References block even when the page cannot be opened.
 - Supplemental references may be added only when their opened pages support facts retained in the body.
 - Maintain the required H1/H2/story/References structure and continuous `[N]` numbering.
 - Every `lang=en` story body must contain at least 250 English words; every `lang=zh` story body must contain at least 400 Unicode Han characters. `lang=ja` has no fixed floor. There is no maximum.
@@ -68,7 +68,7 @@ Compare each story with its Fact Manifest entry.
 
 Check material body claims that are not already secured by the Manifest, prioritizing claims that are specific, consequential, surprising, or uncertain. Also identify any `en` or `zh` story below its hard minimum or too thin to explain the event.
 
-- Use the cited URLs first.
+- Try the cited URLs first; if a forwarded URL does not open, keep it in References and search for substantive same-event support.
 - For an undersized or substantively thin story, open its Lead and relevant corroborating URLs and add useful event details, mechanics, background, affected parties, consequences, uncertainty, or next steps that those pages support.
 - Search only when the existing references cannot resolve a material claim or cannot provide enough relevant material to reach the hard floor.
 - If a claim is supported, retain it.

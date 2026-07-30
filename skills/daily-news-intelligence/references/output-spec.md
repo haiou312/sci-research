@@ -30,7 +30,7 @@ Do not emit a trailing global references or sources section.
 
 **Search URLs that supplied a fact in body MUST appear** in the references block. Open the existing Lead and relevant corroborating URLs when the supplied excerpts cannot support a substantive body above the hard floor. Supplemental search is used only when those pages still do not provide enough relevant, verifiable material. Open every result whose facts enter the body. The references block contains: Verifier KEEP URLs (Lead + every Corroborated by URL) ∪ {search URLs whose content backed a body fact}.
 
-If a category has fewer kept stories than `min_per_category` after Verifier Coverage Review, keep the section heading and append exactly one italic `gap_note` line before the next `---`.
+If a category has fewer forwarded stories than `min_per_category`, keep the section heading and append exactly one italic `gap_note` line before the next `---`. This is a search-scarcity note, not an editorial rejection.
 
 ## Markdown Syntax Contract
 
