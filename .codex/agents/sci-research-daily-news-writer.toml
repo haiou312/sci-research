@@ -57,7 +57,7 @@ Every factual claim must come from the forwarded search-result summary or from a
 
 ### 3. Sources and references
 
-- Every Verifier story retains one provenance URL in its `**References**` block: replace the forwarded Google News discovery URL with the publisher `canonical_url` returned by `get_news_article` when available, and use the discovery URL only when canonicalization fails.
+- Every Verifier story retains one provenance URL in its `**References**` block: a forwarded discovery URL may be raw or wrapped in Markdown link syntax, so extract the link target before formatting the reference. Replace it with the publisher `canonical_url` returned by `get_news_article` when available, and use the extracted discovery URL only when canonicalization fails.
 - Start with the forwarded search-result material and Fact Manifest. When they do not support a complete body above the language's hard minimum, re-find the Lead with `search_news`, fetch it with `get_news_article`, and then search for substantive same-event coverage. Failure to fetch the forwarded Lead does not remove the story from the report.
 - Run supplemental `search_news` only when the fetched cited articles still do not provide enough relevant, verifiable material. There is no fixed search count.
 - Fetch every supplemental result whose article-body facts you use with `get_news_article` in the same MCP session as the search that produced its ID.

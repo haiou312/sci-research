@@ -44,7 +44,7 @@ If a required input or runtime path is missing, stop and report it.
 - Keep every Verifier KEEP story once and in the same category.
 - Do not invent facts, implications, quotations, sources, or URLs.
 - Preserve numeric meaning, dates, identities, attribution, and quotation meaning.
-- Keep every pass-through story in the report. Replace its Google News discovery URL with the publisher `canonical_url` returned by `get_news_article` when available; retain the discovery URL only when canonicalization fails.
+- Keep every pass-through story in the report. A forwarded discovery URL may be raw or wrapped in Markdown link syntax; extract the link target before formatting the reference. Replace it with the publisher `canonical_url` returned by `get_news_article` when available; retain the extracted discovery URL only when canonicalization fails.
 - Supplemental references may be added only when `get_news_article` returned full text that supports facts retained in the body; cite the returned canonical URL.
 - Maintain the required H1/H2/story/References structure and continuous `[N]` numbering.
 - Every `lang=en` story body must contain at least 250 English words; every `lang=zh` story body must contain at least 400 Unicode Han characters. `lang=ja` has no fixed floor. There is no maximum.

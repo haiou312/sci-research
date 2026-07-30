@@ -54,7 +54,7 @@ Also inspect `SCANNER_AUDIT` before delivery:
 
 1. It contains exactly one `<!-- BEGIN CATEGORY OUTPUT: <id> -->` block per active category, in active-category order.
 2. Every category block contains `Status: complete`, the matching `Searched category`, and a candidate count equal to its story blocks.
-3. Every story contains a category-prefixed Candidate ID, `Publish date (search result)`, `Source`, `URL`, and `Search-result summary`; `URL` is the `google_news_url` returned by `search_news`, and the story must not claim that the publisher article was fetched or verified.
+3. Every story contains a category-prefixed Candidate ID, `Publish date (search result)`, `Source`, `URL`, and `Search-result summary`; `URL` is the `google_news_url` returned by `search_news` and may be either a raw URL or a Markdown link. URL presentation and the `news.google.com` domain are not failures, and the story must not claim that the publisher article was fetched or verified.
 4. The Scanner Batch header totals equal the sum of the verbatim category outputs.
 
 Also inspect `VERIFIER_AUDIT` before delivery:

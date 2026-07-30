@@ -20,6 +20,20 @@ class DailyNewsMinimalDiscoveryTests(unittest.TestCase):
         self.assertIn("Do not call `get_news_article`", instructions)
         self.assertIn("do not use Codex native WebSearch", instructions)
         self.assertIn("whether or not its article can be fetched", instructions)
+        self.assertIn("raw URL or a Markdown link", instructions)
+        self.assertIn("never reasons to reject", instructions)
+
+    def test_scanner_url_presentation_is_not_a_gate(self):
+        schema = (
+            ROOT / "skills" / "daily-news-intelligence" / "references" / "schemas.md"
+        ).read_text(encoding="utf-8")
+        skill = (ROOT / "skills" / "daily-news-intelligence" / "SKILL.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("raw `news.google.com` URL or a Markdown link", schema)
+        self.assertIn("URL presentation is not a validation gate", schema)
+        self.assertIn("must never trigger a Scanner retry", skill)
+        self.assertIn("URL domain are never schema violations", skill)
 
     def test_verifier_is_deduplication_only(self):
         agent = self.load_agent("sci-research-news-verifier.toml")

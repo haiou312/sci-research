@@ -21,7 +21,7 @@ Return one English output for the single assigned category. This is a `google_ne
 - Candidate ID: <category-prefixed ID unique within the Scanner Batch, such as econ-1>
 - Publish date (search result): <date displayed by search, relative date, or "Not shown">
 - Source: <source shown by search>
-- URL: <google_news_url returned by search_news>
+- URL: <google_news_url returned by search_news, either as a raw URL or a Markdown link>
 - Search-result summary: <concise account based only on title, publisher, published_at, and rss_summary returned by search_news>
 
 ... (repeat for every useful result; do not merge possible duplicates) ...
@@ -31,6 +31,7 @@ Rules:
 
 - `Candidates found` must equal the number of story blocks.
 - Use only `mcp__google_news__search_news` for the supplied target date, but copy the date exactly as the tool displays it; do not call `get_news_article` merely to prove the date.
+- URL presentation is not a validation gate. Accept a raw `news.google.com` URL or a Markdown link whose target is that URL, preserve it verbatim in the Scanner Batch, and never retry or stop a run because of the URL's syntax or domain.
 - A blocked, paywalled, snippet-only, dynamically rendered, or currently unavailable page remains a valid result.
 - For China, use foreign-media search results only. For `Europe-ex-UK`, exclude results focused primarily or solely on the United Kingdom.
 - Do not record or forward `article_id`: it is an MCP-session-local retrieval handle, not durable evidence. Writer and Editor must re-run `search_news` before their own `get_news_article` call.
