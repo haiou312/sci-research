@@ -124,9 +124,9 @@ The setup performs a bundle check and dry-run before installing. It creates:
 
 With the recommended default workspace, `<runtime-workspace>` is `~/.sci-research`.
 
-The project config sets `agents.max_threads = 10` and `agents.max_depth = 1`. China reports need seven concurrent category Scanner threads; the extra slots allow clean stage handoff without using recursive delegation. If `.codex/config.toml` already exists, setup preserves it byte-for-byte and requires `agents.max_threads >= 10`; a lower or missing value produces the exact TOML block to add.
+The project config sets `web_search = "live"`, `agents.max_threads = 10`, and `agents.max_depth = 1`. Live search is required because the pipelines enforce exact publication dates. China reports need seven concurrent category Scanner threads; the extra slots allow clean stage handoff without recursive delegation. If `.codex/config.toml` already exists, setup preserves user-owned content byte-for-byte and requires both live search and `agents.max_threads >= 10`; a missing or invalid value produces the exact TOML block to add.
 
-It does not modify global `~/.codex/config.toml`, install Python packages, or run a news pipeline. If it reports an unmanaged-file conflict, a locally modified managed agent, or an insufficient existing thread limit, resolve the named file instead of overwriting it manually.
+It does not modify global `~/.codex/config.toml`, install Python packages, or run a news pipeline. If it reports an unmanaged-file conflict, a locally modified managed agent, or an invalid existing runtime setting, resolve the named file instead of overwriting it manually.
 
 #### Step 6 — Review plugin hooks
 
@@ -198,7 +198,7 @@ In that new setup task, enter:
 Use $sci-research:setup-sci-research-runtime to update and check the project-scoped runtime in this workspace.
 ```
 
-The updater backs up managed files before replacing them, refuses to overwrite local changes, and verifies that the runtime manifest version, agent hashes, and project thread limit match the newly installed plugin. Review `/hooks` again if Codex requests trust for updated hook definitions.
+The updater backs up managed files before replacing them, refuses to overwrite local changes, and verifies that the runtime manifest version, agent hashes, live-search mode, and project thread limit match the newly installed plugin. Review `/hooks` again if Codex requests trust for updated hook definitions.
 
 #### Step 5 — Start a fresh pipeline task
 
@@ -449,7 +449,7 @@ Bilingual mode (--lang zh+en …): the category Scanner fan-out runs once per re
 
 | Agent | Codex configuration | Role |
 |---|---|---|
-| `sci-research-daily-news-scanner` | gpt-5.6-luna / medium | One parallel instance per active category. Each instance follows one short category direction; hard-gates exact date, authoritative media, readable body, paid-to-free replacement, China foreign-media-only sourcing, and Europe-ex-UK scope; and reports search/open-page counts. The orchestrator mechanically wraps all outputs before handing every qualifying URL to the Verifier |
+| `sci-research-daily-news-scanner` | gpt-5.6-luna / medium | One parallel instance per active category. Each follows one short direction; hard-gates exact date, readable evidence, narrow official-primary eligibility, paid-to-readable replacement, China foreign-media-only sourcing, and Europe-ex-UK scope. It returns every qualifying URL plus a compact Discovery Note |
 | `sci-research-news-verifier` | gpt-5.6-terra / high | Editorial second-pass filter: independent source assessment, concrete new information, contextual daily-news value, originality/corroboration, Lead selection, deduplication, final category routing, and Coverage Review for short categories |
 | `sci-research-daily-fact-extractor` | gpt-5.4-mini / medium | Extracts every number / name / date / quote from the Verifier KEEP set into a locked-values YAML Fact Manifest (no web access) |
 | `sci-research-daily-news-writer` | gpt-5.6-sol / high | Consumes the Verifier KEEP set and Fact Manifest and composes native target-language newsroom prose. English bodies have a 250-word minimum and Chinese bodies a 400-Han-character minimum, with no maximum. It opens existing story sources and performs supplemental research only when needed for relevant depth. One instance per language in bilingual mode |
@@ -520,14 +520,15 @@ Pipeline C Markdown → deterministic source index → monthly-curator ×categor
 
 ## Pipeline C Discovery And Verification
 
-The Pipeline C Scanner is intentionally short. GPT-5.6 Luna chooses its own queries, media sources, search languages, search depth, and follow-up paths. Each category receives only one sentence describing the general subject area.
+The Pipeline C Scanner is intentionally short. GPT-5.6 Luna chooses its own queries, sources, languages, depth, and follow-up paths. Each category receives only one sentence describing the general subject area.
 
 The Scanner applies only these hard rules:
 
 - the article publication date must equal the requested date;
-- the source must be authoritative, editorially accountable media;
+- the source must be accountable media or, outside China reports, a substantive exact-date release from a government, central bank, regulator, exchange, or listed company;
 - the page must expose enough readable article body to verify facts;
-- a paid or stub-only lead must be replaced with an authoritative free same-event article;
+- a paid or stub-only lead must be replaced with an authoritative readable same-event account;
+- a zero-candidate result must show multiple independent discovery paths in a compact Discovery Note;
 - China reports use foreign media only;
 - Europe reports exclude UK-only and UK-primary events, while UK media may report eligible non-UK European events;
 - unverifiable facts, dates, sources, and URLs must never be invented.
@@ -535,7 +536,7 @@ The Scanner applies only these hard rules:
 The Scanner does not score news value, enforce transaction or impact thresholds, decide final category eligibility, merge duplicate coverage, choose a Lead, or route `china_nexus` and `ipo_ma`. It returns each qualifying URL separately. The Verifier then judges credibility and news value, selects Leads, deduplicates events, performs final category routing, and runs Coverage Review.
 
 Detailed rules:
-- Pipeline C Scanner hard rules and category directions: [`.codex/agents/sci-research-daily-news-scanner.toml`](./.codex/agents/sci-research-daily-news-scanner.toml)
+- Pipeline C Scanner hard rules: [`.codex/agents/sci-research-daily-news-scanner.toml`](./.codex/agents/sci-research-daily-news-scanner.toml); category directions: [`skills/daily-news-intelligence/SKILL.md`](./skills/daily-news-intelligence/SKILL.md)
 - Pipeline C Verifier editorial rules: [`skills/daily-news-intelligence/references/rubric.md`](./skills/daily-news-intelligence/references/rubric.md)
 
 ---
@@ -651,7 +652,8 @@ sci-research/
 
 | Goal | Edit |
 |---|---|
-| Pipeline C Scanner hard rules / category directions | `.codex/agents/sci-research-daily-news-scanner.toml` |
+| Pipeline C Scanner hard rules | `.codex/agents/sci-research-daily-news-scanner.toml` |
+| Pipeline C category directions and orchestration | `skills/daily-news-intelligence/SKILL.md` |
 | Pipeline C Verifier source / news-value / dedup / routing rules | `skills/daily-news-intelligence/references/rubric.md` + `.codex/agents/sci-research-news-verifier.toml` |
 | Pipeline C external-view China rules | `.codex/agents/sci-research-daily-news-scanner.toml` § China report + `skills/daily-news-intelligence/references/rubric.md` § China External-View Gate |
 | Pipeline C output format / Markdown contract | `skills/daily-news-intelligence/references/output-spec.md` |

@@ -14,6 +14,7 @@ Classify each Lead into exactly one `Source class`:
 | `reputable-regional` | Accountable regional or local newsroom with identifiable provenance and direct relevance to the event |
 | `reputable-specialist` | Established trade, legal, financial, scientific, technology, or industry publication with subject-matter reporting responsibility |
 | `sanctioned-syndication` | Transparent, attributed syndication with enough readable factual body when the original is inaccessible or paywalled |
+| `official-primary` | Exact-date substantive statistics, decisions, filings, or financial results from a government, central bank, regulator, exchange, or listed company |
 
 Eligibility principles:
 
@@ -21,8 +22,9 @@ Eligibility principles:
 - Source authority is claim-specific. Media reporting should clearly attribute official decisions, filings, statistics, and statements; disputed effects, criticism, and broader interpretation require credible reporting support.
 - Regional and specialist sources may Lead when they directly report an in-scope event and have accountable editorial provenance.
 - A media report may rely on a filing or official statement for what an institution or company announced. Material consequences or contested claims should be corroborated when practical.
+- An `official-primary` source may establish what the issuing body decided, measured, filed, or reported. It cannot by itself establish disputed effects, independent significance, or third-party reactions. Promotional releases do not qualify.
 - Transparent syndication is eligible when attribution is clear. Prefer the original URL when it is usable; otherwise retain the original under `Corroborated by` when known.
-- Scanner admits only media reporting with enough readable factual body. When the original is paywalled, an authoritative free same-event report or transparent attributed syndication must supply the candidate body.
+- Scanner admits media reporting with enough readable factual body and, outside China reports, narrowly eligible `official-primary` material. When media reporting is paywalled, an authoritative readable same-event report or transparent attributed syndication must supply the candidate body.
 
 Hard-reject as a Lead:
 
@@ -31,6 +33,8 @@ Hard-reject as a Lead:
 - unsupported personal blogs, Substack/Medium posts, social-media posts, forums, Q&A pages, and link aggregators;
 - pages whose provenance, date, or asserted event cannot be verified;
 - promotional copy with no substantive reportable fact.
+
+For China reports, the external-view gate below overrides `official-primary`: Scanner and Verifier use eligible foreign media only.
 
 ## Geographic Scope Gate
 

@@ -53,10 +53,9 @@ Both files must exist. Then spot-check the Markdown:
 Also inspect `SCANNER_AUDIT` before delivery:
 
 1. It contains exactly one `<!-- BEGIN CATEGORY OUTPUT: <id> -->` block per active category, in active-category order.
-2. Every category block contains `Status: complete`, the matching `Searched category`, `Search actions >= 1`, and integer search/open-page counts.
-3. In every category block, `Open-page successes + Open-page failures = Open-page attempts` and `Candidates found <= Open-page successes`.
-4. Every admitted story contains a category-prefixed Candidate ID and `Open-page result: verified-readable`.
-5. The Scanner Batch header totals equal the sum of the verbatim category outputs.
+2. Every category block contains `Status: complete`, the matching `Searched category`, a candidate count equal to its story blocks, and a compact `Discovery Note`; zero-candidate blocks show multiple independent discovery paths.
+3. Every admitted story contains a category-prefixed Candidate ID and `Open-page result: verified-readable`.
+4. The Scanner Batch header totals equal the sum of the verbatim category outputs.
 
 ## Flow Diagram
 
@@ -68,11 +67,11 @@ Also inspect `SCANNER_AUDIT` before delivery:
 │ Step 2: Scanner fan-out                │
 │  One GPT-5.6 Luna per active category  │
 │  All category agents run concurrently  │
-│  One-line category directions only     │
+│  One category direction per prompt     │
 │  WebSearch open_page → per-URL date    │
 │  + authoritative/readable-body checks  │
 │  No dedup or final category routing     │
-│  Emit category output + tool counts    │
+│  Emit candidates + compact discovery   │
 └──────────────────┬─────────────────────┘
                    │
                    ▼
@@ -132,7 +131,7 @@ Also inspect `SCANNER_AUDIT` before delivery:
 
 | Stage | Dispatch | Model | Rationale (the embedded body encodes this) |
 |-------|----------|-------|--------------------------------------------|
-| Scanner × active category (parallel) | `.codex/agents/sci-research-daily-news-scanner.toml` subagent | `gpt-5.6-luna / medium` | Each instance receives one category and a short, high-freedom prompt with exact-date, authoritative-media, readable-body, paid-to-free replacement, China foreign-media-only, and Europe-ex-UK hard rules. It reports search/open-page counts, returns every qualifying URL separately, and does not score, deduplicate, or final-route candidates |
+| Scanner × active category (parallel) | `.codex/agents/sci-research-daily-news-scanner.toml` subagent | `gpt-5.6-luna / medium` | Each instance receives one category direction and a short prompt with exact-date, readable-body, narrow primary-source, paid-to-readable replacement, China foreign-media-only, and Europe-ex-UK hard rules. It returns every qualifying URL plus a compact Discovery Note and does not score, deduplicate, or final-route candidates |
 | Verifier | `.codex/agents/sci-research-news-verifier.toml` subagent | `gpt-5.6-terra / high` | News-desk filter encoding source credibility/evidence fit, concrete new information, contextual daily-news value, originality/corroboration, Lead selection, deduplication, and final category routing. Coverage Review may admit credible narrower developments when a category is short, without relaxing date, geography, provenance, or factual support |
 | Fact-Extractor | `.codex/agents/sci-research-daily-fact-extractor.toml` subagent | `gpt-5.4-mini / medium` | Extracts every hard fact + direct quote from the Verifier KEEP set into a locked-values YAML manifest. Pure transformation — no web, no narrative. The manifest is the Writer's locked-values contract and the Editor's Pass-1 ground truth |
 | Writer | `.codex/agents/sci-research-daily-news-writer.toml` subagent | `gpt-5.6-sol / high` | Daily briefing writer. Uses semantic Fact Manifest fidelity, native-language composition, complete citations, and hard minimums of 250 English words or 400 Chinese Han characters. Opens existing story sources and researches further only when necessary to supply relevant depth |

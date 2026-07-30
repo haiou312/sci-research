@@ -134,6 +134,7 @@ def validate(plugin_root: Path) -> tuple[int, int]:
     except (OSError, tomllib.TOMLDecodeError) as exc:
         fail(f"runtime config template is invalid: {runtime_config}: {exc}")
     agents = config.get("agents")
+    web_search = config.get("web_search")
     max_threads = agents.get("max_threads") if isinstance(agents, dict) else None
     max_depth = agents.get("max_depth") if isinstance(agents, dict) else None
     if (
@@ -142,6 +143,8 @@ def validate(plugin_root: Path) -> tuple[int, int]:
         or max_threads < 10
     ):
         fail("runtime config template must set agents.max_threads >= 10")
+    if web_search != "live":
+        fail('runtime config template must set web_search = "live"')
     if max_depth != 1:
         fail("runtime config template must set agents.max_depth = 1")
     return len(skill_names), len(names)

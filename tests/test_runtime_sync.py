@@ -44,12 +44,14 @@ class RuntimeSyncTests(unittest.TestCase):
             self.assertEqual(len(manifest["managed_files"]), 20)
             config_path = project_root / ".codex/config.toml"
             config = tomllib.loads(config_path.read_text(encoding="utf-8"))
+            self.assertEqual(config["web_search"], "live")
             self.assertEqual(config["agents"]["max_threads"], 10)
             self.assertTrue(manifest["runtime_config"]["created_by_plugin"])
 
             check = self.run_sync(project_root, "--check")
             self.assertEqual(check.returncode, 0, check.stderr)
             self.assertIn("RUNTIME_OK", check.stdout)
+            self.assertIn("web_search=live", check.stdout)
             self.assertIn("max_threads=10", check.stdout)
 
             uninstall = self.run_sync(project_root, "--uninstall")
@@ -73,6 +75,35 @@ class RuntimeSyncTests(unittest.TestCase):
             self.assertEqual(manifest_path.read_bytes(), before)
             backup_root = project_root / ".codex/sci-research-backups"
             self.assertFalse(backup_root.exists())
+
+    def test_updates_unchanged_plugin_created_config_when_requirements_change(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            project_root = Path(temp_dir)
+            first = self.run_sync(project_root)
+            self.assertEqual(first.returncode, 0, first.stderr)
+
+            config_path = project_root / ".codex/config.toml"
+            old_config = b"[agents]\nmax_threads = 10\nmax_depth = 1\n"
+            config_path.write_bytes(old_config)
+            manifest_path = project_root / ".codex/sci-research-runtime.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["runtime_config"].pop("web_search_mode", None)
+            manifest["runtime_config"]["sha256"] = hashlib.sha256(
+                old_config
+            ).hexdigest()
+            manifest_path.write_text(
+                json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
+            )
+
+            update = self.run_sync(project_root)
+            self.assertEqual(update.returncode, 0, update.stderr)
+            self.assertIn("CONFIG: update", update.stdout)
+            config = tomllib.loads(config_path.read_text(encoding="utf-8"))
+            self.assertEqual(config["web_search"], "live")
+            updated = json.loads(manifest_path.read_text(encoding="utf-8"))
+            self.assertEqual(
+                updated["runtime_config"]["web_search_mode"], "live"
+            )
 
     def test_install_updates_stale_manifest_version_with_backup(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -162,7 +193,10 @@ class RuntimeSyncTests(unittest.TestCase):
             project_root = Path(temp_dir)
             config_path = project_root / ".codex/config.toml"
             config_path.parent.mkdir(parents=True)
-            original = "[agents]\nmax_threads = 12\nmax_depth = 2\n"
+            original = (
+                'web_search = "live"\n\n'
+                "[agents]\nmax_threads = 12\nmax_depth = 2\n"
+            )
             config_path.write_text(original, encoding="utf-8")
 
             install = self.run_sync(project_root)
@@ -186,6 +220,7 @@ class RuntimeSyncTests(unittest.TestCase):
             config_path = project_root / ".codex/config.toml"
             config_path.parent.mkdir(parents=True)
             config_path.write_text(
+                'web_search = "live"\n\n'
                 "[agents]\nmax_threads = 6\nmax_depth = 1\n",
                 encoding="utf-8",
             )
@@ -193,6 +228,24 @@ class RuntimeSyncTests(unittest.TestCase):
             result = self.run_sync(project_root)
             self.assertEqual(result.returncode, 2)
             self.assertIn("agents.max_threads >= 10", result.stderr)
+            self.assertFalse(
+                (project_root / ".codex/sci-research-runtime.json").exists()
+            )
+
+    def test_refuses_runtime_config_without_live_search(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            project_root = Path(temp_dir)
+            config_path = project_root / ".codex/config.toml"
+            config_path.parent.mkdir(parents=True)
+            config_path.write_text(
+                'web_search = "cached"\n\n'
+                "[agents]\nmax_threads = 10\nmax_depth = 1\n",
+                encoding="utf-8",
+            )
+
+            result = self.run_sync(project_root)
+            self.assertEqual(result.returncode, 2)
+            self.assertIn('web_search = "live"', result.stderr)
             self.assertFalse(
                 (project_root / ".codex/sci-research-runtime.json").exists()
             )

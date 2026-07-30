@@ -1,6 +1,6 @@
 ---
 name: setup-sci-research-runtime
-description: "Install, update, verify, or remove the project-scoped Codex agents and concurrency config required by the Sci-Research marketplace skills. Use when Sci-Research reports missing named agents or agent thread limits, after installing or updating the plugin, or when preparing a dedicated ~/.sci-research workspace."
+description: "Install, update, verify, or remove the project-scoped Codex agents, live-search mode, and concurrency config required by the Sci-Research marketplace skills. Use when Sci-Research reports missing named agents or invalid runtime settings, after installing or updating the plugin, or when preparing a dedicated ~/.sci-research workspace."
 ---
 
 # Setup Sci-Research Runtime
@@ -11,8 +11,9 @@ Install the plugin's native Codex agents and required subagent concurrency setti
 
 - Default `PROJECT_ROOT` to the current working directory. Use another directory only when the user explicitly names it.
 - Install only under `${PROJECT_ROOT}/.codex/`; never modify `~/.codex/config.toml`, global agents, MCP servers, prompts, Git hooks, or Python packages.
+- Exact-date web pipelines require project config `web_search = "live"`; cached or indexed search is not accepted.
 - Pipelines C and G need up to seven concurrent category threads for China. Require project config `agents.max_threads >= 10`; keep `agents.max_depth = 1` in a newly created config because Sci-Research does not use recursive delegation.
-- If `${PROJECT_ROOT}/.codex/config.toml` is absent, create it from the bundled runtime template. If it already exists, validate `agents.max_threads >= 10` and preserve the file byte-for-byte. Stop with the exact required TOML block when an existing config is missing the setting or sets it below 10.
+- If `${PROJECT_ROOT}/.codex/config.toml` is absent, create it from the bundled runtime template. If setup previously created it and it remains unchanged, update it from the template when requirements change. Otherwise validate `web_search = "live"` and `agents.max_threads >= 10` while preserving the file byte-for-byte; stop with the exact required TOML when either setting is invalid.
 - Resolve `SKILL_DIR` as the absolute directory containing this `SKILL.md`, and derive `PLUGIN_ROOT` from it. Never hard-code a marketplace cache version.
 - Run the bundle checker before install or update.
 - Run a dry-run before applying changes.
@@ -59,4 +60,4 @@ Uninstall removes only files recorded in the runtime manifest and refuses to del
 
 ## Completion
 
-Report the project root, plugin version, number of installed agents, verified `max_threads`, manifest path, and backup path when one was created. Remind the user to review `/hooks` when hook trust is pending. Do not claim the pipelines are ready until a new task successfully spawns a named Sci-Research agent.
+Report the project root, plugin version, number of installed agents, verified `web_search=live`, verified `max_threads`, manifest path, and backup path when one was created. Remind the user to review `/hooks` when hook trust is pending. Do not claim the pipelines are ready until a new task successfully spawns a named Sci-Research agent.

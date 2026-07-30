@@ -1,3 +1,6 @@
+# Exact-date web pipelines require current results rather than the cached index.
+web_search = "live"
+
 # Pipelines C and G use up to seven concurrent category agents; Pipeline F uses five.
 [agents]
 max_threads = 10

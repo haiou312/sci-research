@@ -25,6 +25,7 @@ CONFIG_TEMPLATE_RELATIVE = Path(
     "skills/setup-sci-research-runtime/runtime/config.toml"
 )
 MIN_AGENT_THREADS = 10
+REQUIRED_WEB_SEARCH_MODE = "live"
 
 
 class RuntimeErrorWithContext(RuntimeError):
@@ -103,7 +104,7 @@ def load_source_agents(plugin_root: Path) -> dict[str, dict[str, Any]]:
     return result
 
 
-def load_agent_thread_limit(path: Path) -> int:
+def load_runtime_requirements(path: Path) -> int:
     try:
         data = tomllib.loads(path.read_text(encoding="utf-8"))
     except (OSError, tomllib.TOMLDecodeError) as exc:
@@ -112,15 +113,19 @@ def load_agent_thread_limit(path: Path) -> int:
         ) from exc
     agents = data.get("agents")
     max_threads = agents.get("max_threads") if isinstance(agents, dict) else None
-    if (
+    invalid_threads = (
         isinstance(max_threads, bool)
         or not isinstance(max_threads, int)
         or max_threads < MIN_AGENT_THREADS
-    ):
+    )
+    web_search = data.get("web_search")
+    if invalid_threads or web_search != REQUIRED_WEB_SEARCH_MODE:
         raise RuntimeErrorWithContext(
-            f"Codex runtime config must set agents.max_threads >= "
-            f"{MIN_AGENT_THREADS}: {path}\n"
+            "Codex runtime config must set "
+            f'web_search = "{REQUIRED_WEB_SEARCH_MODE}" and '
+            f"agents.max_threads >= {MIN_AGENT_THREADS}: {path}\n"
             "Add or update:\n"
+            f'web_search = "{REQUIRED_WEB_SEARCH_MODE}"\n\n'
             "[agents]\n"
             f"max_threads = {MIN_AGENT_THREADS}\n"
             "max_depth = 1"
@@ -130,7 +135,7 @@ def load_agent_thread_limit(path: Path) -> int:
 
 def load_config_template(plugin_root: Path) -> Path:
     template = plugin_root / CONFIG_TEMPLATE_RELATIVE
-    load_agent_thread_limit(template)
+    load_runtime_requirements(template)
     data = tomllib.loads(template.read_text(encoding="utf-8"))
     if data["agents"].get("max_depth") != 1:
         raise RuntimeErrorWithContext(
@@ -170,6 +175,7 @@ def manifest_runtime_config(
         )
     path = value.get("path")
     minimum = value.get("minimum_max_threads")
+    web_search_mode = value.get("web_search_mode")
     created = value.get("created_by_plugin")
     digest = value.get("sha256")
     if (
@@ -178,6 +184,7 @@ def manifest_runtime_config(
         or not isinstance(minimum, int)
         or minimum < 1
         or not isinstance(created, bool)
+        or web_search_mode not in (None, REQUIRED_WEB_SEARCH_MODE)
         or (created and (not isinstance(digest, str) or not digest))
     ):
         raise RuntimeErrorWithContext(
@@ -197,24 +204,39 @@ def plan_runtime_config(
         return True, {
             "path": str(CONFIG_RELATIVE),
             "minimum_max_threads": MIN_AGENT_THREADS,
+            "web_search_mode": REQUIRED_WEB_SEARCH_MODE,
             "created_by_plugin": True,
             "sha256": sha256(template),
         }
 
-    load_agent_thread_limit(destination)
-    created_by_plugin = False
-    recorded_hash: str | None = None
-    if old_state and old_state["created_by_plugin"]:
-        recorded_hash = old_state["sha256"]
-        created_by_plugin = sha256(destination) == recorded_hash
+    actual_hash = sha256(destination)
+    created_by_plugin = bool(
+        old_state
+        and old_state["created_by_plugin"]
+        and actual_hash == old_state["sha256"]
+    )
+    if created_by_plugin:
+        try:
+            load_runtime_requirements(destination)
+        except RuntimeErrorWithContext:
+            return True, {
+                "path": str(CONFIG_RELATIVE),
+                "minimum_max_threads": MIN_AGENT_THREADS,
+                "web_search_mode": REQUIRED_WEB_SEARCH_MODE,
+                "created_by_plugin": True,
+                "sha256": sha256(template),
+            }
+    else:
+        load_runtime_requirements(destination)
 
     state: dict[str, Any] = {
         "path": str(CONFIG_RELATIVE),
         "minimum_max_threads": MIN_AGENT_THREADS,
+        "web_search_mode": REQUIRED_WEB_SEARCH_MODE,
         "created_by_plugin": created_by_plugin,
     }
-    if created_by_plugin and recorded_hash:
-        state["sha256"] = recorded_hash
+    if created_by_plugin:
+        state["sha256"] = actual_hash
     return False, state
 
 
@@ -360,7 +382,7 @@ def install(project_root: Path, plugin_root: Path, dry_run: bool) -> int:
     if old_manifest:
         validate_existing_manifest(old_manifest, manifest_path)
     copies, removals = plan_install(project_root, source_agents, old_manifest)
-    create_config, runtime_config = plan_runtime_config(
+    write_config, runtime_config = plan_runtime_config(
         project_root, config_template, old_manifest
     )
     config_path = project_root / CONFIG_RELATIVE
@@ -374,14 +396,22 @@ def install(project_root: Path, plugin_root: Path, dry_run: bool) -> int:
         print(f"REMOVE: {destination}")
     if not copies and not removals:
         print("AGENTS: already match the installed plugin payload")
-    if create_config:
+    if write_config and config_path.exists():
+        print(
+            f"CONFIG: update {config_path} with "
+            f"web_search={REQUIRED_WEB_SEARCH_MODE} and "
+            f"agents.max_threads={MIN_AGENT_THREADS}"
+        )
+    elif write_config:
         print(
             f"CONFIG: create {config_path} with "
+            f"web_search={REQUIRED_WEB_SEARCH_MODE} and "
             f"agents.max_threads={MIN_AGENT_THREADS}"
         )
     else:
         print(
             f"CONFIG: verified {config_path} "
+            f"web_search={REQUIRED_WEB_SEARCH_MODE} and "
             f"agents.max_threads>={MIN_AGENT_THREADS}"
         )
     print(f"MANIFEST: {manifest_path}")
@@ -408,9 +438,11 @@ def install(project_root: Path, plugin_root: Path, dry_run: bool) -> int:
     backup = make_backup(
         project_root,
         manifest_path,
-        [destination for _, destination in copies] + removals,
+        [destination for _, destination in copies]
+        + removals
+        + ([config_path] if write_config and config_path.exists() else []),
     )
-    if create_config:
+    if write_config:
         atomic_copy(config_template, config_path)
     for source, destination in copies:
         atomic_copy(source, destination)
@@ -464,7 +496,7 @@ def check(project_root: Path, plugin_root: Path) -> int:
             problems.append(f"agent hash mismatch: {destination}")
     config_path = project_root / CONFIG_RELATIVE
     try:
-        thread_limit = load_agent_thread_limit(config_path)
+        thread_limit = load_runtime_requirements(config_path)
     except RuntimeErrorWithContext as exc:
         problems.append(str(exc))
     runtime_config = manifest_runtime_config(manifest)
@@ -478,11 +510,16 @@ def check(project_root: Path, plugin_root: Path) -> int:
             "runtime manifest records a different minimum thread limit; "
             "rerun runtime setup"
         )
+    elif runtime_config.get("web_search_mode") != REQUIRED_WEB_SEARCH_MODE:
+        problems.append(
+            "runtime manifest does not record live web search; rerun runtime setup"
+        )
     if problems:
         raise RuntimeErrorWithContext("Runtime check failed:\n- " + "\n- ".join(problems))
     print(
         f"RUNTIME_OK: project_root={project_root} plugin_version={version} "
-        f"agents={len(expected_files)} max_threads={thread_limit} "
+        f"agents={len(expected_files)} web_search={REQUIRED_WEB_SEARCH_MODE} "
+        f"max_threads={thread_limit} "
         f"manifest={manifest_path}"
     )
     return 0

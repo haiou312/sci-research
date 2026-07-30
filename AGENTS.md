@@ -12,7 +12,7 @@
 | F | $sci-research:china-outbound-opportunity-briefing | 中资企业英国及欧洲商机拓展情报 | Markdown、机构化 docx、可选邮件 |
 | G | $sci-research:monthly-news-intelligence | 单国或地区指定月份热点新闻 | 与 Pipeline C 同结构的 Markdown、可选 docx 与邮件 |
 
-所有子 agent 都是带 `sci-research-` 命名空间的原生 Codex TOML 定义，源文件位于 `.codex/agents/*.toml`。Marketplace 更新后先用 `$sci-research:setup-sci-research-runtime` 同步到运行 workspace 的 `.codex/agents/`，并校验项目级 `.codex/config.toml` 中 `agents.max_threads >= 10`，再新开 Codex task。
+所有子 agent 都是带 `sci-research-` 命名空间的原生 Codex TOML 定义，源文件位于 `.codex/agents/*.toml`。Marketplace 更新后先用 `$sci-research:setup-sci-research-runtime` 同步到运行 workspace 的 `.codex/agents/`，并校验项目级 `.codex/config.toml` 中 `web_search = "live"` 与 `agents.max_threads >= 10`，再新开 Codex task。
 
 - 每个 stage 通过 custom-agent selector 启动其精确命名 role，并使用 `fork_turns="none"`；模型与 model_reasoning_effort 从 TOML 读取。`task_name` 仅是线程标签。
 - 每个 stage 的输出和文件交接完成后必须调用 `close_agent`；并行组全部收齐后逐一关闭，失败或 schema 无效的尝试也要先关闭再重试。关闭失败时停止继续 spawn。
@@ -54,14 +54,14 @@
 
 - Scanner 按 active category 一栏一个并行运行；该 fan-out 每份报告只执行一次。Verifier、Fact Extractor 各运行一次；双语模式下 Writer 和 Editor 按语言并行。
 - 每个 Scanner 使用简短、高自由度提示，只接收一个栏目及其一句大致搜索方向，由 GPT-5.6 Luna 自行决定查询、媒体、语言、深度和跟进路径。
-- Scanner 只执行这些硬门槛：日期必须精确等于目标日；来源必须是权威媒体；页面必须有可读事实正文；付费或仅摘要线索必须找到权威免费同事件报道，否则删除；不得编造。
+- Scanner 只执行这些硬门槛：日期必须精确等于目标日；页面必须有可读事实正文；非中国报告可使用权威媒体或政府、央行、监管机构、交易所及上市公司的实质性一手发布，中国报告仍只用外国媒体；付费或仅摘要线索必须找到权威可读的同事件报道，否则删除；不得编造。
 - Scanner 不做新闻价值评分、交易或影响门槛、候选配额、去重、Lead 选择、最终分类或 `china_nexus`/`ipo_ma` 路由；每个合格 URL 独立交给 Verifier。
 - 编排器只按栏目顺序原样包裹各 Scanner 输出并计算汇总计数，不新增 Merger agent，不改写、去重或路由候选；这些判断仍由 Verifier 完成。
 - country=China 必须采用外部视角：只查询和使用外国媒体，不查询或使用中国本土媒体及中国政府域名。
 - country=Europe 使用 Europe-ex-UK 地域契约：英国为唯一或主要地域主体的事件必须排除，且该门槛不得被 Coverage Review 放宽；英国媒体仍可作为欧洲新闻来源，英国仅作为背景或外部交易对手时不自动排除。
 - 非中国报告有 6 个栏目；中国报告在第 5 位增加 china_nexus，并保留 ipo_ma。
 - Verifier 独立判断来源可信度、新闻价值和具体新事实，并负责 Lead 选择、同事件去重、最终栏目路由、`china_nexus`/`ipo_ma` 资格及 Coverage Review。
-- Scanner Batch（含每栏原始输出及 search/open_page 计数）与 Verifier KEEP/DROP 报告必须原样保存到日报目录的 `audit/*.txt`；不要使用 `.md`，避免 Pipeline D 将审计文件当作国家日报。
+- Scanner Batch（含每栏原始输出及精简 Discovery Note）与 Verifier KEEP/DROP 报告必须原样保存到日报目录的 `audit/*.txt`；不要使用 `.md`，避免 Pipeline D 将审计文件当作国家日报。模型自报的 search/open_page 次数不作为审计证据。
 - Writer 必须遵守 Fact Manifest；Editor 使用 apply_patch 运行五道检查。引用、引号和输出格式规范以 skills/daily-news-intelligence/references/ 为准。
 - 英文每篇正文不得少于 250 个词，中文每篇正文不得少于 400 个 Unicode 汉字，不设最高字数。材料不足时先打开 Lead 和相关佐证原文，再按需补充搜索；只能用可引用的实质内容达到底线，不得重复、空泛扩写或编造。
 - --email-attach none 表示仅发送正文，必须省略 --attach。
@@ -148,7 +148,8 @@
 | 需求 | 真源文件 |
 |---|---|
 | C 编排、参数、输出与邮件 | skills/daily-news-intelligence/SKILL.md |
-| C Scanner 硬门槛与一句话栏目方向 | .codex/agents/sci-research-daily-news-scanner.toml |
+| C Scanner 硬门槛 | .codex/agents/sci-research-daily-news-scanner.toml |
+| C 一句话栏目方向与编排 | skills/daily-news-intelligence/SKILL.md |
 | C Verifier 来源、新闻价值、去重、路由和 Coverage Review 规则 | skills/daily-news-intelligence/references/rubric.md |
 | C agent 行为 | .codex/agents/sci-research-daily-*.toml、.codex/agents/sci-research-news-verifier.toml |
 | D 编排与参数 | skills/daily-briefing/SKILL.md |
@@ -169,7 +170,7 @@
 ## 验证顺序
 
 1. 静态检查：TOML、JSON、Python、Node、Bash 语法与 git diff --check。
-2. Runtime 验证：在隔离 workspace 安装、检查、升级、配置冲突与卸载；确认 `agents.max_threads >= 10`，并在新 task 逐一验证命名 agent selector、模型、effort 与 close-agent 生命周期。
+2. Runtime 验证：在隔离 workspace 安装、检查、升级、配置冲突与卸载；确认 `web_search = "live"` 与 `agents.max_threads >= 10`，并在新 task 逐一验证命名 agent selector、模型、effort 与 close-agent 生命周期。
 3. C 最小首跑：无邮件，确认原生 agent 串联、apply_patch、hook、直接格式门与 pandoc 输出。
 4. D 验证：先安装 requirements.txt，使用 C 产出的样例 Markdown，邮件只做 dry-run。
 5. E 验证：测试 Yahoo 企业/高管确认、非中国大陆媒体与公开社交媒体搜索、低中高判断、干净结果静默退出与邮件 dry-run。

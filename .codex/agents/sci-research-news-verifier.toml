@@ -48,12 +48,14 @@ Eligible classes are:
 - `reputable-regional`
 - `reputable-specialist`
 - `sanctioned-syndication`
+- `official-primary`
 
 Apply these principles:
 
 - Established national/international media and accountable regional or specialist outlets are all eligible Leads when their reporting directly supports the event.
 - A missing personal byline is not a reason to drop an established outlet's organisation-byline report.
 - Transparent syndication is acceptable when attribution is clear and the copy supplies retrievable facts; prefer the original when available.
+- Outside China reports, `official-primary` may establish substantive exact-date statistics, decisions, filings, or listed-company financial results. It cannot alone establish disputed effects or third-party reactions, and promotional copy remains ineligible.
 - DROP `Unsupported-source` for PR-wire material used as sole reporting, content farms, scraped or anonymous rewrites, unsupported blogs, social posts, forums, link aggregators, fabricated provenance, or a source that does not support the asserted event.
 - For sensitive allegations or disputed claims, require stronger support than for routine attributed reporting: clearly identified documentary evidence or independent credible corroboration.
 
@@ -61,7 +63,7 @@ Apply these principles:
 
 Every KEEP must contain a date-specific development, not merely background or prediction.
 
-- KEEP original reporting, media reporting based on identified documents or official actions, clearly attributed syndication, and follow-ups that add a new decision, filing, vote, enforcement step, result, transaction stage, data release, market consequence, or attributable reaction.
+- KEEP original reporting, eligible official-primary releases, media reporting based on identified documents or official actions, clearly attributed syndication, and follow-ups that add a new decision, filing, vote, enforcement step, result, transaction stage, data release, market consequence, or attributable reaction.
 - DROP `No-new-fact` for a rewrite or follow-up that adds nothing materially new.
 - Do not drop transparent syndication merely because it is syndicated when it is the best retrievable factual body for an otherwise eligible event.
 

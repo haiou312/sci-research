@@ -14,38 +14,36 @@ Return one English output for the single assigned category. The searched categor
 - Date: <YYYY-MM-DD>
 - Searched category: <category id>
 - Candidates found: <M>
-- Search actions: <non-negative integer>
-- Open-page attempts: <non-negative integer>
-- Open-page successes: <non-negative integer>
-- Open-page failures: <non-negative integer>
 
 ## Stories
 
 ### [<searched category>] <English headline>
 - Candidate ID: <category-prefixed ID unique within the Scanner Batch, such as econ-1>
 - Publish date (verified): <ISO timestamp or local date>
-- Source: <media organisation>
+- Source: <media organisation or issuing institution>
+- Source type: <media | official-primary>
 - URL: <full canonical or readable syndicated https URL>
-- Byline: <author, organisation byline, or "No byline">
+- Byline: <author, organisation byline, issuing institution, or "No byline">
 - Open-page result: verified-readable
 - Factual excerpt: <verbatim text from the readable article body>
 - Key facts: <concise English account of what the article reports>
 
 ... (repeat for every qualifying URL; do not merge possible duplicates) ...
 
-## Coverage Note
+## Discovery Note
 
-- <category id>: <brief description of what was found, why authoritative exact-date reporting with readable factual body was sparse, or why Status is failed>
+- Languages and entry points: <compact account of locally relevant/English search and current publisher, category, or release pages checked>
+- Rejected exact-date leads: <up to five `URL | reason` entries, or "None">
+- Coverage: <brief explanation of what was found, why coverage was sparse, or why Status is failed>
 ```
 
 Rules:
 
-- `Status: complete` requires meaningful search execution, even when `Candidates found: 0`.
+- `Status: complete` requires multiple independent discovery paths when `Candidates found: 0`, including local-language and direct current-page checks when applicable.
 - `Status: failed` means the Scanner could not complete discovery because of a tool or runtime failure; it is not evidence that the category had no qualifying news.
-- `Status: complete` requires `Search actions >= 1`. Count individual queries, not batched tool calls.
-- Count `Open-page attempts` by individual URL, not batched tool calls.
-- `Open-page successes + Open-page failures` must equal `Open-page attempts`.
-- `Candidates found` must not exceed `Open-page successes`.
+- `Candidates found` must equal the number of story blocks, and every candidate must come from an opened readable page.
+- `official-primary` is limited to substantive exact-date government, central-bank, regulator, exchange, or listed-company statistics, decisions, filings, and financial results. It does not include promotional copy and is unavailable for China reports.
+- Keep the Discovery Note compact; it is evidence of coverage, not a complete tool transcript.
 
 ## Scanner Batch Schema
 
@@ -60,7 +58,6 @@ The orchestrator creates one Scanner Batch after all category Scanner invocation
 - Category outputs complete: <N>
 - Candidates found: <M>
 - Candidate counts by searched category: one `id=<n>` token per category in active-category order
-- Tool totals: search=<n> | open_attempts=<n> | open_successes=<n> | open_failures=<n>
 
 ## Category Outputs
 
@@ -91,7 +88,7 @@ The Verifier evaluates every Scanner candidate, selects the final Lead for dupli
 ### [Category] <English headline>
 - Publish date (verified): <ISO timestamp or local date>
 - Source: <media outlet name>
-- Source class: <established-media | reputable-regional | reputable-specialist | sanctioned-syndication>
+- Source class: <established-media | reputable-regional | reputable-specialist | sanctioned-syndication | official-primary>
 - Source assessment: <Verifier judgement of claim-level provenance and evidence fit>
 - URL: <full canonical https URL>
 - Byline: <author, organisation byline, or "No byline">
