@@ -1,7 +1,7 @@
 {
   "name": "sci-research",
-  "version": "1.23.0+codex.20260730170547",
-  "description": "Five specialised multi-agent intelligence workflows plus project-scoped runtime setup, including offline monthly country-news synthesis and UK/Europe commercial opportunity monitoring.",
+  "version": "1.23.0+codex.20260803131306",
+  "description": "Five specialised intelligence workflows plus weekly CRD VI transposition and regulatory-news tracking, with project-scoped runtime setup.",
   "author": {
     "name": "Peter Wang"
   },
@@ -19,6 +19,9 @@
     "companies-house",
     "cross-border-ma",
     "adverse-media",
+    "crd-vi",
+    "eu-regulation",
+    "transposition",
     "branded-docx",
     "references",
     "skills",
@@ -27,9 +30,9 @@
   ],
   "skills": "./skills/",
   "interface": {
-    "displayName": "Sci-Research News Intelligence",
-    "shortDescription": "Daily and monthly news, opportunities, briefings, and reputation monitoring",
-    "longDescription": "Five specialised workflows: daily-news-intelligence for dated single-country reporting, monthly-news-intelligence for offline monthly synthesis from existing daily reports, daily-briefing for a multi-country branded Word document, reputation-track for company and executive risk alerts, and china-outbound-opportunity-briefing for UK economic signals, Chinese expansion into Europe, cross-border M&A, investment footprints, and Companies House entity changes. A setup skill installs the namespaced TOML custom agents into the active project.",
+    "displayName": "Sci-Research Intelligence",
+    "shortDescription": "News, regulatory, reputation, and opportunity intelligence",
+    "longDescription": "Specialised workflows: daily-news-intelligence for dated single-country reporting, monthly-news-intelligence for offline monthly synthesis from existing daily reports, daily-briefing for a multi-country branded Word document, reputation-track for company and executive risk alerts, crd-vi-transposition for weekly snapshot-and-delta monitoring plus exact-week regulatory news and market commentary, and china-outbound-opportunity-briefing for UK economic signals, Chinese expansion into Europe, cross-border M&A, investment footprints, and Companies House entity changes. The CRD VI workflow isolates media commentary from official country-status evidence. A setup skill installs the namespaced TOML custom agents into the active project.",
     "developerName": "Peter Wang",
     "category": "Productivity",
     "capabilities": [
@@ -38,12 +41,9 @@
       "Write"
     ],
     "defaultPrompt": [
-      "Generate a daily news intelligence report for Japan",
-      "Create a monthly United Kingdom news report from existing daily reports",
-      "Create a branded briefing from daily news reports",
-      "Monitor a company for reputational risk",
-      "Create a UK and Europe opportunity briefing for Chinese enterprises",
-      "Set up the Sci-Research runtime in this workspace"
+      "Create a sourced daily or monthly country-news report",
+      "Track weekly CRD VI transposition changes and regulatory news across all EU countries",
+      "Monitor company risk or UK-Europe commercial opportunities"
     ]
   }
 }

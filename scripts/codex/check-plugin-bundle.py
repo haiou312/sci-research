@@ -13,6 +13,7 @@ import tomllib
 
 REQUIRED_SKILLS = {
     "china-outbound-opportunity-briefing",
+    "crd-vi-transposition",
     "daily-news-intelligence",
     "daily-briefing",
     "monthly-news-intelligence",
@@ -41,6 +42,14 @@ REQUIRED_AGENTS = {
     "sci-research-reputation-scanner",
     "sci-research-reputation-verifier",
     "sci-research-reputation-writer",
+}
+
+CRD_VI_COUNTRIES = {
+    "Austria", "Belgium", "Bulgaria", "Croatia", "Cyprus",
+    "Czech Republic", "Denmark", "Estonia", "Finland", "France",
+    "Germany", "Greece", "Hungary", "Ireland", "Italy", "Latvia",
+    "Lithuania", "Luxembourg", "Malta", "Netherlands", "Poland",
+    "Portugal", "Romania", "Slovakia", "Slovenia", "Spain", "Sweden",
 }
 
 
@@ -73,6 +82,69 @@ def validate(plugin_root: Path) -> tuple[int, int]:
     missing_skills = sorted(REQUIRED_SKILLS - skill_names)
     if missing_skills:
         fail(f"missing required skills: {', '.join(missing_skills)}")
+
+    crd_root = skills_root / "crd-vi-transposition"
+    crd_required = (
+        "references/country-sources.json",
+        "references/news-method.md",
+        "references/news-sources.json",
+        "references/source-method.md",
+        "references/table-spec.md",
+        "references/weekly-method.md",
+        "scripts/build-weekly-search-plan.py",
+        "scripts/diff-weekly-state.py",
+        "scripts/validate-country-table.py",
+        "scripts/validate-news-section.py",
+        "scripts/weekly-period.py",
+    )
+    missing_crd = [name for name in crd_required if not (crd_root / name).is_file()]
+    if missing_crd:
+        fail(f"missing CRD VI weekly resources: {', '.join(missing_crd)}")
+    registry = json.loads(
+        (crd_root / "references/country-sources.json").read_text(encoding="utf-8")
+    )
+    registry_countries = registry.get("countries")
+    if not isinstance(registry_countries, list):
+        fail("CRD VI country registry must contain a countries list")
+    names = {
+        item.get("country")
+        for item in registry_countries
+        if isinstance(item, dict) and isinstance(item.get("country"), str)
+    }
+    if names != CRD_VI_COUNTRIES or len(registry_countries) != 27:
+        fail("CRD VI country registry must contain exactly the 27 EU Member States")
+    news_registry = json.loads(
+        (crd_root / "references/news-sources.json").read_text(encoding="utf-8")
+    )
+    news_lanes = news_registry.get("search_lanes")
+    lane_ids = {
+        item.get("id")
+        for item in news_lanes or []
+        if isinstance(item, dict) and isinstance(item.get("id"), str)
+    }
+    if lane_ids != {
+        "national_transposition",
+        "third_country_branches",
+        "supervisory_implementation",
+        "market_response",
+    } or len(news_lanes or []) != 4:
+        fail("CRD VI news registry must contain exactly the four search lanes")
+    source_groups = news_registry.get("source_groups")
+    source_classes = {
+        item.get("class")
+        for item in source_groups or []
+        if isinstance(item, dict) and isinstance(item.get("class"), str)
+    }
+    if source_classes != {
+        "official",
+        "news_media",
+        "industry",
+        "professional_analysis",
+    }:
+        fail("CRD VI news registry has unexpected source classes")
+    target_items = news_registry.get("target_items")
+    if not isinstance(target_items, dict) or target_items.get("maximum") != 8:
+        fail("CRD VI news registry maximum must be 8")
 
     agents_dir = plugin_root / ".codex/agents"
     names: set[str] = set()

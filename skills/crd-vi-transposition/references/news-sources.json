@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "target_items": {
+    "preferred_minimum": 3,
+    "maximum": 8,
+    "allow_zero_when_no_material_items": true
+  },
+  "search_lanes": [
+    {
+      "id": "national_transposition",
+      "intent": "National CRD VI laws, bills, parliamentary progress, publication, commencement, infringement, and implementation disputes"
+    },
+    {
+      "id": "third_country_branches",
+      "intent": "Article 21c, third-country branch authorisation, reverse solicitation, grandfathering, cross-border lending, booking models, and branch or subsidiary decisions"
+    },
+    {
+      "id": "supervisory_implementation",
+      "intent": "EBA, ECB, and European Commission standards, guidelines, reporting, SREP, supervisory expectations, and level-two measures implementing CRD VI"
+    },
+    {
+      "id": "market_response",
+      "intent": "Concrete bank, banking-association, borrower, or adviser responses to CRD VI with practical operational, legal, client, capital, or market-access impact"
+    }
+  ],
+  "source_groups": [
+    {
+      "class": "official",
+      "priority": 1,
+      "domains": [
+        "finance.ec.europa.eu",
+        "eur-lex.europa.eu",
+        "eba.europa.eu",
+        "ecb.europa.eu"
+      ],
+      "rule": "Use original announcements and legal materials whenever available. National official domains come from country-sources.json."
+    },
+    {
+      "class": "news_media",
+      "priority": 2,
+      "domains": [
+        "reuters.com",
+        "ft.com",
+        "bloomberg.com",
+        "spglobal.com",
+        "risk.net",
+        "globalcapital.com",
+        "politico.eu",
+        "euractiv.com"
+      ],
+      "rule": "Open the publisher page and verify date and substance. Treat paywalled material as secondary unless accessible evidence independently supports the facts."
+    },
+    {
+      "class": "industry",
+      "priority": 3,
+      "domains": [
+        "ebf.eu",
+        "afme.eu",
+        "fi.se",
+        "bankenverband.de"
+      ],
+      "rule": "Use for attributable industry positions and implementation concerns, not as proof of enacted law."
+    },
+    {
+      "class": "professional_analysis",
+      "priority": 4,
+      "domains": [
+        "ey.com",
+        "pwc.com",
+        "kpmg.com",
+        "deloitte.com",
+        "simmons-simmons.com",
+        "dlapiper.com",
+        "bclplaw.com",
+        "mayerbrown.com",
+        "cliffordchance.com",
+        "freshfields.com"
+      ],
+      "rule": "Use for practical interpretation with clear attribution. Never treat commentary alone as a country-status authority."
+    }
+  ],
+  "exclusions": [
+    "Generic Basel III or CRR III coverage without a concrete CRD VI connection",
+    "Undated, duplicate, marketing-only, event-registration, or search-result pages",
+    "Claims based only on inaccessible snippets",
+    "Opinion presented as enacted law"
+  ]
+}

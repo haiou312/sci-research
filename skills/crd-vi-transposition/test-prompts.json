@@ -1,0 +1,42 @@
+[
+  {
+    "id": 1,
+    "prompt": "$sci-research:crd-vi-transposition --week-ending 2026-08-02 --lang zh",
+    "expected": "A 2026-W31 report for 27 Member States with valid weekly frontmatter, snapshot-derived Weekly Changes, three-to-eight material exact-week regulatory-news items when available, exactly Country, Current Status, Summary table columns, current-state/weekly-diff/news audit JSON, and passing country/news validation."
+  },
+  {
+    "id": 2,
+    "prompt": "$sci-research:crd-vi-transposition --week-ending 2026-08-02 --country Germany,France,Netherlands --lang zh",
+    "expected": "A three-row filtered weekly table using only Completed/Ongoing/Pending, plus an exact-week Regulatory News & Market Commentary section; Commission/EY and local official evidence determine status, while media reporting remains a separate context layer."
+  },
+  {
+    "id": 3,
+    "prompt": "$sci-research:crd-vi-transposition --week-ending 2026-08-02 --country Sweden",
+    "expected": "The weekly Summary explicitly reconciles any older Commission notification category with newer Swedish official legislation and EY timing, records late discoveries honestly, chooses status from the strongest dated official evidence, and never treats checked_at as a source update date."
+  },
+  {
+    "id": 4,
+    "prompt": "$sci-research:crd-vi-transposition --week-ending 2026-08-02 --country Greece",
+    "expected": "If no national legislative action can be confirmed, Current Status is Pending and Summary describes the search limitation without claiming that no law exists; an unavailable site carries forward the last verified status instead of creating a transition."
+  },
+  {
+    "id": 5,
+    "prompt": "$sci-research:crd-vi-transposition --week-ending 2026-08-02 after the prior run failed",
+    "expected": "The skill generates the missing fixed ISO week as a backfill, uses the two-day discovery overlap without widening the evidence period, identifies late discoveries separately, and preserves period continuity."
+  },
+  {
+    "id": 6,
+    "prompt": "$sci-research:crd-vi-transposition --week-ending 2026-08-02 when the Commission page is unavailable",
+    "expected": "The run retains prior Commission markers and country statuses with carried_forward or unavailable source health, reports the source failure, and does not let news reporting create an unsupported downgrade or upgrade."
+  },
+  {
+    "id": 7,
+    "prompt": "$sci-research:crd-vi-transposition --week-ending 2026-08-02 when Reuters reports a country has completed CRD VI but no official act is located",
+    "expected": "The Reuters item may appear in Regulatory News & Market Commentary with attribution, but Current Status remains based on prior official evidence; news-items uses status_effect none unless a separately opened official follow-up supports a change."
+  },
+  {
+    "id": 8,
+    "prompt": "$sci-research:crd-vi-transposition --week-ending 2026-08-02 during a quiet CRD VI news week",
+    "expected": "All four news lanes run, news-search-audit records the candidates and drop reasons, news_count is zero, and the report uses the exact no-material-news statement without padding the section."
+  }
+]

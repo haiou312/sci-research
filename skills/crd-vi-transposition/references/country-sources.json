@@ -1,0 +1,270 @@
+{
+  "schema_version": 1,
+  "eu_hubs": [
+    {
+      "name": "European Commission CRD VI transposition status",
+      "role": "central_status",
+      "url": "https://finance.ec.europa.eu/regulation-and-supervision/financial-services-legislation/enforcement-and-infringements-banking-and-finance-law/monitoring-banking-and-finance-directives/capital-requirements-directive-vi_en"
+    },
+    {
+      "name": "EUR-Lex Directive (EU) 2024/1619",
+      "role": "eu_law",
+      "url": "https://eur-lex.europa.eu/eli/dir/2024/1619/oj"
+    },
+    {
+      "name": "EUR-Lex national transposition measures",
+      "role": "central_status",
+      "url": "https://eur-lex.europa.eu/legal-content/EN/NIM/?uri=CELEX:32024L1619"
+    },
+    {
+      "name": "N-Lex national law portals",
+      "role": "official_portal_directory",
+      "url": "https://n-lex.europa.eu/n-lex/index?lang=en"
+    },
+    {
+      "name": "EY CRD VI transposition tracker",
+      "role": "secondary_cross_check",
+      "url": "https://www.ey.com/en_ch/crd-vi-transposition"
+    },
+    {
+      "name": "EBA third-country branch regulatory activities",
+      "role": "eu_implementation_watch",
+      "url": "https://www.eba.europa.eu/activities/single-rulebook/regulatory-activities/market-access"
+    },
+    {
+      "name": "ECB legal opinions",
+      "role": "eu_implementation_watch",
+      "url": "https://www.ecb.europa.eu/pub/legal/opinions/html/index.en.html"
+    },
+    {
+      "name": "Simmons & Simmons EBA exemption commentary",
+      "role": "context_only",
+      "url": "https://www.simmons-simmons.com/en/publications/cmdprss5z0090u11opusc6ep3/eba-report-on-the-exemption-of-third-country-undertakings-under-crd6"
+    },
+    {
+      "name": "Simmons & Simmons EU View June 2025",
+      "role": "context_only",
+      "url": "https://www.simmons-simmons.com/en/publications/cmckgnzlq02osuwok74hpvv1x/eu-view-june-2025"
+    }
+  ],
+  "countries": [
+    {
+      "country": "Austria",
+      "official_sources": [
+        {"role": "legislation", "url": "https://www.ris.bka.gv.at/"},
+        {"role": "parliament", "url": "https://www.parlament.gv.at/"}
+      ],
+      "search_terms": ["CRD VI Umsetzung", "Richtlinie (EU) 2024/1619", "Drittlandzweigstelle"]
+    },
+    {
+      "country": "Belgium",
+      "official_sources": [
+        {"role": "official_gazette", "url": "https://www.ejustice.just.fgov.be/"},
+        {"role": "parliament", "url": "https://www.dekamer.be/"}
+      ],
+      "search_terms": ["transposition CRD VI", "omzetting CRD VI", "Directive 2024/1619"]
+    },
+    {
+      "country": "Bulgaria",
+      "official_sources": [
+        {"role": "official_gazette", "url": "https://dv.parliament.bg/"},
+        {"role": "parliament", "url": "https://www.parliament.bg/"}
+      ],
+      "search_terms": ["Директива (ЕС) 2024/1619", "капиталови изисквания", "клонове от трети държави"]
+    },
+    {
+      "country": "Croatia",
+      "official_sources": [
+        {"role": "official_gazette", "url": "https://narodne-novine.nn.hr/"},
+        {"role": "parliament", "url": "https://www.sabor.hr/"}
+      ],
+      "search_terms": ["Direktiva (EU) 2024/1619", "kapitalni zahtjevi", "podružnice iz trećih zemalja"]
+    },
+    {
+      "country": "Cyprus",
+      "official_sources": [
+        {"role": "government", "url": "https://www.gov.cy/"},
+        {"role": "parliament", "url": "https://www.parliament.cy/"},
+        {"role": "regulator", "url": "https://www.centralbank.cy/"}
+      ],
+      "search_terms": ["Οδηγία (ΕΕ) 2024/1619", "κεφαλαιακές απαιτήσεις", "υποκαταστήματα τρίτων χωρών"]
+    },
+    {
+      "country": "Czech Republic",
+      "official_sources": [
+        {"role": "legislation", "url": "https://www.e-sbirka.cz/"},
+        {"role": "parliament", "url": "https://www.psp.cz/"}
+      ],
+      "search_terms": ["směrnice (EU) 2024/1619", "kapitálové požadavky", "pobočky ze třetích zemí"]
+    },
+    {
+      "country": "Denmark",
+      "official_sources": [
+        {"role": "legislation", "url": "https://www.retsinformation.dk/"},
+        {"role": "parliament", "url": "https://www.ft.dk/"}
+      ],
+      "search_terms": ["direktiv (EU) 2024/1619", "kapitalkrav", "tredjelandsfilialer"]
+    },
+    {
+      "country": "Estonia",
+      "official_sources": [
+        {"role": "legislation", "url": "https://www.riigiteataja.ee/"},
+        {"role": "parliament", "url": "https://www.riigikogu.ee/"}
+      ],
+      "search_terms": ["direktiiv (EL) 2024/1619", "kapitalinõuded", "kolmanda riigi filiaal"]
+    },
+    {
+      "country": "Finland",
+      "official_sources": [
+        {"role": "legislation", "url": "https://www.finlex.fi/"},
+        {"role": "parliament", "url": "https://www.eduskunta.fi/"}
+      ],
+      "search_terms": ["direktiivi (EU) 2024/1619", "vakavaraisuusvaatimukset", "kolmannen maan sivuliike"]
+    },
+    {
+      "country": "France",
+      "official_sources": [
+        {"role": "legislation", "url": "https://www.legifrance.gouv.fr/"},
+        {"role": "parliament", "url": "https://www.assemblee-nationale.fr/"}
+      ],
+      "search_terms": ["transposition CRD VI", "directive (UE) 2024/1619", "succursales de pays tiers"]
+    },
+    {
+      "country": "Germany",
+      "official_sources": [
+        {"role": "official_gazette", "url": "https://www.recht.bund.de/"},
+        {"role": "parliament", "url": "https://www.bundestag.de/"},
+        {"role": "ministry", "url": "https://www.bundesfinanzministerium.de/"}
+      ],
+      "search_terms": ["CRD VI Umsetzung", "Richtlinie (EU) 2024/1619", "Drittstaatenzweigstellen"]
+    },
+    {
+      "country": "Greece",
+      "official_sources": [
+        {"role": "official_gazette", "url": "https://search.et.gr/"},
+        {"role": "parliament", "url": "https://www.hellenicparliament.gr/"}
+      ],
+      "search_terms": ["Οδηγία (ΕΕ) 2024/1619", "κεφαλαιακές απαιτήσεις", "υποκαταστήματα τρίτων χωρών"]
+    },
+    {
+      "country": "Hungary",
+      "official_sources": [
+        {"role": "legislation", "url": "https://njt.hu/"},
+        {"role": "official_gazette", "url": "https://magyarkozlony.hu/"}
+      ],
+      "search_terms": ["(EU) 2024/1619 irányelv", "tőkekövetelmények", "harmadik országbeli fióktelep"]
+    },
+    {
+      "country": "Ireland",
+      "official_sources": [
+        {"role": "legislation", "url": "https://www.irishstatutebook.ie/"},
+        {"role": "parliament", "url": "https://www.oireachtas.ie/"}
+      ],
+      "search_terms": ["Directive (EU) 2024/1619", "CRD VI transposition", "third-country branch"]
+    },
+    {
+      "country": "Italy",
+      "official_sources": [
+        {"role": "legislation", "url": "https://www.normattiva.it/"},
+        {"role": "official_gazette", "url": "https://www.gazzettaufficiale.it/"}
+      ],
+      "search_terms": ["recepimento CRD VI", "direttiva (UE) 2024/1619", "succursali di paesi terzi"]
+    },
+    {
+      "country": "Latvia",
+      "official_sources": [
+        {"role": "legislation", "url": "https://likumi.lv/"},
+        {"role": "parliament", "url": "https://www.saeima.lv/"}
+      ],
+      "search_terms": ["Direktīva (ES) 2024/1619", "kapitāla prasības", "trešās valsts filiāle"]
+    },
+    {
+      "country": "Lithuania",
+      "official_sources": [
+        {"role": "legislation", "url": "https://e-seimas.lrs.lt/"},
+        {"role": "parliament", "url": "https://www.lrs.lt/"}
+      ],
+      "search_terms": ["Direktyva (ES) 2024/1619", "kapitalo reikalavimai", "trečiosios valstybės filialas"]
+    },
+    {
+      "country": "Luxembourg",
+      "official_sources": [
+        {"role": "legislation", "url": "https://legilux.public.lu/"},
+        {"role": "parliament", "url": "https://www.chd.lu/"}
+      ],
+      "search_terms": ["transposition CRD VI", "directive (UE) 2024/1619", "succursales de pays tiers"]
+    },
+    {
+      "country": "Malta",
+      "official_sources": [
+        {"role": "legislation", "url": "https://legislation.mt/"},
+        {"role": "parliament", "url": "https://parlament.mt/"}
+      ],
+      "search_terms": ["Directive (EU) 2024/1619", "CRD VI transposition", "third-country branch"]
+    },
+    {
+      "country": "Netherlands",
+      "official_sources": [
+        {"role": "legislation", "url": "https://wetten.overheid.nl/"},
+        {"role": "official_gazette", "url": "https://www.officielebekendmakingen.nl/"}
+      ],
+      "search_terms": ["implementatie CRD VI", "Richtlijn (EU) 2024/1619", "bijkantoren uit derde landen"]
+    },
+    {
+      "country": "Poland",
+      "official_sources": [
+        {"role": "official_gazette", "url": "https://dziennikustaw.gov.pl/"},
+        {"role": "legislation", "url": "https://isap.sejm.gov.pl/"}
+      ],
+      "search_terms": ["dyrektywa (UE) 2024/1619", "wymogi kapitałowe", "oddział z państwa trzeciego"]
+    },
+    {
+      "country": "Portugal",
+      "official_sources": [
+        {"role": "official_gazette", "url": "https://diariodarepublica.pt/"},
+        {"role": "parliament", "url": "https://www.parlamento.pt/"}
+      ],
+      "search_terms": ["transposição CRD VI", "Diretiva (UE) 2024/1619", "sucursais de países terceiros"]
+    },
+    {
+      "country": "Romania",
+      "official_sources": [
+        {"role": "legislation", "url": "https://legislatie.just.ro/"},
+        {"role": "official_gazette", "url": "https://monitoruloficial.ro/"}
+      ],
+      "search_terms": ["Directiva (UE) 2024/1619", "cerințe de capital", "sucursală dintr-o țară terță"]
+    },
+    {
+      "country": "Slovakia",
+      "official_sources": [
+        {"role": "legislation", "url": "https://www.slov-lex.sk/"},
+        {"role": "parliament", "url": "https://www.nrsr.sk/"}
+      ],
+      "search_terms": ["smernica (EÚ) 2024/1619", "kapitálové požiadavky", "pobočka tretej krajiny"]
+    },
+    {
+      "country": "Slovenia",
+      "official_sources": [
+        {"role": "legislation", "url": "https://pisrs.si/"},
+        {"role": "official_gazette", "url": "https://www.uradni-list.si/"}
+      ],
+      "search_terms": ["Direktiva (EU) 2024/1619", "kapitalske zahteve", "podružnica tretje države"]
+    },
+    {
+      "country": "Spain",
+      "official_sources": [
+        {"role": "official_gazette", "url": "https://www.boe.es/"},
+        {"role": "parliament", "url": "https://www.congreso.es/"}
+      ],
+      "search_terms": ["transposición CRD VI", "Directiva (UE) 2024/1619", "sucursales de terceros países"]
+    },
+    {
+      "country": "Sweden",
+      "official_sources": [
+        {"role": "government", "url": "https://www.regeringen.se/"},
+        {"role": "parliament", "url": "https://www.riksdagen.se/"}
+      ],
+      "search_terms": ["direktiv (EU) 2024/1619", "kapitalkrav", "filialer från tredjeland"]
+    }
+  ]
+}

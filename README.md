@@ -1,8 +1,8 @@
 # sci-research
 
-> A **Codex plugin** with **five specialised multi-agent workflows** for daily and monthly news intelligence, branded briefings, company reputation monitoring, and China-outbound commercial opportunity development.
+> A **Codex plugin** with **five specialised multi-agent workflows** plus a CRD VI transposition and regulatory-news tracker for daily and monthly news intelligence, branded briefings, company reputation monitoring, China-outbound commercial opportunity development, and EU regulatory monitoring.
 
-Given a country, company, date, month, or reporting window, this plugin orchestrates specialised agents to produce a polished, sourced deliverable: daily or monthly country-news report, branded Word document, reputational risk email, or UK/Europe opportunity briefing.
+Given a country, company, date, month, or reporting window, this plugin produces a polished, sourced deliverable: daily or monthly country-news report, branded Word document, reputational risk email, UK/Europe opportunity briefing, or CRD VI weekly changes, news commentary, and country-status table.
 
 *(The plugin name is a historical artifact — the original `/sci-research` deep-research pipeline has been removed; the name is kept for marketplace identity and install-path stability.)*
 
@@ -24,6 +24,16 @@ Pipeline C also writes the capped Scanner Batch and deduplication-and-selection 
 
 ---
 
+## Regulatory Tracker
+
+| Command | Purpose | Output |
+|---|---|---|
+| `$sci-research:crd-vi-transposition` | Run a fixed weekly snapshot-and-delta check plus exact-week CRD VI regulatory-news monitoring across official, media, industry, and professional sources | `Weekly Changes`, `Regulatory News & Market Commentary`, the exact `Country / Current Status / Summary` table, and audit JSON for all 27 EU Member States or a filtered subset |
+
+This tracker is an independent skill rather than a sixth custom-agent pipeline. It separates the research date from each source's update date, distinguishes completed transposition from future Article 21c application, and validates the final table mechanically before delivery. Its news section covers only the reporting week and explains practical impact; media commentary cannot change `Current Status` unless an official follow-up source is also recorded in the country snapshot.
+
+---
+
 ## Why This Plugin
 
 - **20 specialised agents** across five pipelines, each agent narrowly scoped
@@ -38,6 +48,7 @@ Pipeline C also writes the capped Scanner Batch and deduplication-and-selection 
 - **Branded Word output** via SPD Bank template (`$sci-research:daily-briefing`)
 - **Commercial opportunity pipeline** for China-to-UK/Europe expansion, M&A, investment, and Companies House changes
 - **Evidence-first Companies House radar** with confirmed/probable/unverified Chinese-nexus labels and explicit coverage limits
+- **Weekly CRD VI transposition and news tracker** with fixed ISO-week cutoffs, prior-state comparison, four exact-week news lanes, 27-country official-source registry, outage-safe carry-forward, Commission/EY conflict resolution, evidence isolation, and deterministic table/state/diff/news gates
 - **Gmail SMTP email delivery** built into all five pipelines
 - **Quality hooks** enforce Pipeline C/F/G Markdown format and email-send safety
 - **Multilingual** — Chinese / English / Japanese output
@@ -577,7 +588,7 @@ sci-research/
 │   ├── sci-research-monthly-fact-extractor.toml
 │   ├── sci-research-monthly-writer.toml
 │   └── sci-research-monthly-editor.toml
-├── skills/                                  # 5 pipelines + project runtime setup
+├── skills/                                  # 5 pipelines + CRD VI tracker + runtime setup
 │   ├── daily-news-intelligence/             # Pipeline C
 │   │   ├── SKILL.md
 │   │   ├── agents/openai.yaml               # skill metadata (display_name, default_prompt)
@@ -614,6 +625,11 @@ sci-research/
 │   │   ├── agents/openai.yaml
 │   │   ├── references/                      # Selection, schemas, output, verification
 │   │   └── scripts/collect-monthly-reports.py
+│   ├── crd-vi-transposition/                 # Weekly EU regulatory tracker
+│   │   ├── SKILL.md
+│   │   ├── agents/openai.yaml
+│   │   ├── references/                      # Weekly/news/source methods, registries, table contract
+│   │   └── scripts/                         # Week/search plan, state diff, table/news validation
 │   └── setup-sci-research-runtime/           # Installs/checks project-scoped agents
 │       ├── SKILL.md
 │       ├── runtime/config.toml                # Project-scoped agent concurrency template
@@ -632,6 +648,9 @@ sci-research/
 │   ├── test_hooks.py                        # Codex hook protocol tests
 │   ├── test_monthly_news_collector.py       # Pipeline G source-index tests
 │   ├── test_opportunity_scripts.py          # Companies House collector/diff tests
+│   ├── test_crd_vi_table_validator.py       # CRD VI three-column table gate tests
+│   ├── test_crd_vi_news_validator.py        # CRD VI exact-week news and evidence-isolation tests
+│   ├── test_crd_vi_weekly.py                # Weekly period, registry, state-diff and alignment tests
 │   ├── test_runtime_sync.py                 # Isolated setup/update/uninstall tests
 │   └── fixtures/opportunity-briefing-sample.md
 ├── .env.example                             # Gmail SMTP environment template
