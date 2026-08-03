@@ -15,6 +15,7 @@ from typing import Any
 NEWS_HEADING = "## Regulatory News & Market Commentary"
 NEWS_HEADER = ["Date", "Country/Region", "Development", "Practical Impact", "Sources"]
 COUNTRY_HEADER = "| Country | Current Status | Summary |"
+DISCLAIMER_HEADING = "## Disclaimer"
 NO_NEWS_TEXT = "No material CRD VI news identified for this reporting period."
 SOURCE_CLASSES = {"official", "news_media", "industry", "professional_analysis"}
 STATUS_EFFECTS = {"none", "official_follow_up"}
@@ -105,8 +106,39 @@ def markdown_urls(value: str) -> list[str]:
     return re.findall(r"\[[^\]]+\]\((https://[^)]+)\)", value)
 
 
+def validate_disclaimer(text: str) -> None:
+    lines = text.splitlines()
+    headings = [index for index, line in enumerate(lines) if line.strip() == DISCLAIMER_HEADING]
+    if len(headings) != 1:
+        raise ValueError(f"expected exactly one {DISCLAIMER_HEADING} section")
+    heading_index = headings[0]
+    country_indexes = [
+        index for index, line in enumerate(lines) if line.strip() == COUNTRY_HEADER
+    ]
+    if len(country_indexes) != 1 or heading_index <= country_indexes[0]:
+        raise ValueError("disclaimer must appear after the country table")
+    later_h2 = [
+        index
+        for index, line in enumerate(lines)
+        if index > heading_index and re.fullmatch(r"## .+", line.strip())
+    ]
+    if later_h2:
+        raise ValueError("disclaimer must be the final level-two section")
+    body = "\n".join(lines[heading_index + 1 :]).casefold()
+    if not (
+        any(marker in body for marker in ("ai-assisted", "ai-generated", "artificial intelligence"))
+        or re.search(r"\bai\b", body)
+    ):
+        raise ValueError("disclaimer must disclose AI assistance")
+    if not any(marker in body for marker in ("workflow", "sources", "reporting period")):
+        raise ValueError("disclaimer must summarize the report workflow")
+    if not any(marker in body for marker in ("not legal", "professional advice", "not a substitute")):
+        raise ValueError("disclaimer must state that the report is not professional advice")
+
+
 def validate_report(text: str) -> tuple[dict[str, str], list[list[str]]]:
     metadata = parse_frontmatter(text)
+    validate_disclaimer(text)
     try:
         period_start = date.fromisoformat(metadata["period_start"])
         period_end = date.fromisoformat(metadata["period_end"])

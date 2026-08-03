@@ -115,10 +115,10 @@ items exist, use exactly:
 | Date | Country/Region | Development | Practical Impact | Sources |
 |---|---|---|---|---|
 
-Write concise original prose in the requested language. Keep the date in
-`YYYY-MM-DD`, preserve source qualification such as "the EBA said" or "the law
-firm analysed", and put direct publisher links in Sources. Do not link to a
-search-result or Google News redirect.
+Write concise original English prose. Keep the date in `YYYY-MM-DD`, preserve
+source qualification such as "the EBA said" or "the law firm analysed", and put
+direct publisher links in Sources. Do not link to a search-result or Google News
+redirect.
 
 When no item qualifies, omit the news table and write exactly:
 
@@ -128,3 +128,29 @@ No material CRD VI news identified for this reporting period.
 
 Set frontmatter `news_count` to the number of rendered rows. Validate the report
 and selected-items JSON with `scripts/validate-news-section.py`.
+
+## Disclaimer and AI disclosure
+
+End every report with exactly one `## Disclaimer` section, after the country
+table. Write the heading and body in English. The disclaimer must state that the
+report is AI-assisted, briefly describe the workflow, identify the `checked_at`
+evidence boundary, warn that the report may contain omissions or errors, and say
+that it is not professional advice or a substitute for independent verification.
+
+Use this concise template and replace `<checked_at>` with the report's
+frontmatter value:
+
+> This report was drafted and assembled with AI through a structured workflow:
+> the reporting period and dynamically verified EU Member State set were defined
+> first; official EU and national sources were checked for transposition status;
+> in-period regulatory news was searched, dated, deduplicated and kept separate
+> from status evidence; and the resulting state, changes, news and citations
+> were mechanically validated. It reflects information available and checked as
+> of `<checked_at>` and may contain omissions or inaccuracies. It is provided
+> for general information only, is not legal, regulatory, accounting, tax,
+> investment or other professional advice, and is not a substitute for advice
+> from a qualified professional. Verify the current law, regulatory position and
+> source material independently before relying on this report or taking action.
+> No representation or warranty is made as to completeness, accuracy or
+> timeliness, and no responsibility is accepted for decisions or losses arising
+> from reliance on it, to the extent permitted by law.

@@ -4,7 +4,7 @@ Send sci-research pipeline reports via Gmail SMTP.
 
 Supports three body modes (mutually exclusive, exactly one required):
   --body          plain text inline
-  --body-file     plain text from file (used by Pipelines C / F / G)
+  --body-file     plain text from file (used by Pipelines C / F / G / CRD VI)
   --body-html-file  HTML from file → builds multipart/alternative with auto
                   text/plain fallback (used by reputation-track / Pipeline E)
 
@@ -17,7 +17,7 @@ Reads credentials from environment variables:
   GOOGLE_EMAIL_START_TLS       — 'true' to use STARTTLS on port 587 (default: true)
 
 Usage:
-  # Text body, with optional attachments (Pipelines C / F / G)
+  # Text body, with optional attachments (Pipelines C / F / G / CRD VI)
   send-report-email.py \\
     --to "alice@foo.com,bob@bar.com" \\
     --subject "中国每日热点新闻 — 2026年4月14日" \\
@@ -306,7 +306,7 @@ def send(cfg, msg, dry_run):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Send a daily news report via Gmail SMTP.",
+        description="Send a sci-research report via Gmail SMTP.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__,
     )

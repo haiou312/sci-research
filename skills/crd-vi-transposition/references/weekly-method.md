@@ -101,7 +101,7 @@ Omit `--previous` for the baseline, repeat `--changed-country` as needed, and ad
 `--full-refresh` on a scheduled full refresh. Follow the emitted `deep_checks`
 and `light_checks`; do not manually downgrade a deep-check country to save time.
 
-Discover official national portals and local-language terms dynamically as
+Discover official national portals and relevant local-language search terms dynamically as
 specified in `member-state-method.md`, together with `2024/1619`, `CRD VI`,
 `CRD6`, known national bill or act identifiers, and third-country-branch terms.
 Search-engine recency filters are discovery aids only. Open the page and verify
@@ -142,9 +142,11 @@ Use `previous_successful_week: none` for the first baseline. Add a
 `news-method.md`, then the table specified in `table-spec.md`. List only
 material country or EU-implementation changes in Weekly Changes; when
 `change_count` is zero, state that no material change was found. For a changed
-country, begin its Summary with `Weekly change:` or an equivalent phrase in the
-requested language. Unchanged rows retain their cumulative Summary.
-`news_count` records news rows and is independent of `change_count`.
+country, begin its Summary with `Weekly change:`. Unchanged rows retain their
+cumulative Summary.
+`news_count` records news rows and is independent of `change_count`. End the
+English report with exactly one `## Disclaimer` section after the country table,
+using the AI/process disclosure template in `news-method.md`.
 
 Save successful runs under:
 

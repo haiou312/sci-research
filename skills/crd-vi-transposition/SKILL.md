@@ -34,8 +34,11 @@ Core invariants:
 | `full_refresh` | no | auto | Full current-membership official rescan; automatic on baseline and every fourth ISO week |
 | `news_max` | no | 8 | Maximum selected news items; allowed range 1–8 |
 | `country` | no | all | Report-only filter for one or more validated Member States |
-| `lang` | no | user language | Summary language; headers remain in English |
 | `output` | no | inline | `inline` or saved Markdown path |
+| `email` | no | empty | Comma-separated recipients; empty means no email |
+| `email_subject` | no | auto | `CRD VI Transposition Tracker — {report_week}` |
+| `email_attach` | no | `md` | `md` or `none` |
+| `email_dry_run` | no | false | Preview the controlled email without SMTP delivery |
 
 For a saved weekly report with no explicit path, use:
 
@@ -58,6 +61,7 @@ Before every run, read these files completely:
 - `references/news-method.md` for exact-week news discovery, selection,
   state-isolation, audit, and rendering;
 - `references/news-sources.json` for search lanes, source classes, and exclusions.
+- `references/email-spec.md` when `email` is non-empty.
 
 Treat those references as authoritative. Keep this file as the orchestration
 contract and do not recreate their detailed rules in prompts or output.
@@ -116,11 +120,11 @@ contract and do not recreate their detailed rules in prompts or output.
 9. Create `audit/news-items.json` from the final news set. Write the weekly
    frontmatter, `## Weekly Changes`, `## Regulatory News & Market Commentary`,
    methodology note, exact three-column country table, enforcement note, source
-   dates, practical reading, and disclaimer. Set `country_filter: all` or the
-   exact comma-separated requested countries in frontmatter. Weekly Changes and
-   news are incremental; the country table is cumulative as of the cutoff.
-   Preserve the exact English Commission marker and direct links inside every
-   Summary.
+   dates, practical reading, and the standard final English `## Disclaimer`
+   from `references/news-method.md`. Set `country_filter: all` or the exact
+   comma-separated requested countries in frontmatter. Weekly Changes and news
+   are incremental; the country table is cumulative as of the cutoff. Preserve
+   the exact English Commission marker and direct links inside every Summary.
 10. Create all report and audit files with `apply_patch` only. Never emit a
    partially refreshed run as successful. A failed scheduled week must be
    backfilled separately.
@@ -142,6 +146,11 @@ contract and do not recreate their detailed rules in prompts or output.
    Add `--allow-subset` to the country-table command only when `country_filter`
    is not `all`. Never use it for current-state validation or weekly diff. Fix
    every error.
+12. When `email` is non-empty, materialize the report at the saved output path
+    (the default report path when `output` is `inline`), build the concise body
+    specified in `references/email-spec.md`, and invoke only the controlled
+    sender. Add `--dry-run` when `email_dry_run=true`; omit `--attach` when
+    `email_attach=none`. Email failure must not change or remove local outputs.
 
 ## Required legal-date labels
 
@@ -162,11 +171,12 @@ Report the ISO week, period and cutoff, dynamic membership count and authority
 URLs, country count, material country-change count, regulatory-news count,
 membership changes, status transitions, status counts, Commission and
 EY page update dates, carried-forward or conflicted sources, validation results,
-and saved report/audit paths.
+saved report/audit paths, and the email result when email was requested.
 
 ## Examples
 
 ```text
-$sci-research:crd-vi-transposition --week-ending 2026-08-02 --lang zh
-$sci-research:crd-vi-transposition --country Germany,France,Netherlands --lang zh
+$sci-research:crd-vi-transposition --week-ending 2026-08-02
+$sci-research:crd-vi-transposition --country Germany,France,Netherlands
+$sci-research:crd-vi-transposition --week-ending 2026-08-02 --email "team@example.com" --email-dry-run
 ```

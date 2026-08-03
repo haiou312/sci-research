@@ -130,7 +130,7 @@
 
 ## 邮件、依赖与安全
 
-- 所有邮件一律通过受控脚本：C/E/F/G 使用 scripts/send-report-email.py，D 使用 skills/daily-briefing/scripts/send-briefing-email.py。
+- 所有邮件一律通过受控脚本：C/E/F/G/CRD VI 使用 scripts/send-report-email.py，D 使用 skills/daily-briefing/scripts/send-briefing-email.py。
 - 不要内嵌 smtplib、sendmail 或 mail -s。email-send-guard hook 会阻断这类调用。
 - 真实邮件必须由用户明确请求；验证使用 --email-dry-run。
 - 安装或更新 D/F 的 docx 依赖：python3 -m pip install --user --upgrade -r requirements.txt。不要自动修改用户 Python 环境。
@@ -167,7 +167,7 @@
 | G 月度选择、schema、输出与验证规范 | skills/monthly-news-intelligence/references/ |
 | G 日报只读索引脚本 | skills/monthly-news-intelligence/scripts/collect-monthly-reports.py |
 | G agent 行为 | .codex/agents/sci-research-monthly-*.toml |
-| CRD VI 周度编排、动态成员国、状态、日期与新闻方法 | skills/crd-vi-transposition/SKILL.md、skills/crd-vi-transposition/references/ |
+| CRD VI 周度编排、动态成员国、状态、日期、新闻与邮件方法 | skills/crd-vi-transposition/SKILL.md、skills/crd-vi-transposition/references/ |
 | CRD VI 成员国门、周期、搜索队列、current-state、快照差异、国家表与新闻验证 | skills/crd-vi-transposition/scripts/validate-member-states.py、skills/crd-vi-transposition/scripts/weekly-period.py、skills/crd-vi-transposition/scripts/build-weekly-search-plan.py、skills/crd-vi-transposition/scripts/validate-current-state.py、skills/crd-vi-transposition/scripts/diff-weekly-state.py、skills/crd-vi-transposition/scripts/validate-country-table.py、skills/crd-vi-transposition/scripts/validate-news-section.py |
 | Runtime 安装与检查 | skills/setup-sci-research-runtime/、skills/setup-sci-research-runtime/runtime/config.toml、scripts/codex/check-plugin-bundle.py |
 | 插件清单与市场条目 | .codex-plugin/plugin.json、.agents/plugins/marketplace.json |

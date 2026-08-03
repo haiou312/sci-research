@@ -40,6 +40,13 @@ def report(row: str | None = None, news_count: int = 1) -> str:
         "|---|---|---|\n"
         "| Austria | Ongoing | Example in 2026. Commission: Partial. "
         "[A](https://a.example) [B](https://b.example) |\n"
+        "\n"
+        "## Disclaimer\n\n"
+        "This report was drafted and assembled with AI through a structured "
+        "workflow using official sources for the reporting period and Member "
+        "State checks. It reflects information checked as of 2026-08-03 and may "
+        "contain omissions. It is not legal or professional advice and is not a "
+        "substitute for qualified advice.\n"
     )
 
 
@@ -135,6 +142,21 @@ class CrdViNewsValidatorTests(unittest.TestCase):
     def test_count_mismatch_fails(self) -> None:
         with self.assertRaisesRegex(ValueError, "news_count"):
             VALIDATOR.validate_report(report(VALID_ROW, news_count=2))
+
+    def test_missing_disclaimer_fails(self) -> None:
+        text = report(VALID_ROW).split("\n## Disclaimer", 1)[0]
+        with self.assertRaisesRegex(ValueError, "Disclaimer"):
+            VALIDATOR.validate_report(text)
+
+    def test_disclaimer_must_be_final_section(self) -> None:
+        text = report(VALID_ROW) + "\n## Appendix\n\nExtra notes.\n"
+        with self.assertRaisesRegex(ValueError, "final"):
+            VALIDATOR.validate_report(text)
+
+    def test_disclaimer_must_cover_ai_process_and_advice_boundary(self) -> None:
+        text = report(VALID_ROW).replace("AI through a structured workflow", "research")
+        with self.assertRaisesRegex(ValueError, "AI assistance"):
+            VALIDATOR.validate_report(text)
 
     def test_items_must_match_rendered_report(self) -> None:
         metadata, rows = VALIDATOR.validate_report(report(VALID_ROW))

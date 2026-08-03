@@ -44,8 +44,8 @@ Keep links inside Summary so the final output remains the exact EY three-column
 table. Never copy or closely paraphrase EY's prose.
 
 In a weekly report, the table remains cumulative as of `status_cutoff`. Start a
-changed country's Summary with `Weekly change:` or a natural equivalent in the
-requested language. Do not prepend repetitive no-change text to unchanged rows;
+changed country's Summary with `Weekly change:`. Do not prepend repetitive
+no-change text to unchanged rows;
 put the no-change conclusion in the separate Weekly Changes section.
 
 ## Dynamic EU set
@@ -74,6 +74,8 @@ remain full-country artifacts. A filtered report must declare its exact
 - A weekly report contains exactly one Regulatory News & Market Commentary
   section between Weekly Changes and the country table; `news_count` agrees with
   the rendered rows and `news-items.json`.
+- A weekly report ends with exactly one `## Disclaimer` covering AI assistance,
+  the evidence workflow, and the professional-advice boundary.
 - `change_count` equals the material country and membership changes in
   `weekly-diff.json`; a baseline identifies itself instead of presenting every
   row as a new law.
