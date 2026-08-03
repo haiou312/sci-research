@@ -1,6 +1,6 @@
 {
   "name": "sci-research",
-  "version": "1.23.0+codex.20260803131306",
+  "version": "1.24.0+codex.20260803133031",
   "description": "Five specialised intelligence workflows plus weekly CRD VI transposition and regulatory-news tracking, with project-scoped runtime setup.",
   "author": {
     "name": "Peter Wang"
