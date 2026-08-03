@@ -11,6 +11,7 @@ from zoneinfo import ZoneInfo
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SKILL_ROOT = REPO_ROOT / "skills/crd-vi-transposition"
+MEMBERS = ["Austria", "Czechia", "France", "Germany", "Spain"]
 
 
 def load_module(name: str, path: Path):
@@ -33,14 +34,31 @@ VALIDATOR = load_module(
 )
 
 
+def membership(members: list[str] | None = None) -> dict[str, object]:
+    countries = list(members or MEMBERS)
+    return {
+        "schema_version": 1,
+        "checked_at": "2026-08-03T07:00:00+01:00",
+        "count": len(countries),
+        "countries": countries,
+        "sources": [
+            {"url": "https://european-union.europa.eu/eu-countries_en"},
+            {"url": "https://eur-lex.europa.eu/member_states"},
+        ],
+    }
+
+
 def country_record(status: str = "Ongoing") -> dict[str, object]:
     return {
         "status": status,
         "commission_marker": "Commission: Partial",
         "national_measure": "Bill 1/2026",
+        "measure_adopted": None,
+        "measure_published": None,
         "milestone_date": "2026-07-31",
         "measure_effective": None,
-        "article_21c_applies": "2027-01-11",
+        "article_21c_general_applies": "2027-01-11",
+        "article_21c_5_existing_contracts_from": "2026-07-11",
         "source_health": "verified",
         "last_verified": "2026-08-03",
         "source_urls": [
@@ -50,7 +68,10 @@ def country_record(status: str = "Ongoing") -> dict[str, object]:
     }
 
 
-def state(report_week: str = "2026-W31") -> dict[str, object]:
+def state(
+    report_week: str = "2026-W31", members: list[str] | None = None
+) -> dict[str, object]:
+    countries = members or MEMBERS
     return {
         "schema_version": 1,
         "report_week": report_week,
@@ -58,9 +79,19 @@ def state(report_week: str = "2026-W31") -> dict[str, object]:
         "period_end": "2026-08-02",
         "status_cutoff": "2026-08-02",
         "checked_at": "2026-08-03T07:00:00+01:00",
-        "countries": {
-            country: country_record() for country in DIFF.EU_COUNTRIES
+        "sources": {
+            "commission": {
+                "last_updated": "2026-07-31",
+                "content_hash": "sha256:commission",
+                "available": True,
+            },
+            "ey": {
+                "last_updated": "2026-07-30",
+                "content_hash": "sha256:ey",
+                "available": True,
+            },
         },
+        "countries": {country: country_record() for country in countries},
     }
 
 
@@ -69,7 +100,7 @@ def weekly_report(change_count: int = 0) -> str:
         f"| {country} | Ongoing | Bill progressed in 2026. Commission: Partial. "
         "[National](https://example.gov/law) "
         "[Commission](https://finance.ec.europa.eu/crd-vi) |"
-        for country in DIFF.EU_COUNTRIES
+        for country in MEMBERS
     )
     return (
         "---\n"
@@ -80,6 +111,7 @@ def weekly_report(change_count: int = 0) -> str:
         "status_cutoff: 2026-08-02\n"
         "checked_at: 2026-08-03T07:00:00+01:00\n"
         "previous_successful_week: 2026-W30\n"
+        "country_filter: all\n"
         f"change_count: {change_count}\n"
         "news_count: 0\n"
         "---\n\n"
@@ -116,22 +148,36 @@ class WeeklyPeriodTests(unittest.TestCase):
 
 
 class WeeklyDiffTests(unittest.TestCase):
-    def test_baseline_is_not_reported_as_27_material_changes(self) -> None:
-        result = DIFF.compare(state())
+    def test_baseline_uses_dynamic_member_count(self) -> None:
+        result = DIFF.compare(state(), membership())
         self.assertTrue(result["baseline"])
         self.assertEqual(result["change_count"], 0)
-        self.assertEqual(result["baseline_country_count"], 27)
+        self.assertEqual(result["baseline_country_count"], len(MEMBERS))
 
     def test_status_transition_is_material(self) -> None:
         previous = state("2026-W30")
         current = deepcopy(state())
         current["countries"]["Austria"]["status"] = "Completed"
-        result = DIFF.compare(current, previous)
+        result = DIFF.compare(current, membership(), previous)
         self.assertEqual(result["change_count"], 1)
         self.assertEqual(
             result["status_transitions"],
             [{"country": "Austria", "before": "Ongoing", "after": "Completed"}],
         )
+
+    def test_membership_addition_is_material(self) -> None:
+        previous_members = [country for country in MEMBERS if country != "France"]
+        result = DIFF.compare(
+            state(), membership(), state("2026-W30", previous_members)
+        )
+        self.assertEqual(result["membership_changes"]["added"], ["France"])
+        self.assertEqual(result["change_count"], 1)
+
+    def test_country_alias_does_not_create_membership_change(self) -> None:
+        previous = state("2026-W30")
+        previous["countries"]["Czech Republic"] = previous["countries"].pop("Czechia")
+        result = DIFF.compare(state(), membership(), previous)
+        self.assertEqual(result["membership_changes"], {"added": [], "removed": []})
 
     def test_source_outage_cannot_change_status(self) -> None:
         previous = state("2026-W30")
@@ -139,34 +185,27 @@ class WeeklyDiffTests(unittest.TestCase):
         current["countries"]["Austria"]["status"] = "Completed"
         current["countries"]["Austria"]["source_health"] = "unavailable"
         with self.assertRaisesRegex(ValueError, "source failure"):
-            DIFF.compare(current, previous)
+            DIFF.compare(current, membership(), previous)
 
     def test_regression_requires_reason(self) -> None:
         previous = state("2026-W30")
         previous["countries"]["Austria"]["status"] = "Completed"
-        current = deepcopy(state())
         with self.assertRaisesRegex(ValueError, "regression_reason"):
-            DIFF.compare(current, previous)
+            DIFF.compare(state(), membership(), previous)
 
     def test_source_health_only_change_is_not_material(self) -> None:
         previous = state("2026-W30")
         current = deepcopy(state())
         current["countries"]["Austria"]["source_health"] = "conflict"
-        result = DIFF.compare(current, previous)
+        result = DIFF.compare(current, membership(), previous)
         self.assertEqual(result["change_count"], 0)
         self.assertIn("Austria", result["changed_countries"])
 
 
 class WeeklySearchPlanTests(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls) -> None:
-        cls.registry = json.loads(
-            (SKILL_ROOT / "references/country-sources.json").read_text(encoding="utf-8")
-        )
-
-    def test_baseline_deep_checks_all_countries(self) -> None:
-        result = PLAN.build_plan(self.registry, date(2026, 8, 2))
-        self.assertEqual(result["deep_check_count"], 27)
+    def test_baseline_deep_checks_dynamic_membership(self) -> None:
+        result = PLAN.build_plan(membership(), date(2026, 8, 2))
+        self.assertEqual(result["deep_check_count"], len(MEMBERS))
         self.assertEqual(result["light_check_count"], 0)
 
     def test_weekly_plan_upgrades_only_triggered_countries(self) -> None:
@@ -178,38 +217,36 @@ class WeeklySearchPlanTests(unittest.TestCase):
         previous["countries"]["France"]["last_verified"] = "2026-06-01"
         previous["countries"]["Spain"]["source_health"] = "conflict"
         result = PLAN.build_plan(
-            self.registry,
-            date(2026, 8, 2),
-            previous,
-            {"Germany"},
+            membership(), date(2026, 8, 2), previous, {"Germany"}
         )
         deep_names = {item["country"] for item in result["deep_checks"]}
         self.assertEqual(deep_names, {"Austria", "France", "Germany", "Spain"})
-        self.assertEqual(result["light_check_count"], 23)
+        self.assertEqual(result["light_check_count"], 1)
 
-    def test_full_refresh_deep_checks_all_countries(self) -> None:
+    def test_new_member_without_history_is_deep_checked(self) -> None:
+        current_members = MEMBERS + ["Portugal"]
+        result = PLAN.build_plan(
+            membership(current_members), date(2026, 8, 2), state("2026-W30")
+        )
+        portugal = next(item for item in result["deep_checks"] if item["country"] == "Portugal")
+        self.assertIn("new_member_state", portugal["reasons"])
+        self.assertIn("no_historical_official_sources", portugal["reasons"])
+
+    def test_full_refresh_deep_checks_dynamic_membership(self) -> None:
         previous = state("2026-W30")
         for record in previous["countries"].values():
             record["status"] = "Completed"
         result = PLAN.build_plan(
-            self.registry, date(2026, 8, 2), previous, full_refresh=True
+            membership(), date(2026, 8, 2), previous, full_refresh=True
         )
-        self.assertEqual(result["deep_check_count"], 27)
+        self.assertEqual(result["deep_check_count"], len(MEMBERS))
 
 
 class WeeklyContractTests(unittest.TestCase):
-    def test_registry_has_all_27_countries_and_official_sources(self) -> None:
-        registry = json.loads(
-            (SKILL_ROOT / "references/country-sources.json").read_text(encoding="utf-8")
+    def test_fixed_country_source_registry_is_absent(self) -> None:
+        self.assertFalse(
+            (SKILL_ROOT / "references/country-sources.json").exists()
         )
-        countries = registry["countries"]
-        self.assertEqual({item["country"] for item in countries}, set(DIFF.EU_COUNTRIES))
-        self.assertEqual(len(countries), 27)
-        for item in countries:
-            self.assertTrue(item["official_sources"])
-            self.assertTrue(item["search_terms"])
-            for source in item["official_sources"]:
-                self.assertTrue(source["url"].startswith("https://"))
 
     def test_news_registry_has_four_lanes_and_source_classes(self) -> None:
         registry = json.loads(
@@ -221,10 +258,11 @@ class WeeklyContractTests(unittest.TestCase):
             {"official", "news_media", "industry", "professional_analysis"},
         )
 
-    def test_weekly_metadata_and_state_alignment_pass(self) -> None:
+    def test_weekly_metadata_state_and_membership_alignment_pass(self) -> None:
         text = weekly_report()
         rows = VALIDATOR.extract_rows(text)
         metadata = VALIDATOR.validate_weekly(text)
+        VALIDATOR.validate(text, MEMBERS)
         VALIDATOR.validate_state_alignment(rows, metadata, state())
         VALIDATOR.validate_diff_alignment(
             metadata,
@@ -250,6 +288,28 @@ class WeeklyContractTests(unittest.TestCase):
             VALIDATOR.validate_state_alignment(
                 VALIDATOR.extract_rows(text), VALIDATOR.validate_weekly(text), current
             )
+
+    def test_filtered_report_can_use_full_current_state(self) -> None:
+        text = weekly_report().replace(
+            "country_filter: all",
+            "country_filter: Germany",
+        )
+        lines = text.splitlines()
+        table_start = lines.index("| Country | Current Status | Summary |")
+        filtered = [line for line in lines[table_start:] if "| Germany |" in line]
+        filtered_text = "\n".join(
+            lines[:table_start]
+            + [
+                "| Country | Current Status | Summary |",
+                "|---|---|---|",
+            ]
+            + filtered
+            + [""]
+        )
+        rows = VALIDATOR.extract_rows(filtered_text)
+        metadata = VALIDATOR.validate_weekly(filtered_text)
+        VALIDATOR.validate(filtered_text, MEMBERS, allow_subset=True)
+        VALIDATOR.validate_state_alignment(rows, metadata, state())
 
 
 if __name__ == "__main__":

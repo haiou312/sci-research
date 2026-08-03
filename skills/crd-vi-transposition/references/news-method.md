@@ -16,7 +16,7 @@ official evidence and recording that evidence in `current-state.json`.
 Read `news-sources.json` before searching. Run each active search lane once for
 the exact `period_start` through `period_end` window. Prefer the configured
 Google News MCP when available; otherwise use live web search. Search in English
-and use local-language terms from `country-sources.json` when a country lead
+and formulate local-language terms dynamically when a country lead
 requires follow-up.
 
 Search-result dates and recency filters are discovery aids. Open the publisher's
@@ -44,7 +44,9 @@ Save all plausible candidates and decisions in `audit/news-search-audit.json`:
 ```
 
 Use only `keep` or `drop` for `decision`. Record a concise reason. Do not copy
-article body text into audit JSON.
+article body text into audit JSON. A dropped undated candidate may use
+`published_date: null`; a kept candidate must have a verified date in the
+reporting week.
 
 ## Selection
 

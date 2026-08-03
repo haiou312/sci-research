@@ -1,7 +1,7 @@
 interface:
   display_name: "CRD VI Transposition"
   short_description: "Weekly CRD VI status and news tracker"
-  default_prompt: "Use $sci-research:crd-vi-transposition to run the latest completed weekly CRD VI update, compare it with the previous snapshot, select material regulatory news, and produce Weekly Changes plus the exact Country / Current Status / Summary table."
+  default_prompt: "Use $sci-research:crd-vi-transposition to verify the current EU membership from two official sources, run the latest completed weekly CRD VI update, compare full-country current-state snapshots, select material regulatory news, and produce Weekly Changes plus the exact Country / Current Status / Summary table."
 
 policy:
   allow_implicit_invocation: true

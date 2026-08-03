@@ -16,9 +16,11 @@ For the separate regulatory-news section, apply `news-method.md` and
 news row and practical-impact explanation, but they remain below official legal
 evidence for country-status adjudication.
 
-For weekly work, load the stable official URLs and local-language terms from
-`country-sources.json`. The registry is a discovery map, not evidence that a page
-contains a current CRD VI measure; open and verify the relevant underlying item.
+For every run, derive the country scope from `membership-snapshot.json` and
+discover national official URLs and local-language terms dynamically under
+`member-state-method.md`. Prior verified URLs are discovery hints, not evidence
+that a page still contains the current CRD VI position; reopen the underlying
+item.
 
 Open the underlying page before using a fact. Do not rely on a search-result
 snippet for a legal status, date, law name, or scope conclusion.
@@ -32,7 +34,9 @@ Keep these fields separate:
 - `measure_adopted`: when the national measure was adopted;
 - `measure_published`: when it appeared in the official journal or gazette;
 - `measure_effective`: when the measure entered into force;
-- `article_21c_applies`: when the third-country branch rules apply.
+- `article_21c_general_applies`: when the general third-country branch rules apply;
+- `article_21c_5_existing_contracts_from`: when the Article 21c(5) existing-contract
+  protection begins.
 - `discovered_at`: when the weekly process first found the item.
 
 `checked_at` may be later than `source_last_updated`. Never present the check date

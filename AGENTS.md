@@ -12,7 +12,7 @@
 | F | $sci-research:china-outbound-opportunity-briefing | 中资企业英国及欧洲商机拓展情报 | Markdown、机构化 docx、可选邮件 |
 | G | $sci-research:monthly-news-intelligence | 单国或地区指定月份热点新闻 | 与 Pipeline C 同结构的 Markdown、可选 docx 与邮件 |
 
-独立监管追踪：`$sci-research:crd-vi-transposition` 每周按 Europe/London 固定 ISO 周合并欧盟委员会、EUR-Lex、EY 与成员国官方来源，先比较上次成功快照，再按 `Weekly Changes → Regulatory News & Market Commentary → Country / Current Status / Summary` 输出。新闻层只收录本周材料并单独审计，不能脱离官方后续证据改变国家状态；它不使用自定义 TOML agent，也不属于 C-G 流水线。
+独立监管追踪：`$sci-research:crd-vi-transposition` 每次先从两个欧盟官方来源动态核对当前成员国，禁止固定国家数量或本地国家来源表；校验后的成员国快照决定完整搜索范围，各国官方来源当次动态发现或仅将历史已验证 URL 作为提示。周报按 Europe/London 固定 ISO 周比较上次成功快照，再按 `Weekly Changes → Regulatory News & Market Commentary → Country / Current Status / Summary` 输出。新闻层只收录本周材料并单独审计，不能脱离官方后续证据改变国家状态；它不使用自定义 TOML agent，也不属于 C-G 流水线。
 
 所有子 agent 都是带 `sci-research-` 命名空间的原生 Codex TOML 定义，源文件位于 `.codex/agents/*.toml`。Marketplace 更新后先用 `$sci-research:setup-sci-research-runtime` 同步到运行 workspace 的 `.codex/agents/`，并校验项目级 `.codex/config.toml` 中 `web_search = "live"` 与 `agents.max_threads >= 10`，再新开 Codex task。Pipeline C 还要求用户级启用名为 `google_news` 的 MCP，并让新 task 暴露 `mcp__google_news__search_news` 与 `mcp__google_news__get_news_article`；Pipeline C 不再使用 Codex 原生 WebSearch。
 
@@ -167,8 +167,8 @@
 | G 月度选择、schema、输出与验证规范 | skills/monthly-news-intelligence/references/ |
 | G 日报只读索引脚本 | skills/monthly-news-intelligence/scripts/collect-monthly-reports.py |
 | G agent 行为 | .codex/agents/sci-research-monthly-*.toml |
-| CRD VI 周度编排、状态、日期、新闻方法与来源登记 | skills/crd-vi-transposition/SKILL.md、skills/crd-vi-transposition/references/ |
-| CRD VI 周期、搜索队列、快照差异、国家表与新闻验证 | skills/crd-vi-transposition/scripts/weekly-period.py、skills/crd-vi-transposition/scripts/build-weekly-search-plan.py、skills/crd-vi-transposition/scripts/diff-weekly-state.py、skills/crd-vi-transposition/scripts/validate-country-table.py、skills/crd-vi-transposition/scripts/validate-news-section.py |
+| CRD VI 周度编排、动态成员国、状态、日期与新闻方法 | skills/crd-vi-transposition/SKILL.md、skills/crd-vi-transposition/references/ |
+| CRD VI 成员国门、周期、搜索队列、current-state、快照差异、国家表与新闻验证 | skills/crd-vi-transposition/scripts/validate-member-states.py、skills/crd-vi-transposition/scripts/weekly-period.py、skills/crd-vi-transposition/scripts/build-weekly-search-plan.py、skills/crd-vi-transposition/scripts/validate-current-state.py、skills/crd-vi-transposition/scripts/diff-weekly-state.py、skills/crd-vi-transposition/scripts/validate-country-table.py、skills/crd-vi-transposition/scripts/validate-news-section.py |
 | Runtime 安装与检查 | skills/setup-sci-research-runtime/、skills/setup-sci-research-runtime/runtime/config.toml、scripts/codex/check-plugin-bundle.py |
 | 插件清单与市场条目 | .codex-plugin/plugin.json、.agents/plugins/marketplace.json |
 
@@ -181,6 +181,6 @@
 5. E 验证：测试 Yahoo 企业/高管确认、非中国大陆媒体与公开社交媒体搜索、低中高判断、干净结果静默退出与邮件 dry-run。
 6. F 验证：测试五 lane 并行、Companies House 有/无 API key、watchlist 与 snapshot diff、confirmed/probable/unverified、格式门、图片回退、docx 渲染和邮件 dry-run。
 7. G 验证：用完整月和当前不完整月测试单日单语言选择、缺失日期、6/7 栏目 Curator 并行、跨栏目去重、Fact Manifest、双语一致性、月报格式门、docx 与邮件 dry-run。
-8. CRD VI 验证：测试固定周一至周日周期与回补、27国来源登记、基线/状态变化/来源失败/禁止无理由倒退、27国全表、成员国子集、欧委会与成员国官方进度冲突、来源更新时间早于核查日、本周新闻日期与事件去重、新闻/状态证据隔离，以及国家表/当前快照/周度差异/新闻四重格式门。
+8. CRD VI 验证：测试固定周一至周日周期与回补、双官方来源动态成员国一致性、成员国增减/重复/冲突、动态国家全表与子集、动态官方来源发现、基线/状态变化/来源失败/禁止无理由倒退、欧委会与成员国官方进度冲突、来源更新时间早于核查日、本周新闻日期与事件去重、新闻/状态证据隔离，以及成员国/国家表/当前快照/周度差异/新闻五重格式门。
 
-当前 C/D/E 只完成了静态与安装打包验证，真实端到端首跑仍待执行；F 已完成静态检查、Companies House 脚本测试、格式门和样例 docx 视觉验证，原生 agent 联网首跑仍待执行；G 已完成静态与安装打包验证、日报收集脚本真实样本检查及格式门单元测试，原生 agent 离线首跑仍待执行；CRD VI 已完成静态、周周期/来源登记/快照差异/新闻层/四重格式门单元测试、marketplace 集成及德国/法国/荷兰三国独立联网前向测试，含新闻层的 27 国周度联网首跑仍待执行。
+当前 C/D/E 只完成了静态与安装打包验证，真实端到端首跑仍待执行；F 已完成静态检查、Companies House 脚本测试、格式门和样例 docx 视觉验证，原生 agent 联网首跑仍待执行；G 已完成静态与安装打包验证、日报收集脚本真实样本检查及格式门单元测试，原生 agent 离线首跑仍待执行；CRD VI 已完成静态、周周期/动态成员国/快照差异/新闻层/五重格式门单元测试、marketplace 集成及德国/法国/荷兰三国独立联网前向测试，动态全成员国周度联网首跑仍待执行。

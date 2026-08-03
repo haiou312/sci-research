@@ -12,35 +12,6 @@ import sys
 from typing import Any
 
 
-EU_COUNTRIES = (
-    "Austria",
-    "Belgium",
-    "Bulgaria",
-    "Croatia",
-    "Cyprus",
-    "Czech Republic",
-    "Denmark",
-    "Estonia",
-    "Finland",
-    "France",
-    "Germany",
-    "Greece",
-    "Hungary",
-    "Ireland",
-    "Italy",
-    "Latvia",
-    "Lithuania",
-    "Luxembourg",
-    "Malta",
-    "Netherlands",
-    "Poland",
-    "Portugal",
-    "Romania",
-    "Slovakia",
-    "Slovenia",
-    "Spain",
-    "Sweden",
-)
 VALID_STATUSES = {"Completed", "Ongoing", "Pending"}
 COMMISSION_MARKERS = {
     "Commission: Full",
@@ -56,6 +27,7 @@ WEEKLY_FIELDS = {
     "status_cutoff",
     "checked_at",
     "previous_successful_week",
+    "country_filter",
     "change_count",
     "news_count",
 }
@@ -131,8 +103,21 @@ def parse_frontmatter(text: str) -> dict[str, str]:
     return metadata
 
 
+def parse_country_filter(metadata: dict[str, str]) -> set[str] | None:
+    value = metadata.get("country_filter", "").strip()
+    if value == "all":
+        return None
+    if not value:
+        raise ValueError("country_filter must be all or a comma-separated country list")
+    countries = {country.strip() for country in value.split(",") if country.strip()}
+    if not countries or len(countries) != len(value.split(",")):
+        raise ValueError("country_filter contains an empty or duplicate country")
+    return countries
+
+
 def validate_weekly(text: str) -> dict[str, str]:
     metadata = parse_frontmatter(text)
+    parse_country_filter(metadata)
     if metadata["timezone"] != "Europe/London":
         raise ValueError("weekly timezone must be Europe/London")
     try:
@@ -196,6 +181,25 @@ def load_json_object(path: Path, label: str) -> dict[str, Any]:
     return data
 
 
+def membership_countries(data: dict[str, Any]) -> list[str]:
+    values = data.get("countries")
+    if not isinstance(values, list) or not values:
+        raise ValueError("membership snapshot countries must be a non-empty list")
+    countries: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError("membership country names must be non-empty strings")
+        country = value.strip()
+        if country in seen:
+            raise ValueError(f"duplicate membership country: {country}")
+        seen.add(country)
+        countries.append(country)
+    if data.get("count") != len(countries):
+        raise ValueError("membership snapshot count differs from countries")
+    return countries
+
+
 def validate_state_alignment(
     rows: list[list[str]], metadata: dict[str, str], state: dict[str, Any]
 ) -> None:
@@ -215,8 +219,15 @@ def validate_state_alignment(
     if not isinstance(countries, dict):
         raise ValueError("current state countries must be an object")
     table_countries = {row[0] for row in rows}
-    if set(countries) != table_countries:
-        raise ValueError("country set differs between report and current state")
+    country_filter = parse_country_filter(metadata)
+    if country_filter is None:
+        if set(countries) != table_countries:
+            raise ValueError("country set differs between report and current state")
+    else:
+        if table_countries != country_filter:
+            raise ValueError("report rows differ from country_filter")
+        if not table_countries.issubset(set(countries)):
+            raise ValueError("filtered report contains a country absent from current state")
     for country, status, summary in rows:
         record = countries[country]
         if not isinstance(record, dict):
@@ -250,27 +261,34 @@ def validate_diff_alignment(metadata: dict[str, str], diff: dict[str, Any]) -> N
         raise ValueError("previous week differs between report and weekly diff")
 
 
-def validate(text: str, allow_subset: bool = False) -> tuple[int, dict[str, int]]:
+def validate(
+    text: str,
+    member_states: list[str] | set[str] | tuple[str, ...],
+    allow_subset: bool = False,
+) -> tuple[int, dict[str, int]]:
     rows = extract_rows(text)
     countries = [row[0] for row in rows]
+    member_set = set(member_states)
+    if not member_set:
+        raise ValueError("dynamic membership set cannot be empty")
     errors: list[str] = []
 
     duplicates = sorted({country for country in countries if countries.count(country) > 1})
     if duplicates:
         errors.append(f"duplicate countries: {', '.join(duplicates)}")
 
-    unknown = sorted(set(countries) - set(EU_COUNTRIES))
+    unknown = sorted(set(countries) - member_set)
     if unknown:
-        errors.append(f"non-EU or unknown countries: {', '.join(unknown)}")
+        errors.append(f"countries outside the dynamic EU membership: {', '.join(unknown)}")
 
     if allow_subset:
-        if not set(countries).issubset(EU_COUNTRIES):
-            errors.append("filtered table contains a country outside the fixed EU set")
+        if not set(countries).issubset(member_set):
+            errors.append("filtered table contains a non-member country")
     else:
-        missing = sorted(set(EU_COUNTRIES) - set(countries))
-        if len(rows) != len(EU_COUNTRIES) or missing:
+        missing = sorted(member_set - set(countries))
+        if len(rows) != len(member_set) or missing:
             errors.append(
-                "all-country table must contain exactly 27 Member States"
+                "all-country table must match the dynamic EU membership snapshot"
                 + (f"; missing: {', '.join(missing)}" if missing else "")
             )
 
@@ -296,20 +314,21 @@ def validate(text: str, allow_subset: bool = False) -> tuple[int, dict[str, int]
 
 
 def self_test() -> None:
+    member_states = ["Austria", "Czechia", "Germany"]
     rows = "\n".join(
         f"| {country} | Completed | Final measure confirmed in 2026. "
         "Commission: Full. [National source](https://example.com/national) "
         "[European Commission](https://example.com/commission) |"
-        for country in EU_COUNTRIES
+        for country in member_states
     )
     valid = f"| Country | Current Status | Summary |\n|---|---|---|\n{rows}\n"
-    count, counts = validate(valid)
-    if count != 27 or counts["Completed"] != 27:
+    count, counts = validate(valid, member_states)
+    if count != 3 or counts["Completed"] != 3:
         raise AssertionError("valid all-country fixture did not validate")
 
     invalid = valid.replace("| Austria | Completed |", "| Austria | Finished |", 1)
     try:
-        validate(invalid)
+        validate(invalid, member_states)
     except ValueError as exc:
         if "invalid Current Status" not in str(exc):
             raise AssertionError("invalid fixture failed for the wrong reason") from exc
@@ -323,7 +342,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--allow-subset",
         action="store_true",
-        help="allow a filtered table containing fewer than all 27 countries",
+        help="allow a filtered table containing a subset of current Member States",
+    )
+    parser.add_argument(
+        "--membership",
+        type=Path,
+        help="validated membership-snapshot.json; required for report validation",
     )
     parser.add_argument("--self-test", action="store_true")
     parser.add_argument(
@@ -352,8 +376,15 @@ def main() -> int:
         return 0
     if args.file is None:
         raise ValueError("--file is required unless --self-test is used")
+    if args.membership is None:
+        raise ValueError("--membership is required for report validation")
     text = args.file.expanduser().read_text(encoding="utf-8")
-    count, counts = validate(text, allow_subset=args.allow_subset)
+    membership = load_json_object(args.membership, "membership snapshot")
+    count, counts = validate(
+        text,
+        membership_countries(membership),
+        allow_subset=args.allow_subset,
+    )
     if (args.state or args.diff) and not args.weekly:
         raise ValueError("--state and --diff require --weekly")
     if args.weekly:

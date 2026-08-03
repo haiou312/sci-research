@@ -18,6 +18,7 @@ COUNTRY_HEADER = "| Country | Current Status | Summary |"
 NO_NEWS_TEXT = "No material CRD VI news identified for this reporting period."
 SOURCE_CLASSES = {"official", "news_media", "industry", "professional_analysis"}
 STATUS_EFFECTS = {"none", "official_follow_up"}
+DEFAULT_SOURCES = Path(__file__).resolve().parents[1] / "references/news-sources.json"
 
 
 def split_row(line: str) -> list[str] | None:
@@ -162,6 +163,68 @@ def load_state(path: Path) -> dict[str, Any]:
     return data
 
 
+def validate_audit(
+    data: dict[str, Any],
+    metadata: dict[str, str],
+    registry: dict[str, Any],
+) -> None:
+    if data.get("schema_version") != 1:
+        raise ValueError("news-search-audit schema_version must be 1")
+    for field in ("report_week", "period_start", "period_end"):
+        if data.get(field) != metadata[field]:
+            raise ValueError(f"{field} differs between report and news-search-audit")
+
+    expected_lanes = registry.get("search_lanes")
+    if not isinstance(expected_lanes, list) or not expected_lanes:
+        raise ValueError("news-sources.json must contain search_lanes")
+    expected_ids = {
+        lane.get("id") for lane in expected_lanes if isinstance(lane, dict)
+    }
+    lanes = data.get("lanes")
+    if not isinstance(lanes, list) or len(lanes) != len(expected_ids):
+        raise ValueError("news-search-audit must contain every active search lane")
+    seen_lanes: set[str] = set()
+    for lane in lanes:
+        if not isinstance(lane, dict):
+            raise ValueError("news-search-audit lanes must be objects")
+        lane_id = lane.get("id")
+        if lane_id not in expected_ids or lane_id in seen_lanes:
+            raise ValueError("news-search-audit contains an unknown or duplicate lane")
+        seen_lanes.add(lane_id)
+        queries = lane.get("queries")
+        if not isinstance(queries, list) or not queries or not all(
+            isinstance(query, str) and query.strip() for query in queries
+        ):
+            raise ValueError(f"{lane_id}: queries must be non-empty strings")
+        result_count = lane.get("result_count")
+        if not isinstance(result_count, int) or isinstance(result_count, bool) or result_count < 0:
+            raise ValueError(f"{lane_id}: result_count must be a non-negative integer")
+    if seen_lanes != expected_ids:
+        raise ValueError("news-search-audit is missing an active search lane")
+
+    candidates = data.get("candidates")
+    if not isinstance(candidates, list):
+        raise ValueError("news-search-audit candidates must be a list")
+    for number, candidate in enumerate(candidates, start=1):
+        if not isinstance(candidate, dict):
+            raise ValueError(f"news candidate {number} must be an object")
+        url = candidate.get("url")
+        if not isinstance(url, str) or not url.startswith("https://"):
+            raise ValueError(f"news candidate {number}: url must be HTTPS")
+        published_date = candidate.get("published_date")
+        if published_date is not None:
+            try:
+                date.fromisoformat(published_date)
+            except (TypeError, ValueError) as exc:
+                raise ValueError(
+                    f"news candidate {number}: published_date must be YYYY-MM-DD or null"
+                ) from exc
+        if candidate.get("decision") not in {"keep", "drop"}:
+            raise ValueError(f"news candidate {number}: decision must be keep or drop")
+        if not isinstance(candidate.get("reason"), str) or not candidate["reason"].strip():
+            raise ValueError(f"news candidate {number}: reason is required")
+
+
 def official_state_urls(data: dict[str, Any]) -> set[str]:
     countries = data.get("countries")
     if not isinstance(countries, dict):
@@ -258,6 +321,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--file", type=Path)
     parser.add_argument("--items", type=Path)
     parser.add_argument("--state", type=Path)
+    parser.add_argument("--audit", type=Path)
+    parser.add_argument("--sources", type=Path, default=DEFAULT_SOURCES)
     parser.add_argument("--self-test", action="store_true")
     return parser.parse_args()
 
@@ -277,6 +342,12 @@ def main() -> int:
         validate_items(metadata, rows, load_items(args.items), state)
     elif args.state:
         raise ValueError("--state requires --items")
+    if args.audit:
+        validate_audit(
+            load_items(args.audit),
+            metadata,
+            load_items(args.sources),
+        )
     print(f"CRD_VI_NEWS_OK rows={len(rows)}")
     return 0
 

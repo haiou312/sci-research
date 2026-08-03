@@ -44,15 +44,6 @@ REQUIRED_AGENTS = {
     "sci-research-reputation-writer",
 }
 
-CRD_VI_COUNTRIES = {
-    "Austria", "Belgium", "Bulgaria", "Croatia", "Cyprus",
-    "Czech Republic", "Denmark", "Estonia", "Finland", "France",
-    "Germany", "Greece", "Hungary", "Ireland", "Italy", "Latvia",
-    "Lithuania", "Luxembourg", "Malta", "Netherlands", "Poland",
-    "Portugal", "Romania", "Slovakia", "Slovenia", "Spain", "Sweden",
-}
-
-
 def fail(message: str) -> None:
     raise ValueError(message)
 
@@ -85,7 +76,7 @@ def validate(plugin_root: Path) -> tuple[int, int]:
 
     crd_root = skills_root / "crd-vi-transposition"
     crd_required = (
-        "references/country-sources.json",
+        "references/member-state-method.md",
         "references/news-method.md",
         "references/news-sources.json",
         "references/source-method.md",
@@ -94,25 +85,16 @@ def validate(plugin_root: Path) -> tuple[int, int]:
         "scripts/build-weekly-search-plan.py",
         "scripts/diff-weekly-state.py",
         "scripts/validate-country-table.py",
+        "scripts/validate-current-state.py",
+        "scripts/validate-member-states.py",
         "scripts/validate-news-section.py",
         "scripts/weekly-period.py",
     )
     missing_crd = [name for name in crd_required if not (crd_root / name).is_file()]
     if missing_crd:
         fail(f"missing CRD VI weekly resources: {', '.join(missing_crd)}")
-    registry = json.loads(
-        (crd_root / "references/country-sources.json").read_text(encoding="utf-8")
-    )
-    registry_countries = registry.get("countries")
-    if not isinstance(registry_countries, list):
-        fail("CRD VI country registry must contain a countries list")
-    names = {
-        item.get("country")
-        for item in registry_countries
-        if isinstance(item, dict) and isinstance(item.get("country"), str)
-    }
-    if names != CRD_VI_COUNTRIES or len(registry_countries) != 27:
-        fail("CRD VI country registry must contain exactly the 27 EU Member States")
+    if (crd_root / "references/country-sources.json").exists():
+        fail("CRD VI must not bundle a fixed country or national-source registry")
     news_registry = json.loads(
         (crd_root / "references/news-sources.json").read_text(encoding="utf-8")
     )

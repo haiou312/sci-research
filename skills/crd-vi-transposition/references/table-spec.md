@@ -48,19 +48,22 @@ changed country's Summary with `Weekly change:` or a natural equivalent in the
 requested language. Do not prepend repetitive no-change text to unchanged rows;
 put the no-change conclusion in the separate Weekly Changes section.
 
-## Fixed EU set
+## Dynamic EU set
 
-Austria; Belgium; Bulgaria; Croatia; Cyprus; Czech Republic; Denmark; Estonia;
-Finland; France; Germany; Greece; Hungary; Ireland; Italy; Latvia; Lithuania;
-Luxembourg; Malta; Netherlands; Poland; Portugal; Romania; Slovakia; Slovenia;
-Spain; Sweden.
+Use only the current run's validated `membership-snapshot.json`. Do not use a
+bundled country list, expected count, previous report, Commission CRD VI rows,
+EY rows, the EEA, Schengen, or euro-area membership to determine the table
+scope. A filtered report may contain only a requested subset of the validated
+current membership.
 
-Exclude Iceland, Liechtenstein, Norway, Switzerland, and the United Kingdom from
-the EU table. Add a separate EEA/third-country section only when requested.
+The filter is presentation-only. `current-state.json` and `weekly-diff.json`
+remain full-country artifacts. A filtered report must declare its exact
+`country_filter` in frontmatter and contain exactly those rows.
 
 ## Final checks
 
-- The all-country table contains exactly 27 unique Member States.
+- The all-country table exactly matches the unique countries in the current
+  validated membership snapshot.
 - A filtered table contains only requested EU Member States.
 - Every status is Completed, Ongoing, or Pending.
 - Every Summary contains one Commission marker, a year, and at least two links.
@@ -71,9 +74,8 @@ the EU table. Add a separate EEA/third-country section only when requested.
 - A weekly report contains exactly one Regulatory News & Market Commentary
   section between Weekly Changes and the country table; `news_count` agrees with
   the rendered rows and `news-items.json`.
-- `change_count` equals the material country changes in `weekly-diff.json`; a
-  baseline identifies itself instead of presenting all 27 rows as new laws.
+- `change_count` equals the material country and membership changes in
+  `weekly-diff.json`; a baseline identifies itself instead of presenting every
+  row as a new law.
 - The table and `current-state.json` agree on country, Current Status, and exact
   Commission marker.
-- No media or professional-analysis item changes a country status without
-  separately verified official evidence in the country state record.

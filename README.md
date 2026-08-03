@@ -28,9 +28,9 @@ Pipeline C also writes the capped Scanner Batch and deduplication-and-selection 
 
 | Command | Purpose | Output |
 |---|---|---|
-| `$sci-research:crd-vi-transposition` | Run a fixed weekly snapshot-and-delta check plus exact-week CRD VI regulatory-news monitoring across official, media, industry, and professional sources | `Weekly Changes`, `Regulatory News & Market Commentary`, the exact `Country / Current Status / Summary` table, and audit JSON for all 27 EU Member States or a filtered subset |
+| `$sci-research:crd-vi-transposition` | Dynamically verify current EU membership, then run a fixed-week snapshot-and-delta check plus exact-week CRD VI regulatory-news monitoring | `Weekly Changes`, `Regulatory News & Market Commentary`, the exact `Country / Current Status / Summary` table, membership audit, and regulatory audit JSON for all current Member States or a filtered subset |
 
-This tracker is an independent skill rather than a sixth custom-agent pipeline. It separates the research date from each source's update date, distinguishes completed transposition from future Article 21c application, and validates the final table mechanically before delivery. Its news section covers only the reporting week and explains practical impact; media commentary cannot change `Current Status` unless an official follow-up source is also recorded in the country snapshot.
+This tracker is an independent skill rather than a sixth custom-agent pipeline. Every run reconciles two official EU Member-State lists; no country count or national-source registry is bundled. The validated membership snapshot determines the complete table and search plan, while national official sources are discovered dynamically or carried forward only as verified historical hints. It separates the research date from each source's update date, distinguishes completed transposition from future Article 21c application, and validates the final table mechanically before delivery. Its news section covers only the reporting week and explains practical impact; media commentary cannot change `Current Status` unless an official follow-up source is also recorded in the country snapshot.
 
 ---
 
@@ -48,7 +48,7 @@ This tracker is an independent skill rather than a sixth custom-agent pipeline. 
 - **Branded Word output** via SPD Bank template (`$sci-research:daily-briefing`)
 - **Commercial opportunity pipeline** for China-to-UK/Europe expansion, M&A, investment, and Companies House changes
 - **Evidence-first Companies House radar** with confirmed/probable/unverified Chinese-nexus labels and explicit coverage limits
-- **Weekly CRD VI transposition and news tracker** with fixed ISO-week cutoffs, prior-state comparison, four exact-week news lanes, 27-country official-source registry, outage-safe carry-forward, Commission/EY conflict resolution, evidence isolation, and deterministic table/state/diff/news gates
+- **Weekly CRD VI transposition and news tracker** with fixed ISO-week cutoffs, two-source dynamic membership reconciliation, dynamic national-source discovery, prior-state comparison, four exact-week news lanes, outage-safe carry-forward, Commission/EY conflict resolution, evidence isolation, and deterministic membership/table/state/diff/news gates
 - **Gmail SMTP email delivery** built into all five pipelines
 - **Quality hooks** enforce Pipeline C/F/G Markdown format and email-send safety
 - **Multilingual** — Chinese / English / Japanese output
@@ -628,8 +628,8 @@ sci-research/
 │   ├── crd-vi-transposition/                 # Weekly EU regulatory tracker
 │   │   ├── SKILL.md
 │   │   ├── agents/openai.yaml
-│   │   ├── references/                      # Weekly/news/source methods, registries, table contract
-│   │   └── scripts/                         # Week/search plan, state diff, table/news validation
+│   │   ├── references/                      # Membership/weekly/news/source methods and table contract
+│   │   └── scripts/                         # Membership gate, week/search plan, state diff, table/news validation
 │   └── setup-sci-research-runtime/           # Installs/checks project-scoped agents
 │       ├── SKILL.md
 │       ├── runtime/config.toml                # Project-scoped agent concurrency template
@@ -648,9 +648,10 @@ sci-research/
 │   ├── test_hooks.py                        # Codex hook protocol tests
 │   ├── test_monthly_news_collector.py       # Pipeline G source-index tests
 │   ├── test_opportunity_scripts.py          # Companies House collector/diff tests
+│   ├── test_crd_vi_membership.py             # Dynamic EU membership reconciliation tests
 │   ├── test_crd_vi_table_validator.py       # CRD VI three-column table gate tests
 │   ├── test_crd_vi_news_validator.py        # CRD VI exact-week news and evidence-isolation tests
-│   ├── test_crd_vi_weekly.py                # Weekly period, registry, state-diff and alignment tests
+│   ├── test_crd_vi_weekly.py                # Weekly period, dynamic search, state-diff and alignment tests
 │   ├── test_runtime_sync.py                 # Isolated setup/update/uninstall tests
 │   └── fixtures/opportunity-briefing-sample.md
 ├── .env.example                             # Gmail SMTP environment template

@@ -23,10 +23,11 @@ Run `scripts/weekly-period.py` rather than calculating ISO weeks manually. An
 explicit `week_ending` must be a Sunday. If a scheduled run fails, generate the
 missing fixed week as a backfill; do not silently widen the next report's period.
 
-## Snapshot contract
+## Full-country snapshot contract
 
-Save one machine-readable snapshot per successful full-country run. Use this
-shape; values may be null only when the official evidence does not provide them:
+Save one machine-readable full-country snapshot per successful weekly run. Use
+this shape; values may be null only when the official evidence does not provide
+them:
 
 ```json
 {
@@ -45,9 +46,12 @@ shape; values may be null only when the official evidence does not provide them:
       "status": "Ongoing",
       "commission_marker": "Commission: Partial",
       "national_measure": "Official bill or act identifier",
+      "measure_adopted": null,
+      "measure_published": null,
       "milestone_date": "2026-07-29",
       "measure_effective": null,
-      "article_21c_applies": "2027-01-11",
+      "article_21c_general_applies": "2027-01-11",
+      "article_21c_5_existing_contracts_from": "2026-07-11",
       "source_health": "verified",
       "last_verified": "2026-08-03",
       "source_urls": ["https://...", "https://..."]
@@ -69,24 +73,26 @@ regulatory event.
 
 ## Search triage
 
-Read `country-sources.json` before searching. Use this weekly order:
+Validate the current `membership-snapshot.json` before searching. Use this
+weekly order:
 
 1. Check the Commission page, EUR-Lex national transposition measures, and EY.
    Record displayed update dates and a content hash even when the date is
    unchanged.
-2. Deep-check every Pending or Ongoing country through its registered national
-   official sources.
+2. Deep-check every Pending or Ongoing country through dynamically discovered
+   national official sources and reopened historical verified URLs.
 3. Deep-check a Completed country when a central tracker changed its category,
    a known national page changed, its source health is not verified, or it has
    not received a full official refresh in 28 days.
 4. Otherwise perform a lightweight known-URL check for Completed countries.
-5. Every fourth ISO week, perform a full official refresh of all 27 countries.
+5. Every fourth ISO week, perform a full official refresh of every country in
+   the current membership snapshot.
 
 After identifying central-source country changes, generate the concrete queue:
 
 ```bash
 python3 "$SKILL_ROOT/scripts/build-weekly-search-plan.py" \
-  --registry "$SKILL_ROOT/references/country-sources.json" \
+  --membership "$MEMBERSHIP_SNAPSHOT" \
   --period-end "$PERIOD_END" --previous "$PREVIOUS_STATE" \
   --changed-country Austria
 ```
@@ -95,7 +101,8 @@ Omit `--previous` for the baseline, repeat `--changed-country` as needed, and ad
 `--full-refresh` on a scheduled full refresh. Follow the emitted `deep_checks`
 and `light_checks`; do not manually downgrade a deep-check country to save time.
 
-Use local-language terms from the registry together with `2024/1619`, `CRD VI`,
+Discover official national portals and local-language terms dynamically as
+specified in `member-state-method.md`, together with `2024/1619`, `CRD VI`,
 `CRD6`, known national bill or act identifiers, and third-country-branch terms.
 Search-engine recency filters are discovery aids only. Open the page and verify
 its own publication or update date.
@@ -124,6 +131,7 @@ timezone: Europe/London
 status_cutoff: 2026-08-02
 checked_at: 2026-08-03T07:00:00+01:00
 previous_successful_week: 2026-W30
+country_filter: all
 change_count: 2
 news_count: 4
 ---
@@ -131,13 +139,12 @@ news_count: 4
 
 Use `previous_successful_week: none` for the first baseline. Add a
 `## Weekly Changes` section, then the news section specified in
-`news-method.md`, then the full table. List only material country or
-EU-implementation changes in Weekly Changes; when `change_count` is zero, state
-that no material change was found. Keep the full current table at exactly three
-columns. For a changed country, begin its Summary with `Weekly change:` or an
-equivalent phrase in the requested language. Unchanged rows retain their
-cumulative Summary. `news_count` records news rows and is independent of
-`change_count`.
+`news-method.md`, then the table specified in `table-spec.md`. List only
+material country or EU-implementation changes in Weekly Changes; when
+`change_count` is zero, state that no material change was found. For a changed
+country, begin its Summary with `Weekly change:` or an equivalent phrase in the
+requested language. Unchanged rows retain their cumulative Summary.
+`news_count` records news rows and is independent of `change_count`.
 
 Save successful runs under:
 
@@ -146,6 +153,7 @@ Save successful runs under:
 ├── crd-vi-transposition-{report_week}.md
 └── audit/
     ├── current-state.json
+    ├── membership-snapshot.json
     ├── previous-state.json
     ├── weekly-diff.json
     ├── news-search-audit.json

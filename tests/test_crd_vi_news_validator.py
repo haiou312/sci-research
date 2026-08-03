@@ -80,6 +80,33 @@ def state(*urls: str) -> dict[str, object]:
     }
 
 
+def audit() -> dict[str, object]:
+    lanes = [
+        "national_transposition",
+        "third_country_branches",
+        "supervisory_implementation",
+        "market_response",
+    ]
+    return {
+        "schema_version": 1,
+        "report_week": "2026-W31",
+        "period_start": "2026-07-27",
+        "period_end": "2026-08-02",
+        "lanes": [
+            {"id": lane, "queries": [f"CRD VI {lane}"], "result_count": 1}
+            for lane in lanes
+        ],
+        "candidates": [
+            {
+                "url": "https://eba.europa.eu/item",
+                "published_date": "2026-07-30",
+                "decision": "keep",
+                "reason": "material CRD VI development",
+            }
+        ],
+    }
+
+
 class CrdViNewsValidatorTests(unittest.TestCase):
     def test_valid_news_report_and_items_pass(self) -> None:
         metadata, rows = VALIDATOR.validate_report(report(VALID_ROW))
@@ -144,6 +171,39 @@ class CrdViNewsValidatorTests(unittest.TestCase):
             selected,
             state("https://eba.europa.eu/item"),
         )
+
+    def test_complete_news_audit_passes(self) -> None:
+        metadata, _ = VALIDATOR.validate_report(report(VALID_ROW))
+        registry = {
+            "search_lanes": [
+                {"id": lane}
+                for lane in (
+                    "national_transposition",
+                    "third_country_branches",
+                    "supervisory_implementation",
+                    "market_response",
+                )
+            ]
+        }
+        VALIDATOR.validate_audit(audit(), metadata, registry)
+
+    def test_missing_news_lane_fails(self) -> None:
+        metadata, _ = VALIDATOR.validate_report(report(VALID_ROW))
+        registry = {
+            "search_lanes": [
+                {"id": lane}
+                for lane in (
+                    "national_transposition",
+                    "third_country_branches",
+                    "supervisory_implementation",
+                    "market_response",
+                )
+            ]
+        }
+        selected = deepcopy(audit())
+        selected["lanes"].pop()
+        with self.assertRaisesRegex(ValueError, "every active search lane"):
+            VALIDATOR.validate_audit(selected, metadata, registry)
 
 
 if __name__ == "__main__":

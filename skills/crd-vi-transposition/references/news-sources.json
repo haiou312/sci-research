@@ -33,7 +33,7 @@
         "eba.europa.eu",
         "ecb.europa.eu"
       ],
-      "rule": "Use original announcements and legal materials whenever available. National official domains come from country-sources.json."
+      "rule": "Use original announcements and legal materials whenever available. Discover national official domains dynamically and retain verified URLs in the weekly audit."
     },
     {
       "class": "news_media",

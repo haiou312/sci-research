@@ -2,12 +2,12 @@
   {
     "id": 1,
     "prompt": "$sci-research:crd-vi-transposition --week-ending 2026-08-02 --lang zh",
-    "expected": "A 2026-W31 report for 27 Member States with valid weekly frontmatter, snapshot-derived Weekly Changes, three-to-eight material exact-week regulatory-news items when available, exactly Country, Current Status, Summary table columns, current-state/weekly-diff/news audit JSON, and passing country/news validation."
+    "expected": "A 2026-W31 report whose full country scope comes from a same-run two-authority EU membership snapshot, with valid weekly frontmatter, snapshot-derived Weekly Changes, three-to-eight material exact-week regulatory-news items when available, exactly Country, Current Status, Summary table columns, membership/current-state/weekly-diff/news audit JSON, and passing membership/country/news validation."
   },
   {
     "id": 2,
     "prompt": "$sci-research:crd-vi-transposition --week-ending 2026-08-02 --country Germany,France,Netherlands --lang zh",
-    "expected": "A three-row filtered weekly table using only Completed/Ongoing/Pending, plus an exact-week Regulatory News & Market Commentary section; Commission/EY and local official evidence determine status, while media reporting remains a separate context layer."
+    "expected": "A three-row presentation-filtered weekly table using only Completed/Ongoing/Pending, backed by a full-country current-state and weekly diff; Commission/EY and local official evidence determine status, while media reporting remains a separate context layer."
   },
   {
     "id": 3,
@@ -38,5 +38,15 @@
     "id": 8,
     "prompt": "$sci-research:crd-vi-transposition --week-ending 2026-08-02 during a quiet CRD VI news week",
     "expected": "All four news lanes run, news-search-audit records the candidates and drop reasons, news_count is zero, and the report uses the exact no-material-news statement without padding the section."
+  },
+  {
+    "id": 9,
+    "prompt": "$sci-research:crd-vi-transposition when the EU country-profiles page and EUR-Lex Member States page differ by one country",
+    "expected": "The run stops before country research or report delivery, preserves both extracted lists in membership-snapshot.json, reports the exact missing or extra country, and does not fall back to a fixed count, EY rows, or the previous week's membership."
+  },
+  {
+    "id": 10,
+    "prompt": "$sci-research:crd-vi-transposition after a new country joins the EU and has no historical source URLs",
+    "expected": "The newly validated Member State is included automatically, marked as a membership addition in Weekly Changes and weekly-diff.json, and routed to deep dynamic discovery of national official legal, parliamentary, ministry, central-bank, and regulator sources."
   }
 ]
