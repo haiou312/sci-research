@@ -45,39 +45,23 @@ table. Never copy or closely paraphrase EY's prose.
 
 In a weekly report, the table remains cumulative as of `status_cutoff`. Start a
 changed country's Summary with `Weekly change:`. Do not prepend repetitive
-no-change text to unchanged rows;
-put the no-change conclusion in the separate Weekly Changes section.
+no-change text to unchanged rows; put that conclusion in Weekly Changes.
 
 ## Dynamic EU set
 
-Use only the current run's validated `membership-snapshot.json`. Do not use a
-bundled country list, expected count, previous report, Commission CRD VI rows,
-EY rows, the EEA, Schengen, or euro-area membership to determine the table
-scope. A filtered report may contain only a requested subset of the validated
-current membership.
-
-The filter is presentation-only. `current-state.json` and `weekly-diff.json`
-remain full-country artifacts. A filtered report must declare its exact
-`country_filter` in frontmatter and contain exactly those rows.
+Derive scope only under `member-state-method.md`. A filtered report declares its
+exact `country_filter` and renders only that validated subset; `current-state.json`
+and `weekly-diff.json` remain full-country artifacts.
 
 ## Final checks
 
-- The all-country table exactly matches the unique countries in the current
-  validated membership snapshot.
-- A filtered table contains only requested EU Member States.
 - Every status is Completed, Ongoing, or Pending.
 - Every Summary contains one Commission marker, a year, and at least two links.
 - `checked_at`, Commission `last_updated`, and EY `last_updated` remain distinct.
 - The report distinguishes transposition completion from future Article 21c
   application.
-- A weekly report contains valid weekly frontmatter and a Weekly Changes section.
-- A weekly report contains exactly one Regulatory News & Market Commentary
-  section between Weekly Changes and the country table; `news_count` agrees with
-  the rendered rows and `news-items.json`.
-- A weekly report ends with exactly one `## Disclaimer` covering AI assistance,
-  the evidence workflow, and the professional-advice boundary.
-- `change_count` equals the material country and membership changes in
-  `weekly-diff.json`; a baseline identifies itself instead of presenting every
-  row as a new law.
 - The table and `current-state.json` agree on country, Current Status, and exact
   Commission marker.
+
+For weekly structure, counts, news placement, disclaimer, baseline, and scope
+alignment, apply `weekly-method.md`, `news-method.md`, and the validators.

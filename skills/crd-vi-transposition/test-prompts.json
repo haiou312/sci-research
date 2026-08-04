@@ -2,7 +2,7 @@
   {
     "id": 1,
     "prompt": "$sci-research:crd-vi-transposition --week-ending 2026-08-02",
-    "expected": "A 2026-W31 report whose full country scope comes from a same-run two-authority EU membership snapshot, with valid weekly frontmatter, snapshot-derived Weekly Changes, three-to-eight material exact-week regulatory-news items when available, exactly Country, Current Status, Summary table columns, membership/current-state/weekly-diff/news audit JSON, and passing membership/country/news validation."
+    "expected": "A 2026-W31 Markdown and matching mandatory Word report whose full country scope comes from a same-run two-authority EU membership snapshot, with all discovery performed through the Brave Search MCP, valid weekly frontmatter, snapshot-derived Weekly Changes, three-to-eight material exact-week regulatory-news items when available, exactly Country, Current Status, Summary table columns, membership/current-state/weekly-diff/news audit JSON, passing membership/country/news validation, and successful DOCX package validation."
   },
   {
     "id": 2,
@@ -37,7 +37,7 @@
   {
     "id": 8,
     "prompt": "$sci-research:crd-vi-transposition --week-ending 2026-08-02 during a quiet CRD VI news week",
-    "expected": "All four news lanes run, news-search-audit records the candidates and drop reasons, news_count is zero, and the report uses the exact no-material-news statement without padding the section."
+    "expected": "All four news lanes run once through the news_tool and resolved news_parameters in news-sources.json, news-search-audit records the search details, candidates, and drop reasons, news_count is zero, and the report uses the exact no-material-news statement without padding the section."
   },
   {
     "id": 9,
@@ -52,6 +52,16 @@
   {
     "id": 11,
     "prompt": "$sci-research:crd-vi-transposition --week-ending 2026-08-02 --email \"team@example.com\" --email-dry-run",
-    "expected": "After all report validators pass, the saved English Markdown report is sent through scripts/send-report-email.py in dry-run mode with the default CRD VI subject and Markdown attachment, while local report and audit files remain unchanged."
+    "expected": "After all report validators and the mandatory DOCX package check pass, scripts/send-report-email.py runs in dry-run mode with the default CRD VI subject and the Word report as the default attachment, while local Markdown, Word, and audit files remain unchanged."
+  },
+  {
+    "id": 12,
+    "prompt": "$sci-research:crd-vi-transposition when Pandoc is unavailable",
+    "expected": "The run stops before research, explains that Pandoc is required for the mandatory CRD VI Word deliverable, does not install anything, and does not mark a weekly snapshot successful or attempt email delivery."
+  },
+  {
+    "id": 13,
+    "prompt": "$sci-research:crd-vi-transposition when the brave_search MCP is registered but its API key or tools are unavailable",
+    "expected": "The run stops before substantive research, reports the exact missing Brave MCP tool or capability-probe failure, tells the user to check codex mcp get brave_search, configure BRAVE_API_KEY, and start a new task, and never falls back to Google News or Codex native WebSearch."
   }
 ]

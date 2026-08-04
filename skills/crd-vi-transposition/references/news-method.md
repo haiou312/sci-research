@@ -13,11 +13,10 @@ official evidence and recording that evidence in `current-state.json`.
 
 ## Discovery
 
-Read `news-sources.json` before searching. Run each active search lane once for
-the exact `period_start` through `period_end` window. Prefer the configured
-Google News MCP when available; otherwise use live web search. Search in English
-and formulate local-language terms dynamically when a country lead
-requires follow-up.
+Read `brave-search-method.md` and `news-sources.json` before searching. Run each
+active lane once with the registry's provider, tool, and resolved parameters.
+Search in English and formulate local-language terms dynamically when a country
+lead requires follow-up.
 
 Search-result dates and recency filters are discovery aids. Open the publisher's
 page and verify its displayed publication date. Do not use a result whose date
@@ -25,23 +24,12 @@ cannot be verified. A materially updated older page is eligible only when the
 publisher displays a substantive update date inside the reporting period and
 the report describes it as an update.
 
-Save all plausible candidates and decisions in `audit/news-search-audit.json`:
-
-```json
-{
-  "schema_version": 1,
-  "report_week": "2026-W31",
-  "lanes": [{"id": "third_country_branches", "queries": ["..."], "result_count": 4}],
-  "candidates": [
-    {
-      "url": "https://...",
-      "published_date": "2026-07-30",
-      "decision": "keep",
-      "reason": "material Article 21c operational development"
-    }
-  ]
-}
-```
+Save all plausible candidates and decisions in `audit/news-search-audit.json`.
+Copy the provider and tool identifiers from `news-sources.json`, record the
+fully resolved non-secret parameter object required by `brave-search-method.md`,
+and include the report week, period boundaries, lane ID, queries, result count,
+retrieval time, and returned URLs. Each candidate records its URL, verified
+publication date, decision, and concise reason.
 
 Use only `keep` or `drop` for `decision`. Record a concise reason. Do not copy
 article body text into audit JSON. A dropped undated candidate may use
@@ -50,8 +38,9 @@ reporting week.
 
 ## Selection
 
-Target three to eight items, but publish fewer rather than fill a quiet week.
-Publish zero only after all search lanes ran and no material item qualified.
+Apply `target_items` from `news-sources.json` and the requested `news_max` cap.
+Publish fewer than the preferred minimum, including zero, rather than add a
+weak item.
 
 Keep an item only when all are true:
 
@@ -62,16 +51,8 @@ Keep an item only when all are true:
 - the page exposes enough content to support the stated development and impact;
 - it adds a distinct event or materially different practical interpretation.
 
-Drop generic Basel III or CRR III coverage without a concrete CRD VI link,
-duplicate coverage, marketing-only pages, event notices, undated pages, copied
-press releases with no added information, and speculative claims without a
-clearly attributed basis.
-
-Prefer original official announcements and accountable financial or policy
-reporting. A paywalled article may remain a secondary link only when an opened,
-accessible source independently supports the material facts. Professional or
-law-firm commentary may explain practical impact but must be labelled as
-analysis, not law.
+Apply the source priorities, source-class rules, and exclusions in
+`news-sources.json`.
 
 Deduplicate by event, not headline. When several outlets cover one event, keep
 one row and include no more than three source links. Prefer the original official
@@ -101,11 +82,10 @@ Save final items to `audit/news-items.json`:
 }
 ```
 
-Use only `official`, `news_media`, `industry`, or `professional_analysis` for
-`source_class`. Use `status_effect: none` unless the article led to separately
-opened official country evidence; then use `official_follow_up` and add
-`official_follow_up_url`. The official URL must also appear in that country's
-state evidence.
+Use a `source_class` declared in `news-sources.json`. Use `status_effect: none`
+unless the article led to separately opened official country evidence; then use
+`official_follow_up` and add `official_follow_up_url`. The official URL must
+also appear in that country's state evidence.
 
 ## Report rendering
 

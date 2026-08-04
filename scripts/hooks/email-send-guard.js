@@ -16,7 +16,7 @@
  * fired because the script was never invoked.
  *
  * Allowlist (command containing one of these → pass):
- *   - `send-report-email.py`      (Pipelines C, E, F, G)
+ *   - `send-report-email.py`      (Pipelines C, E, F, G, and CRD VI)
  *   - `send-briefing-email.py`    (Pipeline D)
  *
  * Blocklist (command contains any of these without allowlist match → Codex deny):

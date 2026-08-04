@@ -80,9 +80,10 @@ There is no bundled national-source map.
 - For a country present in the previous successful state, reuse its verified
   national `source_urls` as discovery hints, then reopen the underlying pages.
 - For a new member or a country without usable historical national URLs, run a
-  deep search for its official gazette, legislation portal, parliament,
-  finance ministry, central bank, or financial regulator together with
-  `Directive (EU) 2024/1619`, `CRD VI`, and Article 21c terms.
+  deep official-source search under `brave-search-method.md` across its gazette,
+  legislation portal, parliament, finance ministry, central bank, or financial
+  regulator together with `Directive (EU) 2024/1619`, `CRD VI`, and Article 21c
+  terms.
 - Form local-language queries dynamically from the official country and source
   pages. Do not persist a fixed country/source table in the skill.
 - Save every URL actually checked in `audit/source-checks.json` and the final

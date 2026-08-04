@@ -1,21 +1,13 @@
 ---
 name: crd-vi-transposition
-description: "Run a weekly CRD VI (Directive (EU) 2024/1619) transposition and regulatory-news tracker across the dynamically verified current EU Member States. Produces Weekly Changes, Regulatory News & Market Commentary, and the exact EY-style Country, Current Status, Summary table. Use for CRD VI, CRD6, Article 21c, third-country branch rules, weekly automated EU monitoring, market commentary, country comparisons, membership-safe change detection, or a dated all-country tracker built from European Commission, EUR-Lex, EY, news media, and independently verified national official sources."
+description: "Run a weekly CRD VI (Directive (EU) 2024/1619) transposition and regulatory-news tracker for the dynamically verified EU Member States. Uses the global Brave Search MCP, compares full-country snapshots, and produces validated Markdown and mandatory Word reports with Weekly Changes, Regulatory News & Market Commentary, and a Country / Current Status / Summary table; controlled email attaches Word by default. Use for CRD VI/CRD6, Article 21c, third-country branches, weekly EU implementation monitoring, market commentary, country comparisons, or membership-safe change detection using Commission, EUR-Lex, EY, and national official sources."
 ---
 
 # CRD VI Transposition
 
-Produce a weekly CRD VI regulatory tracker with an independent news layer and a
-country-status table containing exactly three columns:
-
-| Country | Current Status | Summary |
-|---|---|---|
-
-Merge Commission notification data, EY tracking, and independent national
-official research into one current status and one original Summary per country.
-Compare the current result with the previous successful weekly snapshot. Do not
-copy EY or news prose, expose separate Commission-status or weekly-change
-columns.
+Produce the weekly tracker by reconciling Commission, EUR-Lex, EY, and national
+official evidence, comparing it with the previous successful full-country
+snapshot, and rendering the exact report defined by the references below.
 
 Core invariants:
 
@@ -23,7 +15,8 @@ Core invariants:
 - `current-state.json` always contains every validated current Member State.
 - `weekly-diff.json` always compares two full-country states.
 - `--country` filters rendered report rows only; it never narrows state or diff scope.
-- News can trigger official follow-up but never changes Current Status by itself.
+- Follow `brave-search-method.md` and `news-sources.json` as the sole search
+  contract for this skill.
 
 ## Parameters
 
@@ -34,22 +27,23 @@ Core invariants:
 | `full_refresh` | no | auto | Full current-membership official rescan; automatic on baseline and every fourth ISO week |
 | `news_max` | no | 8 | Maximum selected news items; allowed range 1–8 |
 | `country` | no | all | Report-only filter for one or more validated Member States |
-| `output` | no | inline | `inline` or saved Markdown path |
+| `output` | no | inline | `inline` or saved `.md` path; Word uses the same stem with `.docx` |
 | `email` | no | empty | Comma-separated recipients; empty means no email |
 | `email_subject` | no | auto | `CRD VI Transposition Tracker — {report_week}` |
-| `email_attach` | no | `md` | `md` or `none` |
+| `email_attach` | no | `docx` | `docx`, `both`, `md`, or `none` |
 | `email_dry_run` | no | false | Preview the controlled email without SMTP delivery |
 
-For a saved weekly report with no explicit path, use:
-
-```text
-~/.sci-research/reports/crd-vi/{report_week}/crd-vi-transposition-{report_week}.md
-```
+Every successful run saves both formats. With `output=inline`, also render the
+Markdown in the response. For an explicit path, require `.md` and derive the
+Word path by replacing only that suffix with `.docx`; otherwise use the paths
+returned by `weekly-period.py`.
 
 ## Required references
 
 Before every run, read these files completely:
 
+- `references/brave-search-method.md` for exact MCP tool names, arguments,
+  preflight, direct-page boundary, and audit requirements;
 - `references/source-method.md` for source priority, date semantics, and conflict
   resolution;
 - `references/table-spec.md` for status adjudication, exact row content, and
@@ -68,41 +62,39 @@ contract and do not recreate their detailed rules in prompts or output.
 
 ## Workflow
 
-1. Calculate the period with one of:
+1. Preflight Brave Search exactly as specified in
+   `references/brave-search-method.md`; stop on any failed requirement. Then
+   preflight the required Word exporter:
+
+   ```bash
+   command -v pandoc >/dev/null 2>&1
+   ```
+
+   If it is absent, stop and report that CRD VI requires Pandoc to generate its
+   mandatory Word deliverable. Do not run a package manager inside the skill.
+   Then calculate the period with one of:
 
    ```bash
    python3 "$SKILL_ROOT/scripts/weekly-period.py"
    python3 "$SKILL_ROOT/scripts/weekly-period.py" --week-ending "$WEEK_ENDING"
    ```
 
-   Use the returned period, report path, and audit directory without manually
-   recomputing the week. Locate the previous successful full-country snapshot;
-   baseline when none exists.
-2. Open both official membership authorities in `member-state-method.md`, create
-   `audit/membership-snapshot.json`, and run
-   `scripts/validate-member-states.py`. Treat the validated current list as the
-   only country-scope authority. Stop the run on any missing, extra, duplicate,
-   unavailable, or conflicting membership result.
+   Use the returned values without recomputing the week; apply the explicit
+   output-path rule above when needed. Select the previous state under
+   `weekly-method.md`.
+2. Build and validate `audit/membership-snapshot.json` under
+   `member-state-method.md`; stop on any validation failure.
 3. Open the Commission page, EUR-Lex Directive and national-measures page, and
    EY tracker. Record displayed update dates, availability, and content hashes.
    Compare central categories with the prior snapshot to identify changed leads.
-4. Generate the deterministic search queue from the membership snapshot with
-   `scripts/build-weekly-search-plan.py` as specified in `weekly-method.md`.
-   Deep-check Pending/Ongoing, changed, stale, conflicted, or refresh-due
-   countries; perform the emitted lightweight known-URL checks for the remaining
-   Completed countries. Discover national official sources and local-language
-   terms dynamically; reuse prior verified URLs only as hints. Follow
-   `source-method.md` for evidence access and date rules.
-5. Independently open national official evidence for every deep-check country.
-   Apply `source-method.md` to conflicts and `table-spec.md` to assign Completed,
-   Ongoing, or Pending. Carry forward a last verified status when a source is
-   temporarily unavailable; do not turn an outage into a status transition. When
-   `country` is supplied, retain or carry forward non-selected countries so the
-   state remains full-country.
-6. Run all search lanes in `news-sources.json` for the exact reporting week.
-   Apply `news-method.md`: verify publisher dates, open source pages, deduplicate
-   by event, target three to eight material items, and save candidate decisions
-   to `audit/news-search-audit.json`.
+4. Generate and follow the deterministic deep/light search queue exactly as
+   specified in `weekly-method.md`; apply `brave-search-method.md` for discovery
+   and page retrieval.
+5. Open national official evidence for every deep-check country. Resolve status
+   and conflicts under `source-method.md` and `table-spec.md`, keeping the state
+   full-country even when the rendered report is filtered.
+6. Run every news lane and save its audit under `news-sources.json` and
+   `news-method.md`.
 7. Create the full-country `audit/current-state.json` following the exact
    snapshot contract in `weekly-method.md`. Copy the preceding full-country
    snapshot to `audit/previous-state.json`, preserving its content.
@@ -117,17 +109,11 @@ contract and do not recreate their detailed rules in prompts or output.
    Omit `--previous` for a baseline. Read the result, then create
    `audit/weekly-diff.json`. Fix unsafe transitions instead of overriding the
    script.
-9. Create `audit/news-items.json` from the final news set. Write the weekly
-   frontmatter, `## Weekly Changes`, `## Regulatory News & Market Commentary`,
-   methodology note, exact three-column country table, enforcement note, source
-   dates, practical reading, and the standard final English `## Disclaimer`
-   from `references/news-method.md`. Set `country_filter: all` or the exact
-   comma-separated requested countries in frontmatter. Weekly Changes and news
-   are incremental; the country table is cumulative as of the cutoff. Preserve
-   the exact English Commission marker and direct links inside every Summary.
-10. Create all report and audit files with `apply_patch` only. Never emit a
-   partially refreshed run as successful. A failed scheduled week must be
-   backfilled separately.
+9. Create `audit/news-items.json` and the Markdown report under
+   `weekly-method.md`, `news-method.md`, and `table-spec.md`.
+10. Create Markdown and audit files with `apply_patch` only. Manage
+    `run-metadata.json` delivery status exactly as specified in
+    `weekly-method.md`.
 11. Validate dynamic membership, final Markdown, state alignment, and news artifacts:
 
    ```bash
@@ -146,11 +132,18 @@ contract and do not recreate their detailed rules in prompts or output.
    Add `--allow-subset` to the country-table command only when `country_filter`
    is not `all`. Never use it for current-state validation or weekly diff. Fix
    every error.
-12. When `email` is non-empty, materialize the report at the saved output path
-    (the default report path when `output` is `inline`), build the concise body
-    specified in `references/email-spec.md`, and invoke only the controlled
-    sender. Add `--dry-run` when `email_dry_run=true`; omit `--attach` when
-    `email_attach=none`. Email failure must not change or remove local outputs.
+12. Export the validated Markdown to the mandatory Word path:
+
+    ```bash
+    pandoc "$OUT_MD" -o "$OUT_DOCX"
+    python3 -m zipfile -t "$OUT_DOCX"
+    ```
+
+    Confirm both files exist and are non-empty. On any export or package failure,
+    keep the metadata non-successful and do not send email. After success, set
+    `delivery_status: successful` with `apply_patch`. Generate the binary DOCX
+    only through Pandoc.
+13. When `email` is non-empty, follow `references/email-spec.md`.
 
 ## Required legal-date labels
 
@@ -167,11 +160,9 @@ Never call 10 July 2026 the general CRD VI transposition deadline.
 
 ## Completion report
 
-Report the ISO week, period and cutoff, dynamic membership count and authority
-URLs, country count, material country-change count, regulatory-news count,
-membership changes, status transitions, status counts, Commission and
-EY page update dates, carried-forward or conflicted sources, validation results,
-saved report/audit paths, and the email result when email was requested.
+Report the period and cutoff, membership and country/change/news counts, status
+transitions and counts, key source dates or failures, Brave query counts,
+validation results, absolute output paths, and any requested email result.
 
 ## Examples
 

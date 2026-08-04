@@ -133,6 +133,14 @@ class WeeklyPeriodTests(unittest.TestCase):
         self.assertEqual(result["period_start"], "2026-07-27")
         self.assertEqual(result["period_end"], "2026-08-02")
         self.assertEqual(result["discovery_start"], "2026-07-25")
+        self.assertEqual(
+            Path(result["report_path"]).name,
+            "crd-vi-transposition-2026-W31.md",
+        )
+        self.assertEqual(
+            Path(result["report_docx_path"]).name,
+            "crd-vi-transposition-2026-W31.docx",
+        )
 
     def test_sunday_run_does_not_report_incomplete_sunday(self) -> None:
         timezone = ZoneInfo("Europe/London")
@@ -243,6 +251,32 @@ class WeeklySearchPlanTests(unittest.TestCase):
 
 
 class WeeklyContractTests(unittest.TestCase):
+    def test_brave_search_mcp_is_the_only_search_provider(self) -> None:
+        method = (SKILL_ROOT / "references/brave-search-method.md").read_text(
+            encoding="utf-8"
+        )
+        registry = json.loads(
+            (SKILL_ROOT / "references/news-sources.json").read_text(encoding="utf-8")
+        )
+        self.assertIn("mcp__brave_search__brave_web_search", method)
+        self.assertIn("mcp__brave_search__brave_news_search", method)
+        self.assertIn("mcp__brave_search__brave_llm_context", method)
+        self.assertEqual(registry["search_provider"]["mcp_server"], "brave_search")
+        self.assertFalse(registry["search_provider"]["native_search_fallback"])
+        self.assertEqual(
+            registry["search_provider"]["news_parameters"]["freshness"],
+            "<period_start>to<period_end>",
+        )
+
+    def test_word_export_and_default_email_attachment_are_required(self) -> None:
+        skill = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
+        email_spec = (SKILL_ROOT / "references/email-spec.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("| `email_attach` | no | `docx` |", skill)
+        self.assertIn('pandoc "$OUT_MD" -o "$OUT_DOCX"', skill)
+        self.assertIn("The default is `email_attach=docx`", email_spec)
+
     def test_fixed_country_source_registry_is_absent(self) -> None:
         self.assertFalse(
             (SKILL_ROOT / "references/country-sources.json").exists()

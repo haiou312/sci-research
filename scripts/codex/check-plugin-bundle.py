@@ -76,6 +76,8 @@ def validate(plugin_root: Path) -> tuple[int, int]:
 
     crd_root = skills_root / "crd-vi-transposition"
     crd_required = (
+        "references/brave-search-method.md",
+        "references/email-spec.md",
         "references/member-state-method.md",
         "references/news-method.md",
         "references/news-sources.json",
@@ -95,9 +97,35 @@ def validate(plugin_root: Path) -> tuple[int, int]:
         fail(f"missing CRD VI weekly resources: {', '.join(missing_crd)}")
     if (crd_root / "references/country-sources.json").exists():
         fail("CRD VI must not bundle a fixed country or national-source registry")
+    brave_method_text = (crd_root / "references/brave-search-method.md").read_text(
+        encoding="utf-8"
+    )
+    for tool_name in (
+        "mcp__brave_search__brave_web_search",
+        "mcp__brave_search__brave_news_search",
+    ):
+        if tool_name not in brave_method_text:
+            fail(f"CRD VI Brave method is missing required MCP tool: {tool_name}")
     news_registry = json.loads(
         (crd_root / "references/news-sources.json").read_text(encoding="utf-8")
     )
+    if news_registry.get("search_provider") != {
+        "mcp_server": "brave_search",
+        "web_tool": "mcp__brave_search__brave_web_search",
+        "news_tool": "mcp__brave_search__brave_news_search",
+        "context_tool": "mcp__brave_search__brave_llm_context",
+        "native_search_fallback": False,
+        "news_parameters": {
+            "country": "ALL",
+            "search_lang": "en",
+            "count": 50,
+            "offset": 0,
+            "safesearch": "moderate",
+            "spellcheck": True,
+            "freshness": "<period_start>to<period_end>",
+        },
+    }:
+        fail("CRD VI news registry must use Brave Search MCP without native fallback")
     news_lanes = news_registry.get("search_lanes")
     lane_ids = {
         item.get("id")

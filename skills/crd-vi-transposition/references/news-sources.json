@@ -5,6 +5,22 @@
     "maximum": 8,
     "allow_zero_when_no_material_items": true
   },
+  "search_provider": {
+    "mcp_server": "brave_search",
+    "web_tool": "mcp__brave_search__brave_web_search",
+    "news_tool": "mcp__brave_search__brave_news_search",
+    "context_tool": "mcp__brave_search__brave_llm_context",
+    "native_search_fallback": false,
+    "news_parameters": {
+      "country": "ALL",
+      "search_lang": "en",
+      "count": 50,
+      "offset": 0,
+      "safesearch": "moderate",
+      "spellcheck": true,
+      "freshness": "<period_start>to<period_end>"
+    }
+  },
   "search_lanes": [
     {
       "id": "national_transposition",

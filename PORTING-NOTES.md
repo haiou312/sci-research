@@ -15,6 +15,8 @@ The repository now uses native Codex plugin structure and TOML subagents. This n
 - Pipelines D and F declare python-docx in requirements.txt and never install packages during a run.
 - Pipeline F defines five parallel discovery lanes, a deterministic Companies House collector/diff, a dedicated entity analyst, Verifier, Fact Manifest, Chinese Writer/Editor, a format gate, and institutional DOCX export.
 - Pipeline G defines a deterministic read-only Pipeline C collector, six/seven category Curators, cross-category Verifier, locked Fact Manifest, multilingual Writer/Editor, monthly format gate, and no-web evidence boundary.
+- CRD VI requires a validated Markdown report plus a structurally valid Pandoc-generated Word report for every successful week; controlled email remains opt-in and attaches Word by default.
+- CRD VI uses the global `brave_search` MCP for all discovery and news search, with exact Web/News tool preflight and no Google News or native-search fallback.
 
 ## Remaining runtime validation
 
@@ -24,6 +26,7 @@ The repository now uses native Codex plugin structure and TOML subagents. This n
 4. Run Pipeline E. Verify Yahoo company/executive resolution, non-mainland-China media and public-social discovery, low/medium/high verification, clean-scan silence, and email dry-run.
 5. Run Pipeline F without email. Verify all five Scanner lanes, scoped Companies House API/watchlist coverage, identity confidence labels, format gate, image fallback, DOCX generation, and agent closure.
 6. Run Pipeline G on a complete historical month and a partial current month. Verify one-report-per-date selection, visible coverage, event clustering, cross-category deduplication, bilingual evidence parity, format gate, DOCX generation, and agent closure.
+7. Run CRD VI for a fixed historical week. Verify Brave Web/News tools and the capability probe, absence of Google News/native-search fallback, the five evidence/format gates, mandatory DOCX export and package test, and an email dry-run with the default Word attachment.
 
 ## Runtime assumptions to confirm
 

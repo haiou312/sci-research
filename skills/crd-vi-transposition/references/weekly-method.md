@@ -101,22 +101,16 @@ Omit `--previous` for the baseline, repeat `--changed-country` as needed, and ad
 `--full-refresh` on a scheduled full refresh. Follow the emitted `deep_checks`
 and `light_checks`; do not manually downgrade a deep-check country to save time.
 
-Discover official national portals and relevant local-language search terms dynamically as
-specified in `member-state-method.md`, together with `2024/1619`, `CRD VI`,
-`CRD6`, known national bill or act identifiers, and third-country-branch terms.
-Search-engine recency filters are discovery aids only. Open the page and verify
-its own publication or update date.
+Discover official national portals and relevant local-language terms under
+`brave-search-method.md` and `member-state-method.md`, together with
+`2024/1619`, `CRD VI`, `CRD6`, known national bill or act identifiers, and
+third-country-branch terms. Treat discovery filters only as search aids. Open
+the canonical page and verify its own publication or update date.
 
 Hash normalized substantive content, such as the Commission country groups or a
 national measure's title/status block. Remove navigation, cookie banners,
 session tokens, and generated page timestamps before hashing; a raw full-page
 HTML hash is too noisy to trigger country research safely.
-
-The Commission categories describe measures communicated to the Commission.
-They are not, by themselves, proof that every national provision is legally
-complete. EBA and ECB materials belong in a separate EU implementation watch;
-they may explain Article 21c, authorisation, reporting, SREP, or opinions on
-draft laws, but do not directly determine a country's transposition status.
 
 ## Weekly report contract
 
@@ -141,9 +135,7 @@ Use `previous_successful_week: none` for the first baseline. Add a
 `## Weekly Changes` section, then the news section specified in
 `news-method.md`, then the table specified in `table-spec.md`. List only
 material country or EU-implementation changes in Weekly Changes; when
-`change_count` is zero, state that no material change was found. For a changed
-country, begin its Summary with `Weekly change:`. Unchanged rows retain their
-cumulative Summary.
+`change_count` is zero, state that no material change was found.
 `news_count` records news rows and is independent of `change_count`. End the
 English report with exactly one `## Disclaimer` section after the country table,
 using the AI/process disclosure template in `news-method.md`.
@@ -153,6 +145,7 @@ Save successful runs under:
 ```text
 ~/.sci-research/reports/crd-vi/{report_week}/
 ├── crd-vi-transposition-{report_week}.md
+├── crd-vi-transposition-{report_week}.docx
 └── audit/
     ├── current-state.json
     ├── membership-snapshot.json
@@ -165,3 +158,9 @@ Save successful runs under:
 ```
 
 All audit JSON must contain source URLs and dates, not copied article prose.
+Before Word export, `run-metadata.json` must contain
+`delivery_status: pending_word_export` plus the absolute Markdown and Word
+paths. Change it to `delivery_status: successful` only after the Markdown is
+validated and exported to a non-empty, structurally valid DOCX package. Auto
+selection of a previous state must ignore a week without that success marker or
+without either saved report.

@@ -58,6 +58,9 @@ def build_period(
         "full_refresh_due": iso_week % 4 == 0,
         "report_dir": str(report_dir),
         "report_path": str(report_dir / f"crd-vi-transposition-{report_week}.md"),
+        "report_docx_path": str(
+            report_dir / f"crd-vi-transposition-{report_week}.docx"
+        ),
         "audit_dir": str(report_dir / "audit"),
     }
 

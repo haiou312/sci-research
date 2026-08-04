@@ -12,9 +12,9 @@
 | F | $sci-research:china-outbound-opportunity-briefing | 中资企业英国及欧洲商机拓展情报 | Markdown、机构化 docx、可选邮件 |
 | G | $sci-research:monthly-news-intelligence | 单国或地区指定月份热点新闻 | 与 Pipeline C 同结构的 Markdown、可选 docx 与邮件 |
 
-独立监管追踪：`$sci-research:crd-vi-transposition` 每次先从两个欧盟官方来源动态核对当前成员国，禁止固定国家数量或本地国家来源表；校验后的成员国快照决定完整搜索范围，各国官方来源当次动态发现或仅将历史已验证 URL 作为提示。周报按 Europe/London 固定 ISO 周比较上次成功快照，再按 `Weekly Changes → Regulatory News & Market Commentary → Country / Current Status / Summary` 输出。新闻层只收录本周材料并单独审计，不能脱离官方后续证据改变国家状态；它不使用自定义 TOML agent，也不属于 C-G 流水线。
+独立监管追踪：`$sci-research:crd-vi-transposition` 每次先从两个欧盟官方来源动态核对当前成员国，禁止固定国家数量或本地国家来源表；所有搜索发现均使用全局 `brave_search` MCP，不回退到 Google News 或 Codex 原生 WebSearch，已知官方 URL 仍须直接打开核验。校验后的成员国快照决定完整搜索范围，各国官方来源当次动态发现或仅将历史已验证 URL 作为提示。周报按 Europe/London 固定 ISO 周比较上次成功快照，再按 `Weekly Changes → Regulatory News & Market Commentary → Country / Current Status / Summary` 输出经校验的 Markdown 与 Word；Word 是成功运行的必需交付物，邮件默认附 Word。新闻层只收录本周材料并单独审计，不能脱离官方后续证据改变国家状态；它不使用自定义 TOML agent，也不属于 C-G 流水线。
 
-所有子 agent 都是带 `sci-research-` 命名空间的原生 Codex TOML 定义，源文件位于 `.codex/agents/*.toml`。Marketplace 更新后先用 `$sci-research:setup-sci-research-runtime` 同步到运行 workspace 的 `.codex/agents/`，并校验项目级 `.codex/config.toml` 中 `web_search = "live"` 与 `agents.max_threads >= 10`，再新开 Codex task。Pipeline C 还要求用户级启用名为 `google_news` 的 MCP，并让新 task 暴露 `mcp__google_news__search_news` 与 `mcp__google_news__get_news_article`；Pipeline C 不再使用 Codex 原生 WebSearch。
+所有子 agent 都是带 `sci-research-` 命名空间的原生 Codex TOML 定义，源文件位于 `.codex/agents/*.toml`。Marketplace 更新后先用 `$sci-research:setup-sci-research-runtime` 同步到运行 workspace 的 `.codex/agents/`，并校验项目级 `.codex/config.toml` 中 `web_search = "live"` 与 `agents.max_threads >= 10`，再新开 Codex task。Pipeline C 还要求用户级启用名为 `google_news` 的 MCP，并让新 task 暴露 `mcp__google_news__search_news` 与 `mcp__google_news__get_news_article`；Pipeline C 不再使用 Codex 原生 WebSearch。CRD VI 则要求全局启用名为 `brave_search` 的 MCP，并让新 task 暴露 `mcp__brave_search__brave_web_search` 与 `mcp__brave_search__brave_news_search`；可用时使用 `mcp__brave_search__brave_llm_context` 获取来源上下文。
 
 - 每个 stage 通过 custom-agent selector 启动其精确命名 role，并使用 `fork_turns="none"`；模型与 model_reasoning_effort 从 TOML 读取。`task_name` 仅是线程标签。
 - 每个 stage 的输出和文件交接完成后必须调用 `close_agent`；并行组全部收齐后逐一关闭，失败或 schema 无效的尝试也要先关闭再重试。关闭失败时停止继续 spawn。
@@ -125,6 +125,7 @@
 | E 声誉报告 | ~/.sci-research/reports/reputation/{date}/ |
 | F 商机简报 | ~/.sci-research/reports/china-opportunity-briefings/{date_to}/ |
 | G 月度热点新闻 | ~/.sci-research/reports/monthly-news/{month}/ |
+| CRD VI 周报 | ~/.sci-research/reports/crd-vi/{report_week}/ |
 
 - 输出目录可被相应的 --out-dir 或 --source-dir 覆盖。
 
@@ -133,6 +134,7 @@
 - 所有邮件一律通过受控脚本：C/E/F/G/CRD VI 使用 scripts/send-report-email.py，D 使用 skills/daily-briefing/scripts/send-briefing-email.py。
 - 不要内嵌 smtplib、sendmail 或 mail -s。email-send-guard hook 会阻断这类调用。
 - 真实邮件必须由用户明确请求；验证使用 --email-dry-run。
+- CRD VI 每次成功运行都要求 Pandoc 生成同名 docx；缺少 Pandoc 或 Word 导出/包校验失败时保留 Markdown 与审计文件，但不得标记成功或发送邮件。CRD VI 的 email_attach 默认值为 docx。
 - 安装或更新 D/F 的 docx 依赖：python3 -m pip install --user --upgrade -r requirements.txt。不要自动修改用户 Python 环境。
 
 ## 质量钩子
@@ -168,6 +170,7 @@
 | G 日报只读索引脚本 | skills/monthly-news-intelligence/scripts/collect-monthly-reports.py |
 | G agent 行为 | .codex/agents/sci-research-monthly-*.toml |
 | CRD VI 周度编排、动态成员国、状态、日期、新闻与邮件方法 | skills/crd-vi-transposition/SKILL.md、skills/crd-vi-transposition/references/ |
+| CRD VI Brave Search MCP 工具、参数、直接开页边界与审计 | skills/crd-vi-transposition/references/brave-search-method.md |
 | CRD VI 成员国门、周期、搜索队列、current-state、快照差异、国家表与新闻验证 | skills/crd-vi-transposition/scripts/validate-member-states.py、skills/crd-vi-transposition/scripts/weekly-period.py、skills/crd-vi-transposition/scripts/build-weekly-search-plan.py、skills/crd-vi-transposition/scripts/validate-current-state.py、skills/crd-vi-transposition/scripts/diff-weekly-state.py、skills/crd-vi-transposition/scripts/validate-country-table.py、skills/crd-vi-transposition/scripts/validate-news-section.py |
 | Runtime 安装与检查 | skills/setup-sci-research-runtime/、skills/setup-sci-research-runtime/runtime/config.toml、scripts/codex/check-plugin-bundle.py |
 | 插件清单与市场条目 | .codex-plugin/plugin.json、.agents/plugins/marketplace.json |
@@ -175,12 +178,12 @@
 ## 验证顺序
 
 1. 静态检查：TOML、JSON、Python、Node、Bash 语法与 git diff --check。
-2. Runtime 验证：在隔离 workspace 安装、检查、升级、配置冲突与卸载；确认 `web_search = "live"`、`agents.max_threads >= 10` 与用户级 `google_news` MCP 已启用，并在新 task 逐一验证两个 MCP 工具、命名 agent selector、模型、effort 与 close-agent 生命周期。
+2. Runtime 验证：在隔离 workspace 安装、检查、升级、配置冲突与卸载；确认 `web_search = "live"`、`agents.max_threads >= 10`、用户级 `google_news` MCP 与全局 `brave_search` MCP 已启用，并在新 task 逐一验证 Pipeline C 两个 Google News 工具、CRD VI 的 Brave Web/News 工具、命名 agent selector、模型、effort 与 close-agent 生命周期。
 3. C 最小首跑：无邮件，确认 Scanner 只调用 `search_news`、Writer/Editor 只用 `search_news` + `get_news_article`、无原生 WebSearch 回退，以及原生 agent 串联、apply_patch、hook、直接格式门与 pandoc 输出。
 4. D 验证：先安装 requirements.txt，使用 C 产出的样例 Markdown，邮件只做 dry-run。
 5. E 验证：测试 Yahoo 企业/高管确认、非中国大陆媒体与公开社交媒体搜索、低中高判断、干净结果静默退出与邮件 dry-run。
 6. F 验证：测试五 lane 并行、Companies House 有/无 API key、watchlist 与 snapshot diff、confirmed/probable/unverified、格式门、图片回退、docx 渲染和邮件 dry-run。
 7. G 验证：用完整月和当前不完整月测试单日单语言选择、缺失日期、6/7 栏目 Curator 并行、跨栏目去重、Fact Manifest、双语一致性、月报格式门、docx 与邮件 dry-run。
-8. CRD VI 验证：测试固定周一至周日周期与回补、双官方来源动态成员国一致性、成员国增减/重复/冲突、动态国家全表与子集、动态官方来源发现、基线/状态变化/来源失败/禁止无理由倒退、欧委会与成员国官方进度冲突、来源更新时间早于核查日、本周新闻日期与事件去重、新闻/状态证据隔离，以及成员国/国家表/当前快照/周度差异/新闻五重格式门。
+8. CRD VI 验证：测试 Brave MCP 工具缺失与鉴权失败预检、Web/News/Context 工具参数、禁止 Google News/原生 WebSearch 回退、固定周一至周日周期与回补、双官方来源动态成员国一致性、成员国增减/重复/冲突、动态国家全表与子集、动态官方来源发现、基线/状态变化/来源失败/禁止无理由倒退、欧委会与成员国官方进度冲突、来源更新时间早于核查日、本周新闻日期与事件去重、新闻/状态证据隔离、成员国/国家表/当前快照/周度差异/新闻五重格式门、必需 Word 导出与包校验，以及默认附 Word 的邮件 dry-run。
 
 当前 C/D/E 只完成了静态与安装打包验证，真实端到端首跑仍待执行；F 已完成静态检查、Companies House 脚本测试、格式门和样例 docx 视觉验证，原生 agent 联网首跑仍待执行；G 已完成静态与安装打包验证、日报收集脚本真实样本检查及格式门单元测试，原生 agent 离线首跑仍待执行；CRD VI 已完成静态、周周期/动态成员国/快照差异/新闻层/五重格式门单元测试、marketplace 集成及德国/法国/荷兰三国独立联网前向测试，动态全成员国周度联网首跑仍待执行。

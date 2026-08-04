@@ -2,7 +2,7 @@
 
 > A **Codex plugin** with **five specialised multi-agent workflows** plus a CRD VI transposition and regulatory-news tracker for daily and monthly news intelligence, branded briefings, company reputation monitoring, China-outbound commercial opportunity development, and EU regulatory monitoring.
 
-Given a country, company, date, month, or reporting window, this plugin produces a polished, sourced deliverable: daily or monthly country-news report, branded Word document, reputational risk email, UK/Europe opportunity briefing, or CRD VI weekly changes, news commentary, and country-status table.
+Given a country, company, date, month, or reporting window, this plugin produces a polished, sourced deliverable: daily or monthly country-news report, branded Word document, reputational risk email, UK/Europe opportunity briefing, or CRD VI weekly Markdown and Word reports with changes, news commentary, and a country-status table.
 
 *(The plugin name is a historical artifact — the original `/sci-research` deep-research pipeline has been removed; the name is kept for marketplace identity and install-path stability.)*
 
@@ -28,9 +28,9 @@ Pipeline C also writes the capped Scanner Batch and deduplication-and-selection 
 
 | Command | Purpose | Output |
 |---|---|---|
-| `$sci-research:crd-vi-transposition` | Dynamically verify current EU membership, then run a fixed-week snapshot-and-delta check plus exact-week CRD VI regulatory-news monitoring | `Weekly Changes`, `Regulatory News & Market Commentary`, the exact `Country / Current Status / Summary` table, membership audit, and regulatory audit JSON for all current Member States or a filtered subset |
+| `$sci-research:crd-vi-transposition` | Use the global Brave Search MCP to dynamically verify current EU membership, then run a fixed-week snapshot-and-delta check plus exact-week CRD VI regulatory-news monitoring | Validated Markdown + mandatory Word report with `Weekly Changes`, `Regulatory News & Market Commentary`, the exact `Country / Current Status / Summary` table, membership audit, and regulatory audit JSON for all current Member States or a filtered subset |
 
-This tracker is an independent skill rather than a sixth custom-agent pipeline. Every run reconciles two official EU Member-State lists; no country count or national-source registry is bundled. The validated membership snapshot determines the complete table and search plan, while national official sources are discovered dynamically or carried forward only as verified historical hints. It separates the research date from each source's update date, distinguishes completed transposition from future Article 21c application, and validates the final table mechanically before delivery. Its news section covers only the reporting week and explains practical impact; media commentary cannot change `Current Status` unless an official follow-up source is also recorded in the country snapshot.
+This tracker is an independent skill rather than a sixth custom-agent pipeline. Every run reconciles two official EU Member-State lists; no country count or national-source registry is bundled. All search and discovery uses the globally configured `brave_search` MCP, while known canonical pages are opened directly for evidence verification; Google News and Codex native search are not fallback providers. The validated membership snapshot determines the complete table and search plan, while national official sources are discovered dynamically or carried forward only as verified historical hints. It separates the research date from each source's update date, distinguishes completed transposition from future Article 21c application, and validates the final table mechanically before exporting the mandatory Word report. Its news section covers only the reporting week and explains practical impact; media commentary cannot change `Current Status` unless an official follow-up source is also recorded in the country snapshot. When email is explicitly requested, the Word report is the default attachment.
 
 ---
 
@@ -48,7 +48,7 @@ This tracker is an independent skill rather than a sixth custom-agent pipeline. 
 - **Branded Word output** via SPD Bank template (`$sci-research:daily-briefing`)
 - **Commercial opportunity pipeline** for China-to-UK/Europe expansion, M&A, investment, and Companies House changes
 - **Evidence-first Companies House radar** with confirmed/probable/unverified Chinese-nexus labels and explicit coverage limits
-- **Weekly CRD VI transposition and news tracker** with fixed ISO-week cutoffs, two-source dynamic membership reconciliation, dynamic national-source discovery, prior-state comparison, four exact-week news lanes, outage-safe carry-forward, Commission/EY conflict resolution, evidence isolation, and deterministic membership/table/state/diff/news gates
+- **Weekly CRD VI transposition and news tracker** with Brave Web/News MCP discovery, fixed ISO-week cutoffs, two-source dynamic membership reconciliation, dynamic national-source discovery, prior-state comparison, four exact-week news lanes, outage-safe carry-forward, Commission/EY conflict resolution, evidence isolation, deterministic membership/table/state/diff/news gates, mandatory Word export, and Word-by-default email attachment
 - **Gmail SMTP email delivery** built into all five pipelines
 - **Quality hooks** enforce Pipeline C/F/G Markdown format and email-send safety
 - **Multilingual** — Chinese / English / Japanese output
@@ -84,13 +84,28 @@ codex mcp get google_news
 
 The command must report `enabled: true`. MCP tools are loaded when a Codex task starts, so restart the task after adding or changing this server. Pipeline C has no Codex native WebSearch fallback.
 
-Check the optional Pipeline C docx exporter separately:
+CRD VI separately requires a globally configured MCP server named
+`brave_search`. Verify it before starting a CRD VI task:
+
+```bash
+codex mcp get brave_search
+```
+
+The command must report `enabled: true`, and the server must have a working
+`BRAVE_API_KEY`. Start a new task after registration or key changes and confirm
+that it exposes `mcp__brave_search__brave_web_search` and
+`mcp__brave_search__brave_news_search`. CRD VI does not fall back to Google News
+or Codex native search.
+
+Check Pandoc separately. It is optional for Pipeline C but required for every
+successful CRD VI run:
 
 ```bash
 pandoc --version
 ```
 
-If `pandoc` is unavailable, Pipeline C can still produce Markdown but skips docx export.
+If `pandoc` is unavailable, Pipeline C can still produce Markdown but skips
+docx export; CRD VI stops before research because its Word report is mandatory.
 
 #### Step 2 — Add the Git marketplace
 
@@ -142,7 +157,7 @@ The setup performs a bundle check and dry-run before installing. It creates:
 
 With the recommended default workspace, `<runtime-workspace>` is `~/.sci-research`.
 
-The project config sets `web_search = "live"`, `agents.max_threads = 10`, and `agents.max_depth = 1`. Native live search remains available to Pipelines E/F; Pipeline C uses only the separately configured `google_news` MCP. China reports need seven concurrent category Scanner threads; the extra slots allow clean stage handoff without recursive delegation. If `.codex/config.toml` already exists, setup preserves user-owned content byte-for-byte and requires both live search and `agents.max_threads >= 10`; a missing or invalid value produces the exact TOML block to add.
+The project config sets `web_search = "live"`, `agents.max_threads = 10`, and `agents.max_depth = 1`. Native live search remains available to Pipelines E/F; Pipeline C uses only the separately configured `google_news` MCP, and CRD VI uses only the separately configured global `brave_search` MCP for search. China reports need seven concurrent category Scanner threads; the extra slots allow clean stage handoff without recursive delegation. If `.codex/config.toml` already exists, setup preserves user-owned content byte-for-byte and requires both live search and `agents.max_threads >= 10`; a missing or invalid value produces the exact TOML block to add.
 
 It does not modify global `~/.codex/config.toml`, install Python packages, or run a news pipeline. If it reports an unmanaged-file conflict, a locally modified managed agent, or an invalid existing runtime setting, resolve the named file instead of overwriting it manually.
 
@@ -171,7 +186,7 @@ In the new task, run a runtime-only check:
 Use $sci-research:setup-sci-research-runtime to check the project-scoped runtime in this workspace. Do not run a news pipeline.
 ```
 
-The runtime check must report 20 agents, `max_threads` of at least 10, and a matching plugin version before first use. Pipeline C then performs a separate task-level preflight for `mcp__google_news__search_news` and `mcp__google_news__get_news_article`; if either is absent, verify `codex mcp get google_news` and start another new task.
+The runtime check must report 20 agents, `max_threads` of at least 10, and a matching plugin version before first use. Pipeline C then performs a separate task-level preflight for `mcp__google_news__search_news` and `mcp__google_news__get_news_article`; if either is absent, verify `codex mcp get google_news` and start another new task. CRD VI performs its own preflight for `mcp__brave_search__brave_web_search` and `mcp__brave_search__brave_news_search`; if either is absent or its capability probe fails, verify `codex mcp get brave_search`, configure the Brave key, and start another new task.
 
 #### Step 8 — Run a no-email smoke test
 
@@ -375,6 +390,7 @@ By default, local output is independent of the plugin install location and any G
 | E reputation report | `~/.sci-research/reports/reputation/{date}/` |
 | F opportunity briefing | `~/.sci-research/reports/china-opportunity-briefings/{date_to}/` |
 | G monthly news | `~/.sci-research/reports/monthly-news/{month}/` |
+| CRD VI weekly tracker | `~/.sci-research/reports/crd-vi/{report_week}/` |
 
 ```text
 # Today's multi-country briefing with default countries and 14 stories
@@ -450,6 +466,32 @@ $sci-research:monthly-news-intelligence --country "United Kingdom" \
 # Require a usable China daily report for every expected date and write bilingual output
 $sci-research:monthly-news-intelligence --country "China" \
   --month 2026-06 --lang zh+en --require-complete-month
+```
+
+### CRD VI — `$sci-research:crd-vi-transposition`
+
+```text
+$sci-research:crd-vi-transposition \
+  [--week-ending YYYY-MM-DD] [--country <name,...>] \
+  [--output inline|<report.md>] \
+  [--email <a@x.com,b@y.com>] [--email-subject <text>] \
+  [--email-attach docx|both|md|none] [--email-dry-run]
+```
+
+Every successful run uses Brave Web Search for official-source discovery and
+Brave News Search for the four weekly news lanes, then saves matching `.md` and
+`.docx` reports. The Word file is
+mandatory; a Pandoc export or DOCX package-validation failure prevents the week
+from being marked successful and prevents email delivery. Email remains opt-in,
+but when requested it attaches the Word report by default.
+
+```text
+# Latest completed week, local Markdown + Word only
+$sci-research:crd-vi-transposition
+
+# Fixed week with a controlled email dry-run; Word is attached by default
+$sci-research:crd-vi-transposition --week-ending 2026-08-02 \
+  --email team@example.com --email-dry-run
 ```
 
 ---
@@ -534,6 +576,18 @@ Pipeline C Markdown → deterministic source index → monthly-curator ×categor
 | `sci-research-monthly-writer` | gpt-5.6-sol / high | Synthesizes monthly event narratives in the Pipeline C country-report structure, one instance per language |
 | `sci-research-monthly-editor` | gpt-5.6-sol / high | Runs local-evidence fact, provenance, synthesis, format, and native-language passes without web access |
 
+### CRD VI — `$sci-research:crd-vi-transposition`
+
+```text
+Brave MCP preflight → dynamic membership gate → full-country evidence refresh
+  → weekly state diff → Brave exact-week news audit → five validation gates → Pandoc DOCX
+  → controlled email with Word attached by default (optional)
+```
+
+The tracker has no custom TOML agent. It saves the validated Markdown and audit
+state first, exports and checks the mandatory Word package, and only then may
+invoke the controlled email sender.
+
 ---
 
 ## Pipeline C Minimal Discovery
@@ -555,7 +609,7 @@ Detailed rules:
 | `daily-news-format-check` | C | PostToolUse:apply_patch + direct pre-delivery check | Reports count, numbering, URL, quote-mark, body-length, and per-category-limit violations; Pipeline C records `FORMAT_WARNING` and continues exporting existing content |
 | `monthly-news-format-check` | G | PostToolUse:apply_patch + direct pre-delivery check | Reuses Pipeline C story/reference/body-length checks and enforces the monthly H1, source-coverage note, and country-derived category order |
 | `opportunity-briefing-format-check` | F | PostToolUse:apply_patch + direct pre-delivery check | Enforces section order, action tables, story fields, sources, image provenance/fallback, Companies House confidence, and disclaimer |
-| `email-send-guard` | C / D / E / F / G | PreToolUse:Bash | **Blocks** inline `smtplib` / `MIMEMultipart` / `sendmail` Bash commands that bypass the sanctioned `send-*-email.py` scripts |
+| `email-send-guard` | C / D / E / F / G / CRD VI | PreToolUse:Bash | **Blocks** inline `smtplib` / `MIMEMultipart` / `sendmail` Bash commands that bypass the sanctioned `send-*-email.py` scripts |
 
 ---
 
@@ -625,7 +679,7 @@ sci-research/
 │   │   ├── agents/openai.yaml
 │   │   ├── references/                      # Selection, schemas, output, verification
 │   │   └── scripts/collect-monthly-reports.py
-│   ├── crd-vi-transposition/                 # Weekly EU regulatory tracker
+│   ├── crd-vi-transposition/                 # Weekly Markdown + mandatory Word EU regulatory tracker
 │   │   ├── SKILL.md
 │   │   ├── agents/openai.yaml
 │   │   ├── references/                      # Membership/weekly/news/source methods and table contract
@@ -643,7 +697,7 @@ sci-research/
 │   │   ├── monthly-news-format-check.js
 │   │   ├── opportunity-briefing-format-check.js
 │   │   └── email-send-guard.js
-│   └── send-report-email.py                 # Gmail SMTP (Pipelines C / E / F / G)
+│   └── send-report-email.py                 # Gmail SMTP (Pipelines C / E / F / G / CRD VI)
 ├── tests/
 │   ├── test_hooks.py                        # Codex hook protocol tests
 │   ├── test_monthly_news_collector.py       # Pipeline G source-index tests
@@ -684,6 +738,8 @@ sci-research/
 | Pipeline F Companies House method | `skills/china-outbound-opportunity-briefing/references/companies-house-method.md` + collector/diff scripts |
 | Pipeline F output / image / layout policy | `skills/china-outbound-opportunity-briefing/references/output-spec.md` + `references/image-policy.md` + `references/layout-benchmarks.md` |
 | Pipeline F agent behavior | `.codex/agents/sci-research-opportunity-*.toml` + `.codex/agents/sci-research-companies-house-analyst.toml` |
+| CRD VI Word export / default email attachment | `skills/crd-vi-transposition/SKILL.md` + `skills/crd-vi-transposition/references/email-spec.md` |
+| CRD VI Brave Search tools and query rules | `skills/crd-vi-transposition/references/brave-search-method.md` |
 | New output language (Pipeline C) | `.codex/agents/sci-research-daily-news-writer.toml` + `skills/daily-news-intelligence/references/language-spec.md` |
 | Adding hook / changing email-send guard | `scripts/hooks/email-send-guard.js` + the relevant SKILL.md email step |
 
@@ -695,8 +751,8 @@ sci-research/
 - Node.js ≥ 18 (for hook scripts)
 - Python ≥ 3.11 (required by runtime setup; also used by email delivery and Pipelines D/F)
 - Pipelines D/F dependency (install or update from the plugin root): `python3 -m pip install --user --upgrade -r requirements.txt`
-- `pandoc` is optional; without it Pipeline C still produces Markdown but skips docx export
-- Internet access; Pipeline C uses the user-level `google_news` MCP for search and article text, while Pipelines E/F use Codex WebSearch
+- `pandoc` is optional for Pipeline C; it is required for successful CRD VI Word export
+- Internet access; Pipeline C uses the user-level `google_news` MCP, CRD VI uses the global `brave_search` MCP, and Pipelines E/F use Codex WebSearch
 - Gmail SMTP credentials (only when `--email` is used; see `.env.example`)
 - Companies House API key (optional in Pipeline F `auto` mode; required in `required` mode)
 - No separate social-media MCP configuration is required. Pipeline E uses public, openable social content discovered through WebSearch.

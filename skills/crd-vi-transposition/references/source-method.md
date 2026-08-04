@@ -16,11 +16,9 @@ For the separate regulatory-news section, apply `news-method.md` and
 news row and practical-impact explanation, but they remain below official legal
 evidence for country-status adjudication.
 
-For every run, derive the country scope from `membership-snapshot.json` and
-discover national official URLs and local-language terms dynamically under
-`member-state-method.md`. Prior verified URLs are discovery hints, not evidence
-that a page still contains the current CRD VI position; reopen the underlying
-item.
+Derive country scope and discover national official URLs under
+`member-state-method.md` and `brave-search-method.md`. Reopen prior verified URLs;
+they are discovery hints, not current evidence.
 
 Open the underlying page before using a fact. Do not rely on a search-result
 snippet for a legal status, date, law name, or scope conclusion.
@@ -50,9 +48,9 @@ period but the item was first found now, record a late discovery with both dates
 
 For each country:
 
-1. Search the national official sources using CRD VI, Directive 2024/1619, bank
-   capital requirements, and third-country branch terms in English and the local
-   language where useful.
+1. Search national official sources under `brave-search-method.md` using CRD VI,
+   Directive 2024/1619, bank-capital, and third-country-branch terms in English
+   and the local language where useful.
 2. Confirm the latest procedural stage and identify whether the measure covers
    all CRD VI chapters or only selected provisions.
 3. Compare the result with the Commission category and EY status, taking each
