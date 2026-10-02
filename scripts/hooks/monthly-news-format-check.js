@@ -3,12 +3,18 @@
 /**
  * Validate Pipeline G monthly-news Markdown.
  *
- * Reuses Pipeline C's story/reference/body-length validation, then enforces the
+ * Reuses Pipeline C's story/reference validation with monthly length bounds, then enforces the
  * monthly H1, source-coverage note, and country-derived category sequence.
  */
 
 const fs = require("fs");
 const daily = require("./daily-news-format-check.js");
+
+// Monthly reports retain their existing minimums and have no upper length bound.
+const BODY_LENGTH_TARGETS = {
+  en: { target: 300, minimum: 250, unit: "English words" },
+  zh: { target: 500, minimum: 400, unit: "Han characters" },
+};
 
 const MONTHS =
   "(?:January|February|March|April|May|June|July|August|September|October|November|December)";
@@ -172,7 +178,7 @@ function monthlyViolations(filePath, content) {
     );
   }
 
-  violations.push(...daily.validate(filePath, content));
+  violations.push(...daily.validate(filePath, content, BODY_LENGTH_TARGETS));
   return violations;
 }
 
@@ -212,7 +218,7 @@ function runFileCheck(filePath) {
   }
   process.stdout.write(`FORMAT_OK: ${filePath}\n`);
   const lang = detectLang(content);
-  const info = daily.summarizeBodyLengths(content, lang);
+  const info = daily.summarizeBodyLengths(content, lang, BODY_LENGTH_TARGETS);
   if (info) {
     process.stdout.write(
       `LENGTH_INFO: lang=${info.lang} stories=${info.stories} target~${info.target} ${info.unit}; required>=${info.minimum}, min=${info.min}, max=${info.max}, average=${info.average}\n`

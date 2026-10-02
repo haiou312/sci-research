@@ -62,9 +62,10 @@ Use `N = 0` directly below the category H2 when no story qualifies.
 - Include every unique Manifest reference for the story, deduplicated by exact
   URL, in its colocated `**References**` block.
 - Renumber all references continuously from `[1]` across the whole document.
-- Keep the Pipeline C hard minimum: 400 Unicode Han characters for each Chinese
+- Monthly length override: retain at least 400 Unicode Han characters for each Chinese
   story and 250 English words for each English story. Japanese has no fixed
-  minimum. Never pad.
+  minimum. Monthly stories have no maximum; Pipeline C's Chinese 300–450 range
+  does not apply to Pipeline G. Never pad.
 - Keep the same H2 category order, `###` story title, prose, References, and
   standalone `---` separators as Pipeline C.
 

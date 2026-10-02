@@ -2,7 +2,7 @@
   {
     "id": 1,
     "prompt": "$sci-research:daily-news-intelligence --country \"Japan\" --lang zh",
-    "expected": "6 parallel Terra/high Scanners; one broad search plus one optional low-coverage refinement; diverse, unverified results capped at 10 per category. Verifier deduplicates and keeps 3-6; documented fallbacks preserve usable content. Output is six-category native Chinese Markdown, optionally docx, with >=400 Han characters and APA references per story."
+    "expected": "6 parallel Terra/high Scanners; one broad search plus one optional low-coverage refinement; diverse, unverified results capped at 10 per category. Verifier deduplicates and keeps 3-6; documented fallbacks preserve usable content. Output is six-category native Chinese Markdown, optionally docx, with 300–450 Han characters inclusive and APA references per story. Underlength and overlength bodies trigger format warnings; titles and references are excluded."
   },
   {
     "id": 2,

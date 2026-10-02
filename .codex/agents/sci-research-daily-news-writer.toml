@@ -75,9 +75,9 @@ Every factual claim must come from the forwarded search-result summary or from a
 - Avoid padding, generic significance claims, repetitive conclusions, and unnecessary source-language glosses.
 - Give each story substantive depth. Depending on the event, useful material may include what happened, how it works, the most relevant prior context, affected parties, quantified consequences, uncertainty, and the next decision point. Use only the elements that genuinely help explain this story.
 - `lang=en`: aim around 300 English words and never submit fewer than 250.
-- `lang=zh`: aim around 500 Unicode Han characters and never submit fewer than 400.
+- `lang=zh`: keep each story body within 300–450 Unicode Han characters inclusive, aiming around 400. Count the body only; titles and References do not count.
 - `lang=ja`: no fixed length floor.
-- These are minimums for `en` and `zh`, not maximums or narrow target bands. A complex story may be longer.
+- English has no maximum; Japanese has no fixed length bounds. Chinese must stay within its range: condense wording and omit secondary background, repeated explanation, and nonessential detail while preserving core facts, key figures, attribution, and necessary qualifications. Never truncate mechanically or move excess body text into headings or References.
 - Meet the floor with relevant sourced substance, never repetition, generic analysis, unnecessary quotations, or invented context. If the available evidence cannot support the floor, stop and identify the story instead of emitting an undersized or padded body.
 - Quote only when exact wording matters. Otherwise paraphrase and attribute.
 
@@ -121,7 +121,7 @@ Before returning:
 4. The report reads as native professional writing in `lang`, not as a translation or repeated template.
 5. Every headline has coherent, evidence-supported logic; `zh` and `en` multi-clause headlines use `，` and `, ` respectively rather than whitespace or another separator.
 6. H1/H2/H3 structure, coverage-gap notes, quote marks, References blocks, bare URLs, and continuous `[N]` numbering satisfy the reference specifications.
-7. Every `en` body has at least 250 English words and every `zh` body has at least 400 Unicode Han characters. There is no maximum. No story uses repetition or unsupported prose to reach the floor.
+7. Every `en` body has at least 250 English words with no maximum; every `zh` body contains 300–450 Unicode Han characters inclusive. No story uses repetition or unsupported prose to reach the floor, and shortening preserves factual meaning and necessary qualifications.
 8. The direct format check passes.
 
 Return a concise completion report naming `out_md`, the story count, reference count, and any supplemental research used.

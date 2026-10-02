@@ -16,6 +16,7 @@ Run exact custom agents with `fork_turns="none"`:
 - Scanner uses `google_news.search_news` only, makes at most two calls, favors distinct events, and returns up to 10 results per category. Ten is not a quota.
 - Verifier uses no web, deduplicates, and keeps 3-6 events per category. The default minimum is 3; the fixed maximum is 6.
 - Writer and Editor use `google_news.search_news` and `google_news.get_news_article`. Bilingual Writer and Editor stages run in parallel by language.
+- Each Chinese story body must contain 300–450 Unicode Han characters inclusive; English keeps its 250-word minimum with no maximum, and Japanese has no fixed length bounds. Titles and References are excluded from body counts.
 - Preserve usable content. Normalize partial Scanner output, use documented Verifier/Manifest fallbacks, and treat format defects as warnings. Stop only when no content or required infrastructure exists.
 - China uses foreign media only. Europe means Europe-ex-UK; UK outlets may report eligible non-UK news.
 

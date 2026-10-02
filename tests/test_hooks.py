@@ -193,7 +193,7 @@ class HookTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             report = Path(temp_dir) / "daily-news/report.md"
             report.parent.mkdir(parents=True)
-            body = "中" * 399
+            body = "中" * 299
             report.write_text(
                 f"""# 日本每日热点新闻 — 2026年7月16日
 
@@ -216,13 +216,13 @@ class HookTests(unittest.TestCase):
                 text=True,
             )
             self.assertEqual(result.returncode, 2)
-            self.assertIn("minimum 400", result.stderr)
+            self.assertIn("minimum 300", result.stderr)
 
     def test_direct_format_check_accepts_chinese_at_minimum(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             report = Path(temp_dir) / "daily-news/report.md"
             report.parent.mkdir(parents=True)
-            body = "中" * 400
+            body = "中" * 300
             report.write_text(
                 f"""# 日本每日热点新闻 — 2026年7月16日
 
@@ -247,7 +247,105 @@ class HookTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertIn("FORMAT_OK", result.stdout)
             self.assertIn("LENGTH_INFO: lang=zh", result.stdout)
-            self.assertIn("required>=400", result.stdout)
+            self.assertIn("required=300..450", result.stdout)
+
+    def write_length_report(
+        self, root: Path, bodies: list[str], lang: str = "zh", monthly: bool = False
+    ) -> Path:
+        headings = {
+            "zh": ("日本每日热点新闻 — 2026年7月16日", "一、经济与市场"),
+            "en": ("Japan Daily News Intelligence — July 16, 2026", "1. Economy & Markets"),
+            "ja": ("日本デイリーニュース — 2026年7月16日", "1. 経済と市場"),
+        }
+        h1, h2 = headings[lang]
+        prefix = [f"# {h1}", f"## {h2}"]
+        if monthly:
+            self.assertEqual(lang, "zh")
+            prefix = [
+                "# 日本月度热点新闻 — 2026年7月",
+                "*资料范围：本报告基于2026年7月现有31份日本每日热点新闻，覆盖全部日期。*",
+            ]
+            categories = [
+                "一、经济与市场", "二、政治与外交", "三、科技与产业",
+                "四、社会与民生", "五、企业IPO与并购", "六、其他重要事件",
+            ]
+            self.assertEqual(len(bodies), len(categories))
+        sections = []
+        for number, body in enumerate(bodies, start=1):
+            if monthly:
+                sections.append(f"## {categories[number - 1]}")
+            sections.append(
+                f"### 新闻标题{number}\n\n{body}\n\n**References**\n\n"
+                f"[{number}] Reuters. (2026, July 16). {'参考资料' * 150}. "
+                f"Reuters. https://example.com/story/{number}\n\n---"
+            )
+        report = root / ("monthly-news" if monthly else "daily-news") / "report.md"
+        report.parent.mkdir(parents=True, exist_ok=True)
+        report.write_text("\n\n".join([*prefix, *sections]) + "\n", encoding="utf-8")
+        return report
+
+    def check_report(self, report: Path, script: Path = FORMAT_CHECK) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            ["node", str(script), "--file", str(report)],
+            check=False, capture_output=True, text=True,
+        )
+
+    def test_chinese_maximum_is_inclusive_and_counts_only_han_body(self) -> None:
+        for han_count, expected_code in [(300, 0), (450, 0), (451, 2)]:
+            with self.subTest(han_count=han_count), tempfile.TemporaryDirectory() as temp_dir:
+                # Supplementary-plane Han counts as one; punctuation, Latin text,
+                # digits, headings, and the long reference must not inflate it.
+                body = "中" * (han_count - 1) + "𠀀" + "，。ABC 123 " * 30
+                report = self.write_length_report(Path(temp_dir), [body])
+                result = self.check_report(report)
+                self.assertEqual(result.returncode, expected_code, result.stderr)
+                if expected_code:
+                    self.assertIn("451 Han characters; maximum 450", result.stderr)
+                    self.assertIn("新闻标题1", result.stderr)
+                else:
+                    self.assertIn(f"min={han_count}, max={han_count}", result.stdout)
+                    self.assertIn("required=300..450", result.stdout)
+
+    def test_chinese_length_range_applies_per_story_not_average(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            report = self.write_length_report(Path(temp_dir), ["中" * 299, "中" * 451])
+            result = self.check_report(report)
+            self.assertEqual(result.returncode, 2)
+            self.assertIn('Story "新闻标题1" body length is 299', result.stderr)
+            self.assertIn('Story "新闻标题2" body length is 451', result.stderr)
+
+    def test_format_hook_warns_after_patch_for_chinese_above_maximum(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            report = self.write_length_report(Path(temp_dir), ["中" * 451])
+            result = self.run_hook(FORMAT_CHECK, {
+                "hook_event_name": "PostToolUse",
+                "tool_input": f"*** Begin Patch\n*** Update File: {report}\n*** End Patch",
+            })
+            self.assertEqual(result.returncode, 0, result.stderr)
+            output = json.loads(result.stdout)
+            self.assertIn("maximum 450", output["hookSpecificOutput"]["additionalContext"])
+            self.assertIn("do not truncate mechanically", output["systemMessage"])
+
+    def test_english_keeps_no_maximum_and_japanese_has_no_length_bounds(self) -> None:
+        for lang, body in [("en", "fact " * 600), ("ja", "中"), ("ja", "中" * 600)]:
+            with self.subTest(lang=lang, size=len(body)), tempfile.TemporaryDirectory() as temp_dir:
+                report = self.write_length_report(Path(temp_dir), [body], lang=lang)
+                result = self.check_report(report)
+                self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_monthly_chinese_retains_400_minimum_and_no_maximum(self) -> None:
+        for han_count, expected_code in [(399, 2), (400, 0), (600, 0)]:
+            with self.subTest(han_count=han_count), tempfile.TemporaryDirectory() as temp_dir:
+                report = self.write_length_report(
+                    Path(temp_dir), ["中" * han_count] * 6, monthly=True,
+                )
+                result = self.check_report(report, MONTHLY_FORMAT_CHECK)
+                self.assertEqual(result.returncode, expected_code, result.stderr)
+                if expected_code:
+                    self.assertIn("minimum 400", result.stderr)
+                else:
+                    self.assertIn("required>=400", result.stdout)
+                    self.assertIn(f"min={han_count}, max={han_count}", result.stdout)
 
     def test_direct_format_check_rejects_chinese_headline_whitespace_separator(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

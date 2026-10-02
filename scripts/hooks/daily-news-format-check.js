@@ -16,14 +16,14 @@
  *   - Mismatched count between ### story titles and **References** blocks
  *   - More than 6 stories under any one category H2
  *   - English story bodies below 250 words
- *   - Chinese story bodies below 400 Unicode Han characters
+ *   - Chinese story bodies outside 300–450 Unicode Han characters (inclusive)
  *   - Obvious whitespace-separated Chinese headline fragments
  *   - Prohibited markers: **摘要** / **Summary** / **要約** / **分析** / **Analysis**
  *     (1.9.x+ structure: body prose follows `### title` directly; no
  *     summary/analysis markers anywhere)
  *
  * Direct `--file` mode also reports en/zh body-length statistics.
- * Minimum length is enforced per story; there is no maximum.
+ * Length is checked per story: English has a minimum; Chinese has a bounded range.
  *
  * Trigger: Codex PostToolUse:apply_patch when the file path is under daily-news/
  *          (or the legacy daily-news-reports/ path)
@@ -98,8 +98,11 @@ function runFileCheck(filePath) {
       const content = fs.readFileSync(filePath, "utf8");
       const lengthInfo = summarizeBodyLengths(content, detectLang(content));
       if (lengthInfo) {
+        const required = lengthInfo.maximum === undefined
+          ? `>=${lengthInfo.minimum}`
+          : `=${lengthInfo.minimum}..${lengthInfo.maximum}`;
         process.stdout.write(
-          `LENGTH_INFO: lang=${lengthInfo.lang} stories=${lengthInfo.stories} target~${lengthInfo.target} ${lengthInfo.unit}; required>=${lengthInfo.minimum}, min=${lengthInfo.min}, max=${lengthInfo.max}, average=${lengthInfo.average}\n`
+          `LENGTH_INFO: lang=${lengthInfo.lang} stories=${lengthInfo.stories} target~${lengthInfo.target} ${lengthInfo.unit}; required${required}, min=${lengthInfo.min}, max=${lengthInfo.max}, average=${lengthInfo.average}\n`
         );
       }
     } catch (error) {
@@ -169,7 +172,7 @@ const PROHIBITED_MARKERS = /^\*\*(?:摘要|Summary|要約|分析|Analysis)\*\*$/
 const REFERENCES_MARKER_LINE = "**References**"; // language-independent per spec
 const BODY_LENGTH_TARGETS = {
   en: { target: 300, minimum: 250, unit: "English words" },
-  zh: { target: 500, minimum: 400, unit: "Han characters" },
+  zh: { target: 400, minimum: 300, maximum: 450, unit: "Han characters" },
 };
 
 function countMatches(content, regex) {
@@ -301,8 +304,8 @@ function countHanCharacters(body) {
   return (body.match(/\p{Script=Han}/gu) || []).length;
 }
 
-function summarizeBodyLengths(content, lang) {
-  const target = BODY_LENGTH_TARGETS[lang];
+function summarizeBodyLengths(content, lang, targets = BODY_LENGTH_TARGETS) {
+  const target = targets[lang];
   if (!target) return null;
 
   const stories = extractStoryBodies(content);
@@ -319,6 +322,7 @@ function summarizeBodyLengths(content, lang) {
     stories: counts.length,
     target: target.target,
     minimum: target.minimum,
+    maximum: target.maximum,
     unit: target.unit,
     min: Math.min(...counts),
     max: Math.max(...counts),
@@ -326,8 +330,8 @@ function summarizeBodyLengths(content, lang) {
   };
 }
 
-function checkMinimumBodyLengths(content, lang) {
-  const target = BODY_LENGTH_TARGETS[lang];
+function checkBodyLengths(content, lang, targets = BODY_LENGTH_TARGETS) {
+  const target = targets[lang];
   if (!target) return [];
 
   const violations = [];
@@ -335,7 +339,7 @@ function checkMinimumBodyLengths(content, lang) {
   const expectedStories = countMatches(content, /^### /gm);
   if (stories.length !== expectedStories) {
     violations.push(
-      `Could not isolate every story body for minimum-length checking: parsed ${stories.length} of ${expectedStories}. Each story must use \`### title → body → **References**\` with standalone \`---\` separators.`
+      `Could not isolate every story body for body-length checking: parsed ${stories.length} of ${expectedStories}. Each story must use \`### title → body → **References**\` with standalone \`---\` separators.`
     );
   }
 
@@ -345,6 +349,10 @@ function checkMinimumBodyLengths(content, lang) {
     if (count < target.minimum) {
       violations.push(
         `Story "${title}" body length is ${count} ${target.unit}; minimum ${target.minimum}, target about ${target.target}. Add relevant sourced substance; do not pad or repeat content.`
+      );
+    } else if (target.maximum !== undefined && count > target.maximum) {
+      violations.push(
+        `Story "${title}" body length is ${count} ${target.unit}; maximum ${target.maximum}, allowed range ${target.minimum}–${target.maximum}. Condense wording and remove secondary background while preserving core facts, key figures, attribution, and necessary qualifications; do not truncate mechanically.`
       );
     }
   }
@@ -473,7 +481,7 @@ function checkReferenceCoverage(content, lang) {
 
 // ---------- main validation ----------
 
-function validate(filePath, content) {
+function validate(filePath, content, bodyLengthTargets = BODY_LENGTH_TARGETS) {
   const violations = [];
 
   // 1. Count invariant: ### == **References** (one of each per story)
@@ -582,13 +590,13 @@ function validate(filePath, content) {
 
   // 7. Quote-mark canonical char enforcement (per language-spec.md § Canonical Quote Marks)
   // 8. Reference-coverage heuristic backstop (PR #5).
-  // 9. Per-story hard minimum length (en/zh only; no maximum).
+  // 9. Per-story length bounds (en minimum; zh range; monthly uses its own policy).
   // 10. Obvious whitespace-separated Chinese headline fragments.
   const lang = detectLang(content);
   if (lang) {
     violations.push(...validateQuoteMarks(content, lang));
     violations.push(...checkReferenceCoverage(content, lang));
-    violations.push(...checkMinimumBodyLengths(content, lang));
+    violations.push(...checkBodyLengths(content, lang, bodyLengthTargets));
     violations.push(...checkChineseHeadlineWhitespace(content, lang));
   }
 
@@ -656,7 +664,7 @@ if (require.main === module) {
 
 module.exports = {
   checkCategoryStoryMaximum,
-  checkMinimumBodyLengths,
+  checkBodyLengths,
   checkChineseHeadlineWhitespace,
   summarizeBodyLengths,
   countEnglishWords,

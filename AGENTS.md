@@ -66,7 +66,7 @@
 - Pipeline C 的候选数量、schema、计数和最终格式检查均为诊断与修正信号，不是中止门槛；Fact Extractor 失败时生成空事实 fallback Manifest，Editor 或格式检查失败时保留 Writer Markdown 并继续可用输出。只有全栏目无任何候选、必需工具不存在或输出路径不可写等客观无内容/基础设施条件才停止受影响输出。
 - Scanner Batch 与 Verifier 查重筛选报告必须原样保存到日报目录的 `audit/*.txt`；不要使用 `.md`，避免 Pipeline D 将审计文件当作国家日报。
 - Writer 必须遵守 Fact Manifest；Editor 使用 apply_patch 运行五道检查。Writer 与 Editor 的新闻搜索和正文获取只用 `google_news.search_news` / `google_news.get_news_article`，不得回退到 Codex 原生 WebSearch；引用、引号和输出格式规范以 skills/daily-news-intelligence/references/ 为准。
-- `get_news_article` 的 `article_id` 只在产生它的 MCP 会话内有效；Writer/Editor 必须按标题和媒体重新搜索并立即取文，不得复用 Scanner ID。英文每篇正文不得少于 250 个词，中文每篇正文不得少于 400 个 Unicode 汉字，不设最高字数。材料不足时先通过 MCP 重新搜索并取 Lead 正文，再按需补充同事件搜索；只能用返回的可引用实质正文达到底线，不得重复、空泛扩写或编造。
+- `get_news_article` 的 `article_id` 只在产生它的 MCP 会话内有效；Writer/Editor 必须按标题和媒体重新搜索并立即取文，不得复用 Scanner ID。英文每篇正文不得少于 250 个词且无上限；中文每篇正文须为 300–450 个 Unicode 汉字（含边界），标题与 References 不计入。中文超长时压缩措辞、删减次要背景，保留核心事实、关键数字和必要限定，不得机械截断。材料不足时先通过 MCP 重新搜索并取 Lead 正文，再按需补充同事件搜索；只能用返回的可引用实质正文达到底线，不得重复、空泛扩写或编造。
 - --email-attach none 表示仅发送正文，必须省略 --attach。
 
 ### D — Daily Briefing
@@ -111,7 +111,7 @@
 - Curator 按 active category 并行一次，将同一事件的月内进展聚类，默认每栏提出 3 个正选和最多 2 个备选；重复频率本身不是新闻价值。
 - Verifier 负责跨栏目同事件去重、最终路由、备选晋级和一至五条代表性证据日报选择；一个 source story ID 不得支持两篇最终月报新闻。
 - Fact Extractor 从最终 evidence story IDs 锁定事实、日期、阶段、引语与 URL 并去重；Writer/Editor 不得使用未入选日报或外部知识。
-- 最终 H2/H3/正文/逐条 APA References/分隔线与 Pipeline C 相同，只将 H1 和文件名改为月份，并在首个 H2 前保留一条本地化资料覆盖说明。中英文正文底线与 Pipeline C 相同。
+- 最终 H2/H3/正文/逐条 APA References/分隔线与 Pipeline C 相同，只将 H1 和文件名改为月份，并在首个 H2 前保留一条本地化资料覆盖说明。月报中文正文仍至少 400 个 Unicode 汉字，英文至少 250 个词，均无上限；不套用 Pipeline C 的中文 300–450 字范围。
 - 当前月份允许通过 `as_of` 生成，但必须明确资料截至日；`require_complete_month=true` 时任何应覆盖日期缺少可用日报均停止。
 - source index、Curator Bundle、Verifier 报告与 Fact Manifest 保存到月报目录 `audit/`，均不得使用 `.md`。
 

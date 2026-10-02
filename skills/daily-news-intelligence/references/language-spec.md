@@ -188,24 +188,24 @@ Rationale: `ja` uses corner brackets because Japanese newsroom convention treats
 
 ## Body Length Standard
 
-English and Chinese use a hard minimum with no maximum:
+English has a hard minimum; Chinese has an inclusive required range:
 
-| `lang` | Typical target | Hard minimum | Unit |
-|---|---:|---:|---|
-| `en` | about 300 | 250 | English words |
-| `zh` | about 500 | 400 | Unicode Han characters |
-| `ja` | story-dependent | — | — |
+| `lang` | Typical target | Minimum | Maximum | Unit |
+|---|---:|---:|---:|---|
+| `en` | about 300 | 250 | none | English words |
+| `zh` | about 400 | 300 | 450 | Unicode Han characters |
+| `ja` | story-dependent | — | — | — |
 
 When measuring, count only the story body between its `### <title>` and `**References**` marker. Exclude the title, category headings, References lines, URLs, separators, gap notes, and all other document structure.
 
 - **English word count**: count ASCII alphanumeric lexical tokens. Internal apostrophes or hyphens and a decimal or currency-number suffix do not split a token (`central-bank`, `investor's`, `3.5`, and `US$3.5` each count as one word).
 - **Chinese character count**: count only characters with Unicode Script property `Han`. Punctuation, Arabic numerals, Latin letters, whitespace, and Markdown syntax do not count.
-- Every `en` and `zh` body must meet its hard minimum. A complex event may be longer; there is no maximum or narrow accepted band.
+- Every `zh` body must contain 300–450 Han characters inclusive. Every `en` body must meet its 250-word minimum, with no maximum. Japanese has no fixed length bounds.
 - If supplied material is too thin, re-find and fetch the Lead through `google_news.search_news` plus `google_news.get_news_article`, then run supplemental Google News MCP searches only when that returned full text remains insufficient.
 - Meet the minimum with relevant sourced event detail, mechanics, context, affected parties, consequences, uncertainty, or next steps.
 - Never add repetition, generic significance claims, unnecessary quotations, invented context, or source-language glosses to reach the minimum.
-- Never cut necessary explanation or distort a fact to reduce a count.
-- The format hook reports per-story failures below the minimum. Writer/Editor should correct them when evidence permits, but unresolved length warnings do not block export or delivery of existing content.
+- For Chinese bodies above 450 Han characters, condense wording and omit secondary background, repeated explanations, and nonessential details. Preserve core facts, key figures, attribution, and necessary qualifications; never distort a fact, truncate mechanically, or move excess prose into headings or References.
+- The format hook reports per-story failures below the minimum or above the Chinese maximum. Writer/Editor should correct them, but unresolved length warnings retain Pipeline C's existing best-effort export and delivery policy.
 - Paragraph count remains flexible in all languages.
 
 ## Writing Standard

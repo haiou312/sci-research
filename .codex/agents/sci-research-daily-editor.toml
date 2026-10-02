@@ -47,7 +47,7 @@ If a required input or runtime path is missing, stop and report it.
 - Keep every pass-through story in the report. A forwarded discovery URL may be raw or wrapped in Markdown link syntax; extract the link target before formatting the reference. Replace it with the publisher `canonical_url` returned by `get_news_article` when available; retain the extracted discovery URL only when canonicalization fails.
 - Supplemental references may be added only when `get_news_article` returned full text that supports facts retained in the body; cite the returned canonical URL.
 - Maintain the required H1/H2/story/References structure and continuous `[N]` numbering.
-- Every `lang=en` story body must contain at least 250 English words; every `lang=zh` story body must contain at least 400 Unicode Han characters. `lang=ja` has no fixed floor. There is no maximum.
+- Every `lang=en` story body must contain at least 250 English words with no maximum; every `lang=zh` story body must contain 300–450 Unicode Han characters inclusive. `lang=ja` has no fixed length bounds. Count only story prose, excluding titles and References.
 - Meet the floor only with relevant sourced substance. Never repeat, speculate, invent, or preserve awkward wording merely to increase the count.
 
 ## Five Passes
@@ -96,7 +96,7 @@ Check the complete document against `references/output-spec.md` and `references/
 - coverage-gap notes in the correct category;
 - APA reference lines with bare URLs and continuous `[N]`;
 - canonical quote marks for `lang`;
-- at least 250 English words per `en` story or 400 Han characters per `zh` story;
+- at least 250 English words per `en` story or 300–450 Han characters inclusive per `zh` story;
 - no prohibited summary/analysis markers or global references section.
 
 Repair format problems with focused patches. Do not alter article substance merely for formatting.
@@ -119,7 +119,7 @@ Use causal wording such as `推动`, `导致`, `driving`, or `lifting` only when
 
 You may rewrite a sentence or paragraph, split or merge paragraphs, and improve a headline when needed. Preserve the event, factual meaning, uncertainty, attribution, citations, category, and story order. Do not introduce new factual claims during this pass; return to Pass 2 first if a proposed rewrite needs new evidence.
 
-There is no defect whitelist, edit quota, paragraph-count lock, or maximum body length. Use judgement. Prefer the smallest edit that produces genuinely native, precise prose, but make every necessary edit. Do not let a fluency edit reduce an `en` or `zh` body below its hard floor.
+There is no defect whitelist, edit quota, or paragraph-count lock. Use judgement. Prefer the smallest edit that produces genuinely native, precise prose, but make every necessary edit. For Chinese bodies above 450 Han characters, condense wording and remove secondary background, repetition, and nonessential detail while preserving core facts, key figures, attribution, and necessary qualifications. Do not truncate mechanically or move excess prose into headings or References. Recount after editing: Chinese must remain within 300–450 Han characters inclusive, and English must stay at or above 250 words.
 
 ## Apply-Patch Discipline
 
@@ -135,8 +135,8 @@ There is no defect whitelist, edit quota, paragraph-count lock, or maximum body 
 3. Material claims and quotations are supported by retained references.
 4. The report reads as native professional writing in `lang`; no obvious translationese or repeated template remains.
 5. Every `zh` or `en` multi-clause headline has coherent, evidence-supported logic and uses the language's comma rather than whitespace or another separator.
-6. Every `en` story contains at least 250 English words and every `zh` story contains at least 400 Unicode Han characters, without padding. `ja` is exempt.
-7. References, numbering, headings, separators, gap notes, quote marks, and minimum body lengths pass the direct format check.
+6. Every `en` story contains at least 250 English words and every `zh` story contains 300–450 Unicode Han characters inclusive, without padding or loss of necessary qualifications. `ja` is exempt from fixed length bounds.
+7. References, numbering, headings, separators, gap notes, quote marks, and body-length bounds pass the direct format check.
 
 ## Final Report
 
